@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<title>Garuda Mesh — Title Cards</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* Each card = 1 A4 landscape page = 297mm × 210mm */
+  @page { size: A4 landscape; margin: 0; }
+
+  body { background: #000; font-family: 'Segoe UI', Arial, sans-serif; }
+
+  .card {
+    width: 297mm;
+    height: 210mm;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  /* ── CARD 1: Opening Title ───────────────────────────────────── */
+  .c1 { background: #000; }
+  .c1::before {
+    content: '';
+    position: absolute;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    border: 1px solid rgba(245,158,11,0.12);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+  }
+  .c1::after {
+    content: '';
+    position: absolute;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    border: 1px solid rgba(245,158,11,0.06);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+  }
+  .c1-title {
+    font-size: 88pt;
+    font-weight: 900;
+    color: #F59E0B;
+    letter-spacing: -3px;
+    line-height: 1;
+    text-shadow: 0 0 80px rgba(245,158,11,0.45);
+    position: relative; z-index: 1;
+  }
+  .c1-sub {
+    font-size: 14pt;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-top: 10px;
+    position: relative; z-index: 1;
+  }
+  .c1-tag {
+    font-size: 16pt;
+    font-style: italic;
+    color: rgba(255,255,255,0.35);
+    margin-top: 14px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── CARD 2: Grid Down ───────────────────────────────────────── */
+  .c2 {
+    background: linear-gradient(135deg, #1a0000 0%, #060000 100%);
+    align-items: flex-start;
+    justify-content: center;
+    padding: 50px 80px;
+    gap: 0;
+  }
+  .c2-header {
+    font-size: 10pt;
+    color: rgba(239,68,68,0.6);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    white-space: nowrap;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    white-space: nowrap;
+  }
+  .sdot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #EF4444;
+    flex-shrink: 0;
+  }
+  .stext {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #EF4444;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* ── CARD 3: Mesh Active ─────────────────────────────────────── */
+  .c3 {
+    background: linear-gradient(135deg, #0A1628 0%, #0F1F3D 100%);
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .c3-header {
+    font-size: 10pt;
+    color: rgba(245,158,11,0.6);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    white-space: nowrap;
+  }
+  .mstat {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 20px;
+    white-space: nowrap;
+  }
+  .mval { font-size: 36pt; font-weight: 900; color: #F59E0B; white-space: nowrap; }
+  .mlabel { font-size: 15pt; color: rgba(255,255,255,0.55); white-space: nowrap; }
+
+  /* ── CARD 4: SOS ─────────────────────────────────────────────── */
+  .c4 {
+    background: #0a0000;
+    gap: 18px;
+  }
+  .sos-big { font-size: 72pt; font-weight: 900; color: #EF4444; letter-spacing: 10px; text-shadow: 0 0 50px rgba(239,68,68,0.6); }
+  .sos-msg { font-size: 16pt; color: rgba(255,255,255,0.75); text-align: center; line-height: 1.6; max-width: 75%; }
+  .sos-tag {
+    font-size: 11pt;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.5);
+    color: #EF4444;
+    padding: 6px 22px;
+    border-radius: 4px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  /* ── CARD 5: Authority Verified ──────────────────────────────── */
+  .c5 {
+    background: linear-gradient(135deg, #0A1628 0%, #071a0f 100%);
+    padding: 40px 70px;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .c5-header { font-size: 10pt; color: rgba(16,185,129,0.6); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 6px; }
+  .vmsg {
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.35);
+    border-radius: 10px;
+    padding: 22px 28px;
+    width: 100%;
+  }
+  .vrow { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .vname { font-size: 18pt; font-weight: 700; color: #fff; }
+  .vbadge {
+    background: #10B981; color: #fff;
+    font-size: 9pt; font-weight: 700;
+    padding: 3px 12px; border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .vtext { font-size: 15pt; color: rgba(255,255,255,0.8); line-height: 1.6; }
+  .vcrypto { font-size: 10pt; color: rgba(16,185,129,0.6); font-family: 'Courier New', monospace; margin-top: 10px; }
+  .vnote { font-size: 11pt; color: rgba(255,255,255,0.35); text-align: center; width: 100%; }
+
+  /* ── CARD 6: Hoax Flagged ────────────────────────────────────── */
+  .c6 {
+    background: #0A1628;
+    padding: 40px 70px;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .c6-header { font-size: 10pt; color: rgba(234,179,8,0.6); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 6px; }
+  .hmsg {
+    background: rgba(234,179,8,0.06);
+    border: 1px solid rgba(234,179,8,0.25);
+    border-radius: 10px;
+    padding: 20px 28px;
+    width: 100%;
+  }
+  .hwarn { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .hwtext { font-size: 14pt; color: #EAB308; font-weight: 700; letter-spacing: 1px; }
+  .hcontent { font-size: 16pt; color: rgba(255,255,255,0.35); text-decoration: line-through; }
+  .hcount { font-size: 12pt; color: #EAB308; margin-top: 10px; }
+  .hnote { font-size: 11pt; color: rgba(255,255,255,0.35); text-align: center; width: 100%; }
+
+  /* ── CARD 7: Final Stats ─────────────────────────────────────── */
+  .c7 {
+    background: linear-gradient(135deg, #0A1628 0%, #0F1F3D 100%);
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+  }
+  .sblock {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-right: 1px solid rgba(255,255,255,0.07);
+    height: 100%;
+  }
+  .sblock:last-child { border-right: none; }
+  .semoji { font-size: 32pt; }
+  .sval { font-size: 58pt; font-weight: 900; color: #F59E0B; line-height: 1; }
+  .slabel { font-size: 10pt; color: rgba(255,255,255,0.45); letter-spacing: 2px; text-transform: uppercase; text-align: center; }
+
+  /* ── CARD 8: Closing ─────────────────────────────────────────── */
+  .c8 { background: #000; gap: 12px; }
+  .c8-logo { font-size: 72pt; font-weight: 900; color: #F59E0B; letter-spacing: -2px; text-shadow: 0 0 60px rgba(245,158,11,0.4); }
+  .c8-sub { font-size: 12pt; color: rgba(255,255,255,0.45); letter-spacing: 5px; text-transform: uppercase; }
+  .c8-tag { font-size: 20pt; font-style: italic; color: rgba(255,255,255,0.8); margin-top: 8px; }
+  .c8-team { font-size: 11pt; color: rgba(255,255,255,0.3); letter-spacing: 2px; margin-top: 20px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<!-- CARD 1: Opening Title -->
+<div class="card c1">
+  <div class="c1-title">GARUDA MESH</div>
+  <div class="c1-sub">Offline Emergency Mesh Communication</div>
+  <div class="c1-tag">"When The Grid Falls, We Rise."</div>
+</div>
+
+<!-- CARD 2: Grid Down -->
+<div class="card c2">
+  <div class="c2-header">⚠ &nbsp;STATUS INFRASTRUKTUR &nbsp;—&nbsp; KRITIS</div>
+  <div class="status-row"><div class="sdot"></div><div class="stext">Internet: OFFLINE</div></div>
+  <div class="status-row"><div class="sdot"></div><div class="stext">Cellular Network: NO SIGNAL</div></div>
+  <div class="status-row"><div class="sdot"></div><div class="stext">WhatsApp / Signal: FAILED</div></div>
+  <div class="status-row"><div class="sdot"></div><div class="stext">Emergency Services: UNREACHABLE</div></div>
+</div>
+
+<!-- CARD 3: Mesh Active -->
+<div class="card c3">
+  <div class="c3-header">🛡 &nbsp;GARUDA MESH &nbsp;—&nbsp; AKTIF</div>
+  <div class="mstat"><div class="mval">4</div><div class="mlabel">Nodes Connected</div></div>
+  <div class="mstat"><div class="mval">E2E</div><div class="mlabel">Encrypted · XChaCha20-Poly1305</div></div>
+  <div class="mstat"><div class="mval">~400m</div><div class="mlabel">Estimated Coverage</div></div>
+  <div class="mstat"><div class="mval">0</div><div class="mlabel">Server Dependencies</div></div>
+</div>
+
+<!-- CARD 4: SOS Emergency -->
+<div class="card c4">
+  <div class="sos-big">🆘 SOS</div>
+  <div class="sos-msg">
+    <strong style="color:#fff;">Medical Emergency</strong><br/>
+    "Ibu hamil kontraksi darurat, butuh ambulans segera!"<br/>
+    <span style="font-size:12pt; color:rgba(255,255,255,0.5);">📍 -6.2115, 106.8456 &nbsp;·&nbsp; Relaying via 3 hops...</span>
+  </div>
+  <div class="sos-tag">Priority: EMERGENCY · Signed: Ed25519</div>
+</div>
+
+<!-- CARD 5: Authority Verified -->
+<div class="card c5">
+  <div class="c5-header">🔐 &nbsp;Authority Message &nbsp;—&nbsp; Cryptographically Verified</div>
+  <div class="vmsg">
+    <div class="vrow">
+      <div class="vname">🛡️ BPBD Jakarta</div>
+      <div class="vbadge">✓ VERIFIED AUTHORITY</div>
+    </div>
+    <div class="vtext">
+      "Shelter evakuasi tersedia di GOR Senayan dan Balai Kota.<br/>
+      Kapasitas 2.000 orang. Akses via Jl. Sudirman."
+    </div>
+    <div class="vcrypto">Signature: Ed25519 · VALID · Key: BPBD-2026-A3F8B9C2...</div>
+  </div>
+  <div class="vnote">Tidak bisa dipalsukan · Tidak bisa dimanipulasi · Terverifikasi tanpa server</div>
+</div>
+
+<!-- CARD 6: Hoax Flagged -->
+<div class="card c6">
+  <div class="c6-header">🚩 &nbsp;Community Defense &nbsp;—&nbsp; Hoax Detected</div>
+  <div class="hmsg">
+    <div class="hwarn">
+      <span style="font-size:20pt;">⚠️</span>
+      <div class="hwtext">FLAGGED BY COMMUNITY — POSSIBLE HOAX</div>
+    </div>
+    <div class="hcontent">"BAHAYA!! Semua gedung bertingkat Jakarta akan runtuh malam ini!!"</div>
+    <div class="hcount">🚩 Dilaporkan oleh 3 pengguna &nbsp;·&nbsp; Flag menyebar via mesh protocol</div>
+  </div>
+  <div class="hnote">Konsensus komunitas tanpa server pusat &nbsp;·&nbsp; Anti-Disinformasi Offline</div>
+</div>
+
+<!-- CARD 7: Final Stats -->
+<div class="card c7">
+  <div class="sblock">
+    <div class="semoji">✉️</div>
+    <div class="sval">12</div>
+    <div class="slabel">Pesan<br/>Terkirim</div>
+  </div>
+  <div class="sblock">
+    <div class="semoji">🆘</div>
+    <div class="sval">3</div>
+    <div class="slabel">SOS<br/>Ditangani</div>
+  </div>
+  <div class="sblock">
+    <div class="semoji">🔀</div>
+    <div class="sval">47</div>
+    <div class="slabel">Relay<br/>Hops</div>
+  </div>
+  <div class="sblock">
+    <div class="semoji">🚩</div>
+    <div class="sval">1</div>
+    <div class="slabel">Hoax<br/>Diblokir</div>
+  </div>
+  <div class="sblock">
+    <div class="semoji">🌐</div>
+    <div class="sval">0</div>
+    <div class="slabel">Server<br/>Digunakan</div>
+  </div>
+</div>
+
+<!-- CARD 8: Closing -->
+<div class="card c8">
+  <div class="c8-logo">GARUDA MESH</div>
+  <div class="c8-sub">Offline Emergency Mesh Communication</div>
+  <div class="c8-tag">"When The Grid Falls, We Rise."</div>
+  <div class="c8-team">[NAMA TIM] &nbsp;·&nbsp; WRECK-IT 7.0 &nbsp;·&nbsp; IoT Resilience &nbsp;·&nbsp; 2026</div>
+</div>
+
+</body>
+</html>
