@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels {
         val app = application as GarudaMeshApp
-        MainViewModelFactory(app.repository, app.identityManager, app.wifiDirectManager)
+        MainViewModelFactory(app.repository, app.identityManager, app.wifiDirectManager, app.connectivityMonitor)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

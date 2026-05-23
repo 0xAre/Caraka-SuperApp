@@ -74,6 +74,10 @@ class WifiDirectManager(
     // Track the WiFi Direct MAC of the device we're connecting to
     private var pendingWifiDirectMac: String? = null
 
+    // Stats exposed to ViewModel
+    private val _relayedMessageCount = MutableStateFlow(0)
+    val relayedMessageCount: StateFlow<Int> = _relayedMessageCount
+
     // ========== LIFECYCLE ==========
 
     fun startListening() {
@@ -202,11 +206,18 @@ class WifiDirectManager(
     // ========== MESH MESSAGE LISTENER (from MeshSocketManager) ==========
 
     override fun onMessageReceived(protocol: MeshProtocol, fromAddress: String) {
+        // ── Anti-replay gate ─────────────────────────────────────────────────
+        // HANDSHAKE is exempt from dedup (each new socket sends one)
+        if (protocol.type != "HANDSHAKE" && socketManager.isDuplicate(protocol.id, protocol.timestamp)) {
+            Log.d(TAG, "Anti-replay: dropped duplicate/stale ${protocol.type} id=${protocol.id}")
+            return
+        }
         scope.launch {
             when (protocol.type) {
                 "HANDSHAKE" -> handleHandshake(protocol, fromAddress)
-                "TEXT" -> handleTextMessage(protocol)
-                "SOS" -> handleSosMessage(protocol)
+                "TEXT"      -> handleTextMessage(protocol)
+                "SOS"       -> handleSosMessage(protocol)
+                "FLAG"      -> handleFlagMessage(protocol)
                 else -> Log.w(TAG, "Unknown message type: ${protocol.type}")
             }
         }
@@ -282,9 +293,27 @@ class WifiDirectManager(
     }
 
     /**
-     * Process incoming TEXT message — save to local DB.
+     * Process incoming TEXT message.
+     * Multi-hop relay: if this message isn't addressed to us, forward it (TTL−1).
+     * Only save to DB when the message is meant for this device.
      */
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
+        val myId = identityManager.getPeerId()
+        val isForMe = protocol.recipientId == myId || protocol.recipientId == "BROADCAST"
+
+        // ── Multi-hop relay ───────────────────────────────────────────────────
+        if (!isForMe && protocol.ttl > 1) {
+            val relayed = protocol.copy(ttl = protocol.ttl - 1)
+            socketManager.sendPayload(relayed.toJson())
+            _relayedMessageCount.value++
+            Log.d(TAG, "Relaying TEXT ${protocol.id} → ${protocol.recipientId}, TTL=${relayed.ttl}")
+            return // Don't persist — not our message
+        }
+        if (!isForMe) {
+            Log.d(TAG, "TEXT TTL exhausted, not for us — dropping")
+            return
+        }
+
         Log.d(TAG, "Received TEXT from ${protocol.senderName}")
 
         // Decrypt if encrypted
@@ -297,11 +326,8 @@ class WifiDirectManager(
                 val decrypted = cryptoManager.decryptMessage(
                     protocol.encryptedPayload, senderPubKey, mySecretKey
                 )
-                if (decrypted != null) {
-                    plaintext = decrypted
-                } else {
-                    Log.w(TAG, "Failed to decrypt message from ${protocol.senderName}")
-                }
+                if (decrypted != null) plaintext = decrypted
+                else Log.w(TAG, "Failed to decrypt message from ${protocol.senderName}")
             }
         }
 
@@ -327,10 +353,19 @@ class WifiDirectManager(
     }
 
     /**
-     * Process incoming SOS message — save to local DB (SOS is never encrypted).
+     * Process incoming SOS message.
+     * SOS is never encrypted. Always relay to extend coverage, then persist locally.
      */
     private suspend fun handleSosMessage(protocol: MeshProtocol) {
         Log.d(TAG, "Received SOS from ${protocol.senderName}: ${protocol.content}")
+
+        // ── Multi-hop relay ───────────────────────────────────────────────────
+        if (protocol.ttl > 1) {
+            val relayed = protocol.copy(ttl = protocol.ttl - 1)
+            socketManager.sendPayload(relayed.toJson())
+            _relayedMessageCount.value++
+            Log.d(TAG, "Relaying SOS ${protocol.id}, TTL=${relayed.ttl}")
+        }
 
         val entity = MessageEntity(
             id = protocol.id,
@@ -352,6 +387,22 @@ class WifiDirectManager(
         )
         repository.saveMessage(entity)
         showSosNotification(protocol.senderName, protocol.content)
+    }
+
+    /**
+     * Process incoming FLAG message — increment flag count for the target message,
+     * then relay so the flag propagates through the mesh.
+     */
+    private suspend fun handleFlagMessage(protocol: MeshProtocol) {
+        val targetId = protocol.content // content carries the ID of the flagged message
+        if (targetId.isNotBlank()) {
+            repository.flagMessageById(targetId)
+            Log.d(TAG, "Flagged message $targetId by ${protocol.senderName}")
+        }
+        // Relay the flag
+        if (protocol.ttl > 1) {
+            socketManager.sendPayload(protocol.copy(ttl = protocol.ttl - 1).toJson())
+        }
     }
 
     private fun showSosNotification(sender: String, message: String) {

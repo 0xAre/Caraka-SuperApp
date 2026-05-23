@@ -1,6 +1,8 @@
 package com.example.garudamesh.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -8,9 +10,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Verified
@@ -31,14 +35,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> Unit) {
     var messageText by remember { mutableStateOf("") }
     val chatFlow = remember(peerId) { viewModel?.getChatMessages(peerId) }
     val messages by chatFlow?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList()) }
     val connectedPeers by viewModel?.connectedPeers?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList()) }
-    
+
+    // Flag context menu state
+    var flagTargetId by remember { mutableStateOf<String?>(null) }
+    var showFlagDialog by remember { mutableStateOf(false) }
+
     val peer = connectedPeers.find { it.id == peerId }
 
     val listState = rememberLazyListState()
@@ -161,7 +169,13 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                             sender = msg.senderName,
                             message = msg.content,
                             time = timeFormatted,
-                            isAuthority = peer?.isAuthority == true
+                            isFlagged = msg.flagCount >= 3,
+                            flagCount = msg.flagCount,
+                            isAuthority = peer?.isAuthority == true,
+                            onLongPress = {
+                                flagTargetId = msg.id
+                                showFlagDialog = true
+                            }
                         )
                     } else {
                         OutgoingMessageBubble(
@@ -173,24 +187,74 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
             }
         }
     }
+
+    // ── Flag confirmation dialog ───────────────────────────────────────────
+    if (showFlagDialog && flagTargetId != null) {
+        AlertDialog(
+            onDismissRequest = { showFlagDialog = false },
+            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = WarningYellow) },
+            title = { Text("Flag as Suspicious?", color = TextPrimary) },
+            text = {
+                Text(
+                    "This message will be marked as potentially false/hoax. " +
+                    "If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        flagTargetId?.let { viewModel?.flagMessage(it) }
+                        showFlagDialog = false
+                        flagTargetId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningYellow)
+                ) { Text("Flag It", color = Color.Black, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFlagDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceDark
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun IncomingMessageBubble(sender: String, message: String, time: String, isFlagged: Boolean = false, isAuthority: Boolean = false) {
+fun IncomingMessageBubble(
+    sender: String,
+    message: String,
+    time: String,
+    isFlagged: Boolean = false,
+    flagCount: Int = 0,
+    isAuthority: Boolean = false,
+    onLongPress: (() -> Unit)? = null
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        // Avatar Placeholder
+        // Avatar
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White),
+            modifier = Modifier.size(40.dp).clip(CircleShape)
+                .background(if (isAuthority) ActiveGreen.copy(alpha = 0.2f) else SurfaceDark),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.LocalHospital, contentDescription = null, tint = DangerRed)
+            Icon(
+                if (isAuthority) Icons.Default.Verified else Icons.Default.Person,
+                contentDescription = null,
+                tint = if (isAuthority) ActiveGreen else AmberAccent
+            )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
-                    .background(IncomingChat)
+                    .background(if (isFlagged) WarningYellow.copy(alpha = 0.08f) else IncomingChat)
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = { onLongPress?.invoke() }
+                    )
                     .padding(12.dp)
             ) {
                 Column {
@@ -204,9 +268,16 @@ fun IncomingMessageBubble(sender: String, message: String, time: String, isFlagg
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(message, color = TextPrimary, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.align(Alignment.End))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        if (!isAuthority) {
+                            Icon(Icons.Default.Flag, contentDescription = "Hold to flag",
+                                tint = TextSecondary.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
+                        }
+                    }
                 }
             }
+            // Warning badge when flagged by 3+ users
             if (isFlagged) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
@@ -218,7 +289,7 @@ fun IncomingMessageBubble(sender: String, message: String, time: String, isFlagg
                 ) {
                     Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Flagged by users", color = WarningYellow, fontSize = 12.sp)
+                    Text("⚠️ Flagged by $flagCount users — possible hoax", color = WarningYellow, fontSize = 12.sp)
                 }
             }
         }

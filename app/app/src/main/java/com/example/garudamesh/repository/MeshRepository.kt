@@ -51,8 +51,42 @@ class MeshRepository(
     }
 
     fun getSosMessages(): Flow<List<MessageEntity>> = messageDao.getSosMessages()
-    
+
     fun getRecentAlerts(): Flow<List<MessageEntity>> = messageDao.getRecentAlerts()
+
+    /** Increment local flag count — called when receiving a FLAG wire message. */
+    suspend fun flagMessageById(messageId: String) {
+        messageDao.flagMessage(messageId)
+    }
+
+    /**
+     * Flag a message locally AND broadcast a FLAG packet to the mesh.
+     * Called when the current user long-presses and flags a message.
+     */
+    suspend fun flagAndBroadcast(messageId: String) {
+        messageDao.flagMessage(messageId)
+
+        val myId = identityManager.getPeerId()
+        val myName = identityManager.getDisplayName()
+        val myRole = identityManager.getRole()
+
+        val flagPacket = com.example.garudamesh.network.MeshProtocol(
+            type = "FLAG",
+            id = java.util.UUID.randomUUID().toString(),
+            senderId = myId,
+            senderName = myName,
+            senderRole = myRole,
+            recipientId = "BROADCAST",
+            content = messageId, // the flagged message's ID
+            timestamp = System.currentTimeMillis(),
+            ttl = 5,
+            priority = "NORMAL"
+        )
+        wifiDirectManager?.sendMessage(flagPacket.toJson())
+    }
+
+    fun getTotalRelayedCount(): kotlinx.coroutines.flow.StateFlow<Int>? =
+        wifiDirectManager?.relayedMessageCount
 
     /**
      * Send a direct text message to a specific peer.

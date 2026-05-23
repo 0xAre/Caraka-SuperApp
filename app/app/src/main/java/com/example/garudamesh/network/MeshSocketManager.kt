@@ -28,6 +28,10 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
         const val TIMEOUT = 5000
         private const val TAG = "MeshSocket"
         private const val MAX_MESSAGE_SIZE = 65536
+        // Anti-replay: reject messages older than 5 minutes
+        private const val MAX_TIMESTAMP_DRIFT_MS = 5 * 60 * 1_000L
+        // Keep at most 2 000 seen IDs in memory (LRU-like via LinkedHashSet)
+        private const val MAX_SEEN_IDS = 2_000
     }
 
     private var serverJob: Job? = null
@@ -37,6 +41,32 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
     private val clientStreams = java.util.concurrent.ConcurrentHashMap<String, OutputStream>()
     private var activeSocket: Socket? = null // Keep for client close
     private var serverSocket: ServerSocket? = null
+
+    /**
+     * Anti-replay cache.
+     * Returns true if the message was already seen (should be dropped).
+     * Thread-safe via synchronized access on the set itself.
+     */
+    private val seenIds: MutableSet<String> =
+        java.util.Collections.synchronizedSet(
+            object : LinkedHashSet<String>() {
+                override fun add(element: String): Boolean {
+                    if (size >= MAX_SEEN_IDS) iterator().let { it.next(); it.remove() }
+                    return super.add(element)
+                }
+            }
+        )
+
+    fun isDuplicate(id: String, timestamp: Long): Boolean {
+        // Timestamp drift check
+        val drift = Math.abs(System.currentTimeMillis() - timestamp)
+        if (drift > MAX_TIMESTAMP_DRIFT_MS) {
+            android.util.Log.w(TAG, "Anti-replay: timestamp drift ${drift}ms for msg $id — dropped")
+            return true
+        }
+        // ID dedup check
+        return !seenIds.add(id) // add returns false if already present
+    }
 
     fun startServer() {
         serverJob?.cancel()

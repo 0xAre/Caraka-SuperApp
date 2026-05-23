@@ -8,6 +8,14 @@ import com.google.gson.Gson
  *
  * Types: HANDSHAKE, TEXT, SOS, SYSTEM
  */
+/**
+ * Message types:
+ *  HANDSHAKE  — identity exchange on new socket connection
+ *  TEXT       — encrypted direct or broadcast message
+ *  SOS        — unencrypted emergency broadcast (signed)
+ *  FLAG       — report a message as suspicious; content = target message ID
+ *  ACK        — delivery acknowledgement; content = target message ID
+ */
 data class MeshProtocol(
     val type: String,
     val id: String,
@@ -24,9 +32,10 @@ data class MeshProtocol(
     val sosCategory: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val flagCount: Int = 0,             // cumulative flag count propagated in mesh
     // Handshake-specific fields
     val publicKey: String? = null,      // X25519 base64
-    val signingKey: String? = null       // Ed25519 base64
+    val signingKey: String? = null      // Ed25519 base64
 ) {
     companion object {
         private val gson = Gson()

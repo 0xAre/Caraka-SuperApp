@@ -4,6 +4,7 @@ import android.app.Application
 import com.example.garudamesh.crypto.CryptoManager
 import com.example.garudamesh.crypto.IdentityManager
 import com.example.garudamesh.data.local.GarudaMeshDatabase
+import com.example.garudamesh.network.ConnectivityMonitor
 import com.example.garudamesh.network.WifiDirectManager
 import com.example.garudamesh.repository.MeshRepository
 
@@ -18,6 +19,7 @@ class GarudaMeshApp : Application() {
     lateinit var identityManager: IdentityManager
     lateinit var repository: MeshRepository
     lateinit var wifiDirectManager: WifiDirectManager
+    lateinit var connectivityMonitor: ConnectivityMonitor
 
     override fun onCreate() {
         super.onCreate()
@@ -44,5 +46,8 @@ class GarudaMeshApp : Application() {
 
         // Resolve circular dependency
         repository.wifiDirectManager = wifiDirectManager
+
+        // Connectivity monitor — tracks internet vs mesh-only state
+        connectivityMonitor = ConnectivityMonitor(this)
     }
 }
