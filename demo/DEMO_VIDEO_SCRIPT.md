@@ -1,4 +1,4 @@
-# 🎬 GARUDA MESH — Demo Video Script
+# 🎬 CARAKA — Demo Video Script
 ## WRECK-IT 7.0 | IoT Resilience Track | Durasi Target: 4:00 menit
 
 ---
@@ -69,7 +69,7 @@ OVERLAY TEXT (putih, centered):
 ```
 
 - Fade to hitam total
-- Logo GARUDA MESH muncul dengan amber glow
+- Logo CARAKA muncul dengan amber glow
 - Tagline muncul: *"When The Grid Falls, We Rise."*
 - Cut ke Scene 1
 
@@ -120,18 +120,18 @@ ketika infrastruktur itu sendiri yang diserang?"
 
 ---
 
-### SCENE 2 — "GARUDA MESH AKTIF"
+### SCENE 2 — "CARAKA AKTIF"
 **[00:55 — 01:45] | Durasi: 50 detik**
 
 **TUJUAN**: Wow factor — tampilkan app berjalan, mesh terbentuk, network map yang keren.
 
-**SHOT 4 — [00:55-01:05]: HP 1 (WARGA) buka Garuda Mesh**
+**SHOT 4 — [00:55-01:05]: HP 1 (WARGA) buka CARAKA**
 - Close-up layar HP 1
 - Buka app → ProfileSetup sudah dilakukan → langsung masuk HomeScreen
 - Tampil banner: **🔴 MESH ONLY — Grid Down, We Rise**
 
 **NARASI:**
-> *"Garuda Mesh. Tidak butuh internet. Tidak butuh BTS. Tidak butuh server."*
+> *"CARAKA. Tidak butuh internet. Tidak butuh BTS. Tidak butuh server."*
 
 **SHOT 5 — [01:05-01:25]: Split-screen atau sequential, 4 HP buka app**
 - Tunjukkan HP 2, 3, 4 juga buka app masing-masing
@@ -281,7 +281,7 @@ ketika infrastruktur itu sendiri yang diserang?"
 ```
 
 **NARASI:**
-> *"Infrastruktur pulih. Garuda Mesh secara otomatis
+> *"Infrastruktur pulih. CARAKA secara otomatis
 > beralih ke mode hybrid — mesh tetap aktif sebagai backup."*
 
 **SHOT 15 — [03:38-03:50]: Dashboard stats**
@@ -303,12 +303,12 @@ ketika infrastruktur itu sendiri yang diserang?"
 
 **SHOT 16 — Closing title**
 - Layar hitam
-- Logo Garuda Mesh fade in dengan amber glow
+- Logo CARAKA fade in dengan amber glow
 - Teks muncul satu per satu:
 
 ```
 OVERLAY TEXT:
-"GARUDA MESH"
+"CARAKA"
 "Offline Emergency Mesh Communication"
 " "
 "When The Grid Falls, We Rise."
@@ -338,7 +338,7 @@ OVERLAY TEXT:
 [00:45] "Bagaimana kita tetap berkomunikasi...
          ketika infrastruktur itu sendiri yang diserang?"
 
-[00:55] "Garuda Mesh. Tidak butuh internet. Tidak butuh BTS. Tidak butuh server."
+[00:55] "CARAKA. Tidak butuh internet. Tidak butuh BTS. Tidak butuh server."
 
 [01:05] "Setiap smartphone menjadi node dalam jaringan mesh mandiri.
          WiFi Direct menghubungkan perangkat langsung, device-to-device,
@@ -364,7 +364,7 @@ OVERLAY TEXT:
          Hoax teridentifikasi. Otoritas merespons dengan informasi terverifikasi.
          Kepanikan bisa dicegah."
 
-[03:25] "Infrastruktur pulih. Garuda Mesh secara otomatis
+[03:25] "Infrastruktur pulih. CARAKA secara otomatis
          beralih ke mode hybrid — mesh tetap aktif sebagai backup."
 
 [03:38] "Dalam empat menit darurat: dua belas pesan tersampaikan via relay.

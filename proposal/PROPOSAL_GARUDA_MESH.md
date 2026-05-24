@@ -1,6 +1,6 @@
 # PROPOSAL HACKATHON WRECK-IT 7.0
 
-## GARUDA MESH: Zero Trust Offline Communication Network untuk Ketahanan Infrastruktur Kritis pada Skenario Cyber Warfare
+## CARAKA: Zero Trust Offline Communication Network untuk Ketahanan Infrastruktur Kritis pada Skenario Cyber Warfare
 
 **Track**: IoT Resilience — Penguatan Infrastruktur Kritis via Zero Trust
 
@@ -41,7 +41,7 @@ Berdasarkan latar belakang di atas, rumusan masalah yang diangkat adalah:
 
 ### 1.3 Tujuan
 
-1. Mengembangkan **Garuda Mesh**, sebuah aplikasi Android yang membangun *offline mesh communication network* menggunakan WiFi Direct, memungkinkan komunikasi terenkripsi antar perangkat tanpa internet.
+1. Mengembangkan **CARAKA**, sebuah aplikasi Android yang membangun *offline mesh communication network* menggunakan WiFi Direct, memungkinkan komunikasi terenkripsi antar perangkat tanpa internet.
 2. Menerapkan arsitektur **Zero Trust** pada komunikasi offline melalui *end-to-end encryption*, *Public Key Infrastructure* (PKI), dan verifikasi identitas digital.
 3. Menyediakan sistem **SOS broadcast** dan koordinasi darurat yang memungkinkan first responders beroperasi secara efektif dalam skenario *cyber warfare*.
 
@@ -64,7 +64,7 @@ Berdasarkan latar belakang di atas, rumusan masalah yang diangkat adalah:
 
 ### 1.5 Ruang Lingkup
 
-Pengembangan Garuda Mesh dalam kompetisi ini difokuskan pada:
+Pengembangan CARAKA dalam kompetisi ini difokuskan pada:
 - Platform Android (API 26+)
 - Komunikasi offline via WiFi Direct
 - Pesan teks terenkripsi dan SOS broadcast
@@ -89,7 +89,7 @@ Serangan terhadap infrastruktur komunikasi merupakan langkah strategis dalam *cy
 
 *Zero Trust* adalah paradigma keamanan siber yang berprinsip "never trust, always verify" (NIST SP 800-207). Tidak ada entitas — baik internal maupun eksternal — yang dipercaya secara default. Setiap akses dan komunikasi harus diverifikasi, diotorisasi, dan dienkripsi.
 
-Prinsip Zero Trust yang diterapkan dalam Garuda Mesh:
+Prinsip Zero Trust yang diterapkan dalam CARAKA:
 
 | Prinsip | Implementasi |
 |---|---|
@@ -120,7 +120,7 @@ Spesifikasi teknis:
 
 ### 2.5 Kriptografi untuk Komunikasi Aman
 
-Garuda Mesh menggunakan kombinasi algoritma kriptografi modern:
+CARAKA menggunakan kombinasi algoritma kriptografi modern:
 
 - **X25519**: Elliptic Curve Diffie-Hellman untuk key exchange (Bernstein, 2006)
 - **Ed25519**: EdDSA signature scheme untuk tanda tangan digital
@@ -135,7 +135,7 @@ Kombinasi ini mengikuti best practice yang digunakan oleh Signal Protocol dan Wi
 
 ### 3.1 Pendekatan Pengembangan
 
-Pengembangan Garuda Mesh menggunakan pendekatan **Agile Sprint** dengan iterasi mingguan:
+Pengembangan CARAKA menggunakan pendekatan **Agile Sprint** dengan iterasi mingguan:
 
 | Sprint | Periode | Fokus |
 |---|---|---|
@@ -146,11 +146,11 @@ Pengembangan Garuda Mesh menggunakan pendekatan **Agile Sprint** dengan iterasi 
 
 ### 3.2 Arsitektur Sistem
 
-Garuda Mesh menggunakan arsitektur berlapis (*layered architecture*) dengan pemisahan tanggung jawab yang jelas:
+CARAKA menggunakan arsitektur berlapis (*layered architecture*) dengan pemisahan tanggung jawab yang jelas:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                  GARUDA MESH                      │
+│                  CARAKA                      │
 ├──────────────────────────────────────────────────┤
 │                                                  │
 │  Layer 4: APPLICATION (Presentation)             │
@@ -289,7 +289,7 @@ User Membuka Aplikasi
 
 ### 4.1 Deskripsi Solusi
 
-Garuda Mesh adalah **Zero Trust offline communication network** yang memungkinkan komunikasi darurat terenkripsi antar perangkat Android tanpa membutuhkan internet, jaringan seluler, atau infrastruktur apapun. Setiap perangkat yang menjalankan Garuda Mesh menjadi sebuah *node* dalam jaringan mesh, mampu mengirim, menerima, dan meneruskan (*relay*) pesan ke perangkat lain.
+CARAKA adalah **Zero Trust offline communication network** yang memungkinkan komunikasi darurat terenkripsi antar perangkat Android tanpa membutuhkan internet, jaringan seluler, atau infrastruktur apapun. Setiap perangkat yang menjalankan CARAKA menjadi sebuah *node* dalam jaringan mesh, mampu mengirim, menerima, dan meneruskan (*relay*) pesan ke perangkat lain.
 
 Solusi ini secara langsung menjawab kebutuhan penguatan infrastruktur kritis — khususnya infrastruktur komunikasi — melalui penerapan prinsip Zero Trust pada level paling fundamental: **komunikasi tetap berjalan bahkan ketika seluruh infrastruktur sudah lumpuh**.
 
@@ -359,8 +359,8 @@ Timeline Serangan:
 02:00 — Jamming tower seluler, jaringan mobile down
 03:00 — Disinformasi menyebar via sisa koneksi, panic massal
 
-Respons dengan Garuda Mesh:
-03:15 — First responders aktivasi Garuda Mesh
+Respons dengan CARAKA:
+03:15 — First responders aktivasi CARAKA
 03:20 — BPBD broadcast: "Shelter evakuasi di Gedung X" [✓ Verified]
 03:25 — Warga kirim SOS Medical: "Korban luka di Jl. Y"
 03:30 — PMI terima SOS via relay, kirim tim medis
@@ -399,13 +399,13 @@ Respons dengan Garuda Mesh:
 
 ### 5.1 Kesimpulan
 
-Garuda Mesh menjawab *critical gap* dalam ketahanan infrastruktur komunikasi Indonesia terhadap skenario *cyber warfare*. Dengan membangun **Zero Trust offline mesh communication network**, Garuda Mesh memungkinkan:
+CARAKA menjawab *critical gap* dalam ketahanan infrastruktur komunikasi Indonesia terhadap skenario *cyber warfare*. Dengan membangun **Zero Trust offline mesh communication network**, CARAKA memungkinkan:
 
 1. **Komunikasi darurat tanpa infrastruktur** — pesan terenkripsi tersalurkan melalui jaringan mesh device-to-device, beroperasi penuh tanpa internet, seluler, atau listrik grid.
 2. **Keamanan tanpa kompromi** — prinsip Zero Trust diterapkan pada setiap layer: enkripsi end-to-end, tanda tangan digital, dan verifikasi identitas offline.
 3. **Koordinasi evakuasi efektif** — SOS broadcast dan verified authority messages memungkinkan BPBD, Polri, dan PMI berkoordinasi secara real-time meskipun seluruh infrastruktur komunikasi lumpuh.
 
-Garuda Mesh bukan sekadar aplikasi chat offline — ini adalah **survival layer** bagi komunikasi nasional ketika *the fifth domain* diserang.
+CARAKA bukan sekadar aplikasi chat offline — ini adalah **survival layer** bagi komunikasi nasional ketika *the fifth domain* diserang.
 
 ### 5.2 Saran Pengembangan
 
@@ -433,4 +433,4 @@ Garuda Mesh bukan sekadar aplikasi chat offline — ini adalah **survival layer*
 ---
 
 *Dokumen ini adalah draft proposal untuk kompetisi Hackathon WRECK-IT 7.0 — Track IoT Resilience.*
-*Garuda Mesh © 2026. All rights reserved.*
+*CARAKA © 2026. All rights reserved.*

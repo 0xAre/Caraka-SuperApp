@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.garudamesh"
+    namespace = "com.example.caraka"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.garudamesh"
+        applicationId = "com.example.caraka"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

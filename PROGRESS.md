@@ -1,4 +1,4 @@
-# Garuda Mesh — Progress Tracker
+# CARAKA — Progress Tracker
 > WRECK-IT 7.0 · Track: IoT Resilience · Theme: Cyber Warfare: Silent War on The Fifth Domain  
 > Deadline Proposal: **14 Juni 2026** · Last updated: 23 Mei 2026
 
@@ -32,7 +32,7 @@
 - [x] **Title Card PNGs** — 2105×1489px exports (2.5× scale) · `demo/title_cards/card_01.png` s/d `card_08.png`
   | Card | Isi |
   |------|-----|
-  | 01 | Opening Title — GARUDA MESH |
+  | 01 | Opening Title — CARAKA |
   | 02 | Grid Down — semua infrastruktur offline |
   | 03 | Mesh Active — 4 nodes, E2E, ~400m, 0 servers |
   | 04 | SOS Emergency — medical alert + GPS + relay |

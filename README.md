@@ -1,8 +1,8 @@
-# Cakra Mesh (Garuda Mesh)
+# Cakra Mesh (CARAKA)
 
 **Offline crisis communication over WiFi Direct — when the grid falls, we rise.**
 
-Garuda Mesh is an Android app that builds a decentralized, encrypted mesh network without internet. It targets emergency coordination during infrastructure outages (cyber warfare, disasters, grid failure) for first responders, medical teams, authorities, and civilians.
+CARAKA is an Android app that builds a decentralized, encrypted mesh network without internet. It targets emergency coordination during infrastructure outages (cyber warfare, disasters, grid failure) for first responders, medical teams, authorities, and civilians.
 
 > *"When The Grid Falls, We Rise."*
 
@@ -10,7 +10,7 @@ Built for **WRECK-IT 7.0** (IoT Resilience) — theme: *Cyber Warfare: Silent Wa
 
 ## Problem
 
-When coordinated attacks take down internet, power, and cellular networks, most communication tools stop working. Garuda Mesh keeps peer-to-peer messaging, SOS broadcasts, and relay routing alive on local WiFi Direct links.
+When coordinated attacks take down internet, power, and cellular networks, most communication tools stop working. CARAKA keeps peer-to-peer messaging, SOS broadcasts, and relay routing alive on local WiFi Direct links.
 
 ## Features
 

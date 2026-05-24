@@ -1,4 +1,4 @@
-"GARUDA MESH" - Offline Crisis Communication Network
+"CARAKA" - Offline Crisis Communication Network
 Tagline:
 "When The Grid Falls, We Rise. Decentralized Emergency Communication for Cyber Warfare Resilience"
 
@@ -17,7 +17,7 @@ Hour 3: Disinformation spreading → Chaos & panic
 - BPBD nggak bisa evakuasi
 - Masyarakat panic, nggak ada info terpercaya
 
-✅ GARUDA MESH:
+✅ CARAKA:
 - Offline mesh network masih jalan
 - Encrypted communication tetap aman
 - Emergency coordination masih bisa
@@ -32,7 +32,7 @@ Fifth Domain: Resilience layer ketika domain siber diserang
 🏗 ARSITEKTUR SISTEM
 Multi-Layer Offline Communication:
 ┌─────────────────────────────────────────────┐
-│         GARUDA MESH ARCHITECTURE            │
+│         CARAKA ARCHITECTURE            │
 └─────────────────────────────────────────────┘
 
 Layer 1: DEVICE-TO-DEVICE (D2D)
@@ -203,7 +203,7 @@ User D (Ambulans driver, 2km away):
 🎨 MOCKUP SCREENS (untuk Proposal)
 1. Home Dashboard
 ┌─────────────────────────────┐
-│ 🛡 GARUDA MESH              │
+│ 🛡 CARAKA              │
 │                             │
 │ Status: 🟢 Mesh Active      │
 │ Nodes: 47 nearby            │
@@ -353,7 +353,7 @@ Timeline Demo:
 05:00 - Attack Begins (Narasi)
 ├─ "Internet & cellular down karena DDoS + infrastructure attack"
 ├─ Show: devices can't access internet
-└─ Activate GARUDA MESH
+└─ Activate CARAKA
 
 10:00 - Emergency Response
 ├─ Device A: Hospital broadcast SOS (butuh power generator)
@@ -424,7 +424,7 @@ User Opens App → Check Internet
 
 BAB III: PEMBAHASAN
 Deskripsi Solusi:
-[Jelasin konsep GARUDA MESH secara detail]
+[Jelasin konsep CARAKA secara detail]
 Fitur Utama:
 
 Mesh Networking Engine
@@ -455,7 +455,7 @@ Kekurangan: Range terbatas (solved by more users), battery drain (optimized)
  
 BAB IV: PENUTUP
 Kesimpulan:
-GARUDA MESH adalah solusi fundamental untuk cyber warfare resilience melalui decentralized offline communication. Menyelesaikan critical gap dalam national security infrastructure.
+CARAKA adalah solusi fundamental untuk cyber warfare resilience melalui decentralized offline communication. Menyelesaikan critical gap dalam national security infrastructure.
 Saran:
 
 Government adoption untuk disaster preparedness

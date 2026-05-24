@@ -1,4 +1,4 @@
-# 📋 PRD — GARUDA MESH
+# 📋 PRD — CARAKA
 # Offline Crisis Communication Network
 
 > **Version**: 1.1 | **Date**: 12 Mei 2026  
@@ -13,7 +13,7 @@
 
 ## 1. Executive Summary
 
-**Garuda Mesh** adalah aplikasi Android yang membangun **offline mesh communication network** via WiFi Direct, memungkinkan komunikasi darurat terenkripsi tanpa internet. Diposisikan sebagai **Zero Trust communication backbone untuk infrastruktur kritis saat cyber warfare**.
+**CARAKA** adalah aplikasi Android yang membangun **offline mesh communication network** via WiFi Direct, memungkinkan komunikasi darurat terenkripsi tanpa internet. Diposisikan sebagai **Zero Trust communication backbone untuk infrastruktur kritis saat cyber warfare**.
 
 **Tagline**: *"When The Grid Falls, We Rise."*
 
@@ -134,7 +134,7 @@ iOS, LoRa/Satellite, voice messages, offline maps, blockchain verification, deep
 
 ```
 ┌──────────────────────────────────────────────┐
-│               GARUDA MESH                     │
+│               CARAKA                     │
 ├──────────────────────────────────────────────┤
 │  Presentation    │  Domain        │  Data    │
 │  ─────────────   │  ──────────    │  ─────── │
@@ -278,7 +278,7 @@ Scene 1: "Serangan Terkoordinasi" (2 min)
   → Narasi: DDoS + infrastructure sabotage, semua internet mati
   → Show: 4 devices offline, no connectivity
 
-Scene 2: "Garuda Mesh Aktif" (2 min)
+Scene 2: "CARAKA Aktif" (2 min)
   → Buka app di semua device, mesh auto-connects
   → Show: network visualization — 4 nodes terhubung
 
