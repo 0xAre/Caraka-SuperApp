@@ -3,6 +3,7 @@ package com.example.caraka.network
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.IntentFilter
+import android.net.wifi.WifiManager
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pInfo
@@ -13,6 +14,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
 import com.example.caraka.MainActivity
 import com.example.caraka.crypto.CryptoManager
@@ -22,10 +24,17 @@ import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.repository.MeshRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.SocketException
 import java.util.UUID
 
 /**
@@ -41,6 +50,8 @@ class WifiDirectManager(
 
     companion object {
         private const val TAG = "WifiDirect"
+        private const val LAN_DISCOVERY_PORT = 8890
+        private const val LAN_DISCOVERY_INTERVAL_MS = 5_000L
     }
 
     private val manager: WifiP2pManager =
@@ -48,6 +59,10 @@ class WifiDirectManager(
     private val channel: WifiP2pManager.Channel =
         manager.initialize(context, context.mainLooper, null)
     private var receiver: WifiDirectReceiver? = null
+    private var scanJob: Job? = null
+    private var lanListenJob: Job? = null
+    private var lanBroadcastJob: Job? = null
+    private var lanSocket: DatagramSocket? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val intentFilter = IntentFilter().apply {
@@ -81,8 +96,24 @@ class WifiDirectManager(
     // ========== LIFECYCLE ==========
 
     fun startListening() {
-        receiver = WifiDirectReceiver(manager, channel, this)
-        context.registerReceiver(receiver, intentFilter)
+        if (receiver != null) {
+            discoverPeers()
+            startLanDiscovery()
+            return
+        }
+
+        val newReceiver = WifiDirectReceiver(manager, channel, this)
+        receiver = newReceiver
+        ContextCompat.registerReceiver(
+            context,
+            newReceiver,
+            intentFilter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        requestCurrentPeers()
+        discoverPeers()
+        startPeriodicDiscovery()
+        startLanDiscovery()
     }
 
     fun stopListening() {
@@ -93,7 +124,20 @@ class WifiDirectManager(
                 // Ignore if not registered
             }
         }
+        receiver = null
+        scanJob?.cancel()
+        scanJob = null
+        lanBroadcastJob?.cancel()
+        lanBroadcastJob = null
+        lanListenJob?.cancel()
+        lanListenJob = null
+        lanSocket?.close()
+        lanSocket = null
         socketManager.stopAll()
+    }
+
+    fun startFallbackDiscovery() {
+        startLanDiscovery()
     }
 
     // ========== WIFI DIRECT ACTIONS ==========
@@ -101,21 +145,27 @@ class WifiDirectManager(
     @SuppressLint("MissingPermission")
     fun discoverPeers() {
         if (!_isWifiP2pEnabled.value) {
-            Log.w(TAG, "WiFi P2P is not enabled")
-            return
+            Log.d(TAG, "WiFi P2P state not confirmed yet; trying discovery anyway")
         }
 
         _connectionState.value = "DISCOVERING"
-        manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() {
-                Log.d(TAG, "Discovery started")
-            }
+        try {
+            manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() {
+                    Log.d(TAG, "Discovery started")
+                    requestCurrentPeers()
+                }
 
-            override fun onFailure(reasonCode: Int) {
-                Log.e(TAG, "Discovery failed: $reasonCode")
-                _connectionState.value = "DISCOVERY_FAILED"
-            }
-        })
+                override fun onFailure(reasonCode: Int) {
+                    Log.e(TAG, "Discovery failed: $reasonCode")
+                    _connectionState.value = "DISCOVERY_FAILED"
+                    requestCurrentPeers()
+                }
+            })
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Missing permission for WiFi Direct discovery", e)
+            _connectionState.value = "PERMISSION_MISSING"
+        }
     }
 
     /**
@@ -175,10 +225,18 @@ class WifiDirectManager(
 
     internal fun onWifiStateChanged(isEnabled: Boolean) {
         _isWifiP2pEnabled.value = isEnabled
+        if (isEnabled) {
+            requestCurrentPeers()
+            discoverPeers()
+        } else {
+            _availablePeers.value = emptyList()
+            _connectionState.value = "WIFI_P2P_DISABLED"
+        }
     }
 
     internal fun onPeersAvailable(peers: List<WifiP2pDevice>) {
         _availablePeers.value = peers
+        _connectionState.value = if (peers.isEmpty()) "NO_PEERS" else "PEERS_FOUND"
     }
 
     internal fun onConnectionInfoAvailable(info: WifiP2pInfo) {
@@ -201,6 +259,151 @@ class WifiDirectManager(
         Log.d(TAG, "Disconnected")
         _connectionState.value = "DISCONNECTED"
         socketManager.stopAll()
+        scope.launch {
+            repository.disconnectAllPeers()
+        }
+        requestCurrentPeers()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestCurrentPeers() {
+        try {
+            manager.requestPeers(channel) { peers ->
+                onPeersAvailable(peers.deviceList.toList())
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Missing permission to request WiFi Direct peers", e)
+            _connectionState.value = "PERMISSION_MISSING"
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to request WiFi Direct peers", e)
+        }
+    }
+
+    private fun startPeriodicDiscovery() {
+        if (scanJob?.isActive == true) return
+        scanJob = scope.launch {
+            while (true) {
+                discoverPeers()
+                delay(15_000L)
+            }
+        }
+    }
+
+    private fun startLanDiscovery() {
+        startLanListener()
+        startLanBroadcaster()
+    }
+
+    private fun startLanListener() {
+        if (lanListenJob?.isActive == true) return
+        lanListenJob = scope.launch {
+            try {
+                val socket = DatagramSocket(null).apply {
+                    reuseAddress = true
+                    broadcast = true
+                    bind(InetSocketAddress(LAN_DISCOVERY_PORT))
+                }
+                lanSocket = socket
+                val buffer = ByteArray(65_536)
+
+                while (true) {
+                    val packet = DatagramPacket(buffer, buffer.size)
+                    socket.receive(packet)
+                    val json = String(packet.data, 0, packet.length, Charsets.UTF_8)
+                    val protocol = MeshProtocol.fromJson(json) ?: continue
+                    val myId = identityManager.getPeerId()
+
+                    if (protocol.type == "HANDSHAKE" &&
+                        protocol.content == "LAN_DISCOVERY" &&
+                        protocol.senderId.isNotBlank() &&
+                        protocol.senderId != myId
+                    ) {
+                        saveLanPeer(protocol, packet.address.hostAddress ?: "unknown")
+                    }
+                }
+            } catch (_: SocketException) {
+                // Socket is closed during normal shutdown.
+            } catch (e: Exception) {
+                Log.e(TAG, "LAN discovery listener failed", e)
+            }
+        }
+    }
+
+    private fun startLanBroadcaster() {
+        if (lanBroadcastJob?.isActive == true) return
+        lanBroadcastJob = scope.launch {
+            while (true) {
+                sendLanHandshake()
+                delay(LAN_DISCOVERY_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun sendLanHandshake() {
+        val myId = identityManager.getPeerId()
+        if (myId.isBlank()) return
+
+        val handshake = MeshProtocol(
+            type = "HANDSHAKE",
+            id = UUID.randomUUID().toString(),
+            senderId = myId,
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = "BROADCAST",
+            content = "LAN_DISCOVERY",
+            timestamp = System.currentTimeMillis(),
+            publicKey = identityManager.getEncryptionPublicKeyBase64(),
+            signingKey = identityManager.getSigningPublicKeyBase64()
+        )
+        val bytes = handshake.toJson().toByteArray(Charsets.UTF_8)
+
+        try {
+            DatagramSocket().use { socket ->
+                socket.broadcast = true
+                localBroadcastAddresses().forEach { address ->
+                    val packet = DatagramPacket(bytes, bytes.size, address, LAN_DISCOVERY_PORT)
+                    socket.send(packet)
+                }
+            }
+            Log.d(TAG, "LAN discovery handshake broadcast")
+        } catch (e: Exception) {
+            Log.e(TAG, "LAN discovery broadcast failed", e)
+        }
+    }
+
+    private suspend fun saveLanPeer(protocol: MeshProtocol, hostAddress: String) {
+        val peer = PeerEntity(
+            id = protocol.senderId,
+            deviceName = protocol.senderName,
+            displayName = protocol.senderName,
+            role = protocol.senderRole,
+            publicKey = protocol.publicKey ?: "",
+            signingKey = protocol.signingKey ?: "",
+            isVerified = false,
+            isAuthority = protocol.senderRole in listOf("BPBD", "POLRI", "PMI"),
+            macAddress = "lan:$hostAddress",
+            lastSeen = System.currentTimeMillis(),
+            isConnected = true,
+            hopCount = 0
+        )
+        repository.savePeer(peer)
+        _connectionState.value = "LAN_PEER_FOUND"
+        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress")
+    }
+
+    private fun localBroadcastAddresses(): Set<InetAddress> {
+        val addresses = linkedSetOf(InetAddress.getByName("255.255.255.255"))
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val dhcp = wifiManager?.dhcpInfo ?: return addresses
+        val broadcast = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
+        val bytes = byteArrayOf(
+            (broadcast and 0xff).toByte(),
+            ((broadcast shr 8) and 0xff).toByte(),
+            ((broadcast shr 16) and 0xff).toByte(),
+            ((broadcast shr 24) and 0xff).toByte()
+        )
+        addresses.add(InetAddress.getByAddress(bytes))
+        return addresses
     }
 
     // ========== MESH MESSAGE LISTENER (from MeshSocketManager) ==========

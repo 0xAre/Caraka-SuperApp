@@ -40,6 +40,10 @@ class MeshRepository(
         peerDao.insertPeer(peer)
     }
 
+    suspend fun disconnectAllPeers() {
+        peerDao.disconnectAll()
+    }
+
     // ========== MESSAGING ==========
 
     suspend fun saveMessage(message: MessageEntity) {

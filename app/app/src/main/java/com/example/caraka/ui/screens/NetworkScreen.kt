@@ -3,6 +3,7 @@ package com.example.caraka.ui.screens
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -21,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.ui.theme.*
+import com.example.caraka.viewmodel.MeshNodeUi
 import com.example.caraka.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.*
@@ -35,6 +37,7 @@ private data class GraphNode(
     val role: String,
     val isAuthority: Boolean,
     val hopCount: Int,
+    val isConnected: Boolean,
     var x: Float = 0f,
     var y: Float = 0f,
     var vx: Float = 0f,
@@ -46,16 +49,20 @@ private data class GraphNode(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NetworkScreen(viewModel: MainViewModel? = null) {
-    val connectedPeers by viewModel?.connectedPeers?.collectAsStateWithLifecycle(initialValue = emptyList())
+    val meshNodes by viewModel?.meshNodes?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
     val connectionState by viewModel?.connectionState?.collectAsStateWithLifecycle(initialValue = "IDLE")
         ?: remember { mutableStateOf("IDLE") }
-    val connectedNodes by viewModel?.connectedPeerCount?.collectAsStateWithLifecycle(initialValue = 0)
-        ?: remember { mutableStateOf(0) }
+    val meshNodeCount by viewModel?.meshNodeCount?.collectAsStateWithLifecycle(initialValue = 1)
+        ?: remember { mutableStateOf(1) }
     val activeAlerts by viewModel?.activeAlerts?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0)
         ?: remember { mutableStateOf(0) }
+
+    LaunchedEffect(viewModel) {
+        viewModel?.discoverPeers()
+    }
 
     Scaffold(
         topBar = {
@@ -79,14 +86,14 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
             // Force-directed network graph
             Box(modifier = Modifier.fillMaxSize()) {
                 MeshNetworkGraph(
-                    peers = connectedPeers,
+                    peers = meshNodes,
                     hasSosActive = activeAlerts.isNotEmpty(),
                     modifier = Modifier.fillMaxSize()
                 )
 
                 // Bottom stats strip (Floating Glassmorphism)
                 NetworkStatsPanel(
-                    nodeCount = connectedNodes + 1,
+                    nodeCount = meshNodeCount,
                     connectionState = connectionState,
                     sosCount = activeAlerts.size,
                     relayedCount = relayed,
@@ -103,7 +110,7 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
 
 @Composable
 private fun MeshNetworkGraph(
-    peers: List<PeerEntity>,
+    peers: List<MeshNodeUi>,
     hasSosActive: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -134,17 +141,18 @@ private fun MeshNetworkGraph(
     val nodes = remember(peers.map { it.id }.toSet()) {
         mutableStateListOf<GraphNode>().also { list ->
             // Self node at center
-            list.add(GraphNode("SELF", "YOU", "SELF", isAuthority = false, hopCount = -1, x = 0f, y = 0f))
+            list.add(GraphNode("SELF", "YOU", "SELF", isAuthority = false, hopCount = -1, isConnected = true, x = 0f, y = 0f))
             peers.forEachIndexed { i, peer ->
                 val angle = (i.toFloat() / peers.size.coerceAtLeast(1)) * 2 * PI.toFloat()
                 val r = if (peer.hopCount == 0) 0.35f else 0.62f
                 list.add(
                     GraphNode(
                         id = peer.id,
-                        name = peer.displayName,
+                        name = peer.name,
                         role = peer.role,
                         isAuthority = peer.isAuthority,
                         hopCount = peer.hopCount,
+                        isConnected = peer.isConnected,
                         x = cos(angle) * r,
                         y = sin(angle) * r
                     )
@@ -250,7 +258,7 @@ private fun MeshNetworkGraph(
         // ── Edges ─────────────────────────────────────────────────────────────
         nodes.filter { it.id != "SELF" }.forEach { peer ->
             val peerPos = pos(peer)
-            val isDirect = peer.hopCount == 0
+            val isDirect = peer.hopCount == 0 && peer.isConnected
 
             if (isDirect) {
                 // Direct peer — solid amber line
@@ -324,6 +332,12 @@ private fun MeshNetworkGraph(
                     // Shield cross mark
                     drawLine(Color.White.copy(alpha = 0.9f), Offset(p.x, p.y - 6.dp.toPx()), Offset(p.x, p.y + 6.dp.toPx()), 1.5f.dp.toPx())
                     drawLine(Color.White.copy(alpha = 0.9f), Offset(p.x - 5.dp.toPx(), p.y), Offset(p.x + 5.dp.toPx(), p.y), 1.5f.dp.toPx())
+                }
+                !node.isConnected -> {
+                    drawCircle(color = DisasterBlue.copy(alpha = 0.12f), radius = 20.dp.toPx(), center = p)
+                    drawCircle(color = SurfaceDark, radius = 13.dp.toPx(), center = p)
+                    drawCircle(color = DisasterBlue.copy(alpha = 0.75f), radius = 13.dp.toPx(), center = p, style = Stroke(1.5f.dp.toPx()))
+                    drawCircle(color = DisasterBlue.copy(alpha = 0.9f), radius = 5.dp.toPx(), center = p)
                 }
                 node.hopCount > 0 -> {
                     // Relayed (multi-hop) node

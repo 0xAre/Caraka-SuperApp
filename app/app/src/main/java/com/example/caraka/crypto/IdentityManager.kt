@@ -57,7 +57,7 @@ class IdentityManager(
      */
     suspend fun hasIdentity(): Boolean {
         val prefs = context.identityStore.data.first()
-        return prefs[KEY_PEER_ID] != null
+        return !prefs[KEY_PEER_ID].isNullOrBlank()
     }
 
     /**

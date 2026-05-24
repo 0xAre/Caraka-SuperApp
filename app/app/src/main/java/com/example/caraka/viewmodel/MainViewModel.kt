@@ -14,8 +14,18 @@ import com.example.caraka.repository.MeshRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class MeshNodeUi(
+    val id: String,
+    val name: String,
+    val role: String,
+    val isAuthority: Boolean,
+    val hopCount: Int,
+    val isConnected: Boolean
+)
 
 class MainViewModel(
     private val repository: MeshRepository,
@@ -28,22 +38,6 @@ class MainViewModel(
 
     private val _hasIdentity = kotlinx.coroutines.flow.MutableStateFlow(true)
     val hasIdentity: StateFlow<Boolean> = _hasIdentity
-
-    init {
-        viewModelScope.launch {
-            _hasIdentity.value = identityManager.hasIdentity()
-            if (_hasIdentity.value) {
-                wifiDirectManager.updateDeviceName(identityManager.getDisplayName())
-            }
-        }
-
-        // Keep ConnectivityMonitor in sync with mesh peer count
-        viewModelScope.launch {
-            connectedPeerCount.collect { count ->
-                connectivityMonitor.setMeshActive(count > 0)
-            }
-        }
-    }
 
     // ========== STATE FLOWS (DB) ==========
 
@@ -67,6 +61,38 @@ class MainViewModel(
 
     val connectionState: StateFlow<String> = wifiDirectManager.connectionState
 
+    val meshNodes: StateFlow<List<MeshNodeUi>> = combine(connectedPeers, availablePeers) { connected, available ->
+        val connectedMacs = connected.mapNotNull { it.macAddress }.toSet()
+        val connectedNodes = connected.map { peer ->
+            MeshNodeUi(
+                id = peer.id,
+                name = peer.displayName,
+                role = peer.role,
+                isAuthority = peer.isAuthority,
+                hopCount = peer.hopCount,
+                isConnected = true
+            )
+        }
+        val discoveredNodes = available
+            .filterNot { device -> device.deviceAddress in connectedMacs }
+            .map { device ->
+                MeshNodeUi(
+                    id = "wifi:${device.deviceAddress}",
+                    name = device.deviceName.ifBlank { "Nearby device" },
+                    role = device.statusLabel(),
+                    isAuthority = false,
+                    hopCount = 0,
+                    isConnected = device.status == WifiP2pDevice.CONNECTED
+                )
+            }
+
+        (connectedNodes + discoveredNodes).distinctBy { it.id }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val meshNodeCount: StateFlow<Int> = meshNodes
+        .map { nodes -> nodes.size + 1 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+
     // ========== STATE FLOWS (Connectivity) ==========
 
     /** 🟢 ONLINE / 🟡 HYBRID / 🔴 MESH_ONLY */
@@ -76,6 +102,24 @@ class MainViewModel(
 
     /** Messages relayed for other nodes (multi-hop stat). */
     val relayedMessageCount: StateFlow<Int> = wifiDirectManager.relayedMessageCount
+
+    init {
+        viewModelScope.launch {
+            repository.disconnectAllPeers()
+            _hasIdentity.value = identityManager.hasIdentity()
+            if (_hasIdentity.value) {
+                wifiDirectManager.updateDeviceName(identityManager.getDisplayName())
+                wifiDirectManager.startFallbackDiscovery()
+            }
+        }
+
+        // Keep ConnectivityMonitor in sync with visible mesh node count.
+        viewModelScope.launch {
+            meshNodeCount.collect { count ->
+                connectivityMonitor.setMeshActive(count > 1)
+            }
+        }
+    }
 
     // ========== ACTIONS ==========
 
@@ -87,6 +131,7 @@ class MainViewModel(
                 identityManager.loadAuthorityIdentity(role)
             }
             wifiDirectManager.updateDeviceName(displayName)
+            wifiDirectManager.startFallbackDiscovery()
             _hasIdentity.value = true
         }
     }
@@ -163,5 +208,16 @@ class MainViewModelFactory(
             return MainViewModel(repository, identityManager, wifiDirectManager, connectivityMonitor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+private fun WifiP2pDevice.statusLabel(): String {
+    return when (status) {
+        WifiP2pDevice.AVAILABLE -> "AVAILABLE"
+        WifiP2pDevice.INVITED -> "INVITED"
+        WifiP2pDevice.CONNECTED -> "CONNECTED"
+        WifiP2pDevice.FAILED -> "FAILED"
+        WifiP2pDevice.UNAVAILABLE -> "UNAVAILABLE"
+        else -> "DISCOVERED"
     }
 }

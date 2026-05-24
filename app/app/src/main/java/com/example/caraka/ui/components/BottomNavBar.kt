@@ -59,32 +59,33 @@ fun BottomNavBar(navController: NavController) {
             contentColor = TextSecondary,
             tonalElevation = 0.dp
         ) {
-        val navBackStackEntry = navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry.value?.destination?.route
+            val navBackStackEntry = navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry.value?.destination?.route
 
-        items.forEach { screen ->
-            val isSelected = currentRoute == screen.route
-            NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.title) },
-                label = { Text(screen.title) },
-                selected = isSelected,
-                onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+            items.forEach { screen ->
+                val isSelected = currentRoute == screen.route
+                NavigationBarItem(
+                    icon = { Icon(screen.icon, contentDescription = screen.title) },
+                    label = { Text(screen.title) },
+                    selected = isSelected,
+                    onClick = {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
-                    unselectedIconColor = TextSecondary,
-                    selectedTextColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
-                    unselectedTextColor = TextSecondary,
-                    indicatorColor = SurfaceDark // Hide default indicator pill
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
+                        unselectedIconColor = TextSecondary,
+                        selectedTextColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
+                        unselectedTextColor = TextSecondary,
+                        indicatorColor = SurfaceDark // Hide default indicator pill
+                    )
                 )
-            )
+            }
         }
     }
 }

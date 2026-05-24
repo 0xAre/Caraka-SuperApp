@@ -33,8 +33,8 @@ import com.example.caraka.viewmodel.MainViewModel
 fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? = null) {
     val activeAlerts by viewModel?.activeAlerts?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
-    val connectedNodes by viewModel?.connectedPeerCount?.collectAsStateWithLifecycle(initialValue = 0)
-        ?: remember { mutableStateOf(0) }
+    val meshNodeCount by viewModel?.meshNodeCount?.collectAsStateWithLifecycle(initialValue = 1)
+        ?: remember { mutableStateOf(1) }
     val connectivity by viewModel?.connectivityStatus?.collectAsStateWithLifecycle(
         initialValue = ConnectivityStatus.MESH_ONLY)
         ?: remember { mutableStateOf(ConnectivityStatus.MESH_ONLY) }
@@ -77,7 +77,7 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
             item {
                 ConnectivityBanner(
                     status = if (attackSimActive) ConnectivityStatus.MESH_ONLY else connectivity,
-                    nodeCount = connectedNodes,
+                    nodeCount = meshNodeCount,
                     isAttackSim = attackSimActive
                 )
             }
@@ -85,7 +85,7 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
             // ── Live stats row ─────────────────────────────────────────────
             item {
                 LiveStatsRow(
-                    nodeCount = connectedNodes + 1,
+                    nodeCount = meshNodeCount,
                     sosCount = activeAlerts.size,
                     relayedCount = relayed
                 )
