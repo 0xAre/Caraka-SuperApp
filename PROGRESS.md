@@ -22,9 +22,21 @@
 - [x] **ChatScreen update** — Long-press to flag (hoax reporting), flag confirmation dialog, `combinedClickable`, authority badge (✓ Verified icon), warning badge saat flagCount ≥ 3
 
 ### 📄 Proposal & Dokumentasi
-- [x] **Proposal PDF** — 19 halaman, 476KB · `proposal/PROPOSAL_GARUDA_MESH_WRECK-IT-7.0.pdf`
-  - Cover, Executive Summary, Latar Belakang, Arsitektur Teknis, Security Stack (X25519 + Ed25519 + XChaCha20-Poly1305), Feature Matrix, Roadmap, Kesimpulan
-- [x] **Proposal HTML source** — Editable di `proposal/proposal_garuda_mesh.html`
+- [x] **Proposal PDF** — 15 halaman, 655KB · `proposal/PROPOSAL_GARUDA_MESH_WRECK-IT-7.0.pdf`
+  - Cover, Executive Summary, Latar Belakang, Arsitektur Teknis, Security Stack (X25519 + Ed25519 + XChaCha20-Poly1305), Feature Matrix, **3.7 Evaluasi HCI (Heuristik Nielsen + WCAG 2.1)**, Roadmap, Kesimpulan
+- [x] **Proposal HTML source** — Editable di `proposal/proposal_caraka.html`
+- [x] **HCI Evaluation doc** — `docs/HCI_EVALUATION.md` (14KB, pemetaan lengkap ke Nielsen + WCAG dengan code refs)
+
+### 🎨 UI/UX & HCI Upgrade (Jan 2026)
+- [x] **i18n dual-locale** — Bahasa Indonesia (default) + English (175 string per locale)
+- [x] **Tipografi taktis** — Rajdhani (display) + Inter (body) + JetBrains Mono (peer ID) via Downloadable Google Fonts
+- [x] **Hold-to-confirm SOS** (2 detik) — Nielsen #5 Error Prevention
+- [x] **Haptic feedback** — Util semantic (tick/light/heavy/SOS-waveform 3-pulsa)
+- [x] **Onboarding tour 5-langkah** — replay-able dari Help
+- [x] **HelpScreen** + InfoTooltip — 6 FAQ + ringkasan heuristik HCI + a11y
+- [x] **High-Contrast mode** (WCAG AAA) + **Big-Text mode** (+25%)
+- [x] **Snackbar feedback bus** — visibility of system status
+- [x] **Accessibility semantics** — role/contentDescription/stateDescription di semua kontrol custom
 
 ### 🎬 Demo Video Package
 - [x] **Demo Script** — Narasi word-for-word 4 menit, shot list, timing cues, setup checklist, editing guide · `demo/DEMO_VIDEO_SCRIPT.md`

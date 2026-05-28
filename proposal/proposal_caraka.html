@@ -383,6 +383,7 @@
   <div class="toc-item toc-sub"><span>3.4 Skenario Penggunaan</span></div>
   <div class="toc-item toc-sub"><span>3.5 Dampak dan Relevansi</span></div>
   <div class="toc-item toc-sub"><span>3.6 Analisis SWOT</span></div>
+  <div class="toc-item toc-sub"><span>3.7 Evaluasi HCI (Heuristik Nielsen &amp; WCAG 2.1)</span></div>
 
   <div class="toc-item toc-bab" style="margin-top:8px;"><span>BAB IV &nbsp; PENUTUP</span></div>
   <div class="toc-item toc-sub"><span>4.1 Kesimpulan</span></div>
@@ -914,6 +915,144 @@ Node A ──── [TEXT, TTL=5] ────▶ Node B ──── [TEXT, TTL
       </tr>
     </tbody>
   </table>
+
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!--  3.7 Evaluasi HCI                                -->
+<!-- ════════════════════════════════════════════════ -->
+<div class="content page-break">
+
+  <h2 class="sub">3.7 Evaluasi HCI (Heuristik Nielsen &amp; WCAG 2.1)</h2>
+
+  <p>
+    Karena CARAKA dipakai dalam kondisi krisis (pengguna panik, pencahayaan minim,
+    perangkat sering bergetar, lintas peran &amp; bahasa), kualitas
+    <strong>Human-Computer Interaction</strong> menjadi penentu apakah aplikasi ini
+    benar-benar berguna saat dibutuhkan. Antarmuka kami dievaluasi terhadap dua
+    standar industri: <strong>10 Heuristik Usability Jakob Nielsen</strong> dan
+    <strong>WCAG 2.1</strong> (Web Content Accessibility Guidelines). Ringkasan
+    pemetaannya disajikan di tabel berikut; dokumen lengkap dengan referensi baris
+    kode tersedia di <code>docs/HCI_EVALUATION.md</code> pada repositori.
+  </p>
+
+  <h3 class="subsub" style="margin-top:14px;">A. Pemetaan Heuristik Nielsen</h3>
+  <table>
+    <thead>
+      <tr><th style="width:30%;">Heuristik</th><th>Implementasi di CARAKA</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>N1. Visibility of System Status</strong></td>
+        <td>Banner konektivitas 🟢/🟡/🔴 selalu tampil di Beranda dengan titik berdenyut saat mesh-only; <em>LiveStatsRow</em> (node, range, alarm, paket di-relay) bergerak real-time; snackbar global mengonfirmasi setiap aksi penting.</td>
+      </tr>
+      <tr>
+        <td><strong>N2. Match Real World</strong></td>
+        <td>Ikon emergency universal (🚨 medis, 🔥 kebakaran, ⚠️ keamanan, 🌊 bencana); <strong>Bahasa Indonesia default</strong> sesuai pengguna target (BPBD/Polri/PMI), dengan toggle ke English.</td>
+      </tr>
+      <tr>
+        <td><strong>N3. User Control &amp; Freedom</strong></td>
+        <td>Tombol kembali tegas di setiap layar; <em>Hold-to-Confirm</em> SOS bisa dibatalkan dengan melepas jari &lt; 2 detik; toggle bahasa &amp; mode aksesibilitas reversibel kapan saja.</td>
+      </tr>
+      <tr>
+        <td><strong>N4. Consistency &amp; Standards</strong></td>
+        <td>Material 3 dipakai konsisten; skema warna per peran (BPBD=biru, Polri=amber, PMI=merah, Sipil=mint); tipografi terpusat (Rajdhani display, Inter body, JetBrains Mono untuk peer ID).</td>
+      </tr>
+      <tr>
+        <td><strong>N5. Error Prevention</strong></td>
+        <td><strong>Hold-to-Confirm 2 detik</strong> sebelum SOS disiarkan; tombol SOS <em>disabled</em> sampai kategori dipilih; dialog konfirmasi sebelum melaporkan hoaks &amp; reset identitas; validasi input inline.</td>
+      </tr>
+      <tr>
+        <td><strong>N6. Recognition &gt; Recall</strong></td>
+        <td><em>Onboarding Tour</em> 5 langkah otomatis saat pertama dibuka, replay-able dari Help; badge peran selalu tampil di chat header &amp; daftar pesan; ikon ✓ Verified untuk otoritas.</td>
+      </tr>
+      <tr>
+        <td><strong>N7. Flexibility &amp; Efficiency</strong></td>
+        <td>Gesture <em>hold</em> &amp; <em>long-press</em> untuk shortcut; bottom-nav 5 tab akses 1 tap; floating in-app alert tap-to-open chat; toggle aksesibilitas tanpa restart aplikasi.</td>
+      </tr>
+      <tr>
+        <td><strong>N8. Aesthetic &amp; Minimalist Design</strong></td>
+        <td>Tema gelap taktis <code>#0A1628</code> + amber <code>#F59E0B</code> kontras tinggi tanpa ramai; glass-morphism halus memberi kedalaman; hierarki visual jelas; tidak ada iklan/informasi redundan.</td>
+      </tr>
+      <tr>
+        <td><strong>N9. Error Recovery</strong></td>
+        <td>Pesan error <em>inline</em> dengan saran konkret (mis. "Nama tampilan wajib diisi untuk peran Warga Sipil"); error otorisasi spesifik; status koneksi gagal terlihat di header chat.</td>
+      </tr>
+      <tr>
+        <td><strong>N10. Help &amp; Documentation</strong></td>
+        <td>Layar <em>Help</em> lengkap dengan 6 FAQ + ringkasan heuristik HCI + a11y; komponen <em>InfoTooltip</em> reusable untuk istilah teknis (TTL, hop, peer ID); setiap dialog menjelaskan dampaknya.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsub" style="margin-top:18px;">B. Kepatuhan WCAG 2.1</h3>
+  <div class="box-green">
+    <strong>Level AA (default), Level AAA (opsional via mode kontras tinggi).</strong><br/>
+    Implementasi konkret yang dapat diverifikasi:
+    <ul style="margin-top:6px; padding-left:18px;">
+      <li><strong>1.1.1 Non-text Content (A)</strong> — Semua ikon punya <code>contentDescription</code>.</li>
+      <li><strong>1.3.1 Info &amp; Relationships (A)</strong> — Custom controls memakai <code>Modifier.semantics { role; stateDescription }</code>.</li>
+      <li><strong>1.4.3 Contrast Minimum (AA)</strong> — Palet default lulus rasio 4.5:1 (body) &amp; 3:1 (display).</li>
+      <li><strong>1.4.6 Contrast Enhanced (AAA)</strong> — Mode High-Contrast opsional menaikkan rasio ke 7:1.</li>
+      <li><strong>1.4.4 Resize Text (AA)</strong> — Font-scale sistem dihormati; mode Big-Text menambah +25 % skala font.</li>
+      <li><strong>2.5.5 Target Size (AAA)</strong> — Semua tombol primer ≥ 48 dp.</li>
+      <li><strong>3.1.1 / 3.1.2 Language (A/AA)</strong> — Locale di-set dinamis via <code>createConfigurationContext</code>; toggle ID ↔ EN tanpa restart.</li>
+      <li><strong>4.1.2 Name, Role, Value (A)</strong> — TalkBack dapat membaca setiap kontrol custom.</li>
+    </ul>
+  </div>
+
+  <h3 class="subsub" style="margin-top:18px;">C. Fitur Inklusif &amp; Affective UX</h3>
+  <table>
+    <thead>
+      <tr><th style="width:35%;">Fitur</th><th>Manfaat &amp; Implementasi</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Multibahasa ID/EN</strong></td>
+        <td>175 string resource per locale; toggle 1 tap di Pengaturan; recomposition langsung tanpa restart.</td>
+      </tr>
+      <tr>
+        <td><strong>Mode Teks Besar</strong></td>
+        <td>Memperbesar seluruh teks +25 % — krusial saat panik atau pencahayaan rendah.</td>
+      </tr>
+      <tr>
+        <td><strong>Mode Kontras Tinggi</strong></td>
+        <td>Palet WCAG AAA (<code>#000814</code> background, <code>#FFFFFF</code> teks, amber/mint lebih terang) untuk pengguna <em>low-vision</em>.</td>
+      </tr>
+      <tr>
+        <td><strong>Umpan Balik Haptik</strong></td>
+        <td>Pola berbeda untuk tick (toggle), light (kirim), heavy (navigasi SOS), dan waveform 3-pulsa saat siaran berhasil — terasa walau di saku.</td>
+      </tr>
+      <tr>
+        <td><strong>Screen-Reader Ready</strong></td>
+        <td>Semua kontrol custom (<em>HoldToConfirmButton</em>, banner, kartu alert) memakai <code>semantics{}</code> agar dibacakan TalkBack.</td>
+      </tr>
+      <tr>
+        <td><strong>Snackbar Feedback Bus</strong></td>
+        <td>Konfirmasi non-intrusif setiap aksi penting: "Pesan terkirim", "SOS disiarkan ke X node", "Pesan diteruskan".</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="subsub" style="margin-top:18px;">D. Studi Kasus User Flow — "Warga Panik Kirim SOS"</h3>
+  <div class="box-amber">
+    <ol style="margin:0; padding-left:18px;">
+      <li>Buka aplikasi → status <strong>🔴 MESH ONLY</strong> langsung terlihat <em>(N1 Visibility)</em>.</li>
+      <li>Tap tombol SOS pulsing 148 dp — jauh di atas batas WCAG 48 dp <em>(N4 Consistency, WCAG 2.5.5)</em>; haptic <em>heavy</em> mengonfirmasi tap <em>(Affective UX)</em>.</li>
+      <li>Pilih kategori darurat dari 4 ikon universal: 🚨 / 🔥 / ⚠️ / 🌊 <em>(N2 Match real world)</em>.</li>
+      <li><strong>Tahan tombol 2 detik</strong> untuk mengonfirmasi — mencegah salah pencet di tengah panik <em>(N5 Error Prevention)</em>.</li>
+      <li>Saat siaran berhasil: haptic 3-pulsa + label "SIARAN SOS TERKIRIM" + snackbar "SOS disiarkan ke X node" <em>(N1, N9)</em>.</li>
+      <li>Kembali otomatis ke Beranda setelah 1,8 detik — pengguna tidak perlu mencari tombol kembali saat krisis <em>(N3)</em>.</li>
+    </ol>
+  </div>
+
+  <p style="margin-top:14px;">
+    Dengan kombinasi heuristik klasik, kepatuhan aksesibilitas modern, dan
+    fitur afektif (haptik, animasi denyut), CARAKA tidak hanya berjalan tanpa
+    internet — ia juga <strong>tetap dapat dipakai oleh siapa saja, dalam kondisi
+    apa pun, tanpa pelatihan formal</strong>. Inilah esensi resiliensi yang
+    sesungguhnya: bukan hanya jaringan, tetapi juga manusia di ujungnya.
+  </p>
 
 </div>
 

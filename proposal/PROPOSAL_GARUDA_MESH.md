@@ -395,6 +395,63 @@ Respons dengan CARAKA:
 
 ---
 
+### 4.7 Evaluasi HCI (Human-Computer Interaction)
+
+Karena CARAKA dipakai dalam kondisi krisis (panik, pencahayaan minim, perangkat bergetar, lintas peran & bahasa), kualitas **HCI** menentukan apakah aplikasi ini benar-benar berguna saat dibutuhkan. Antarmuka kami dievaluasi terhadap dua standar industri:
+
+#### A. Pemetaan terhadap 10 Heuristik Usability Nielsen
+
+| Heuristik | Implementasi di CARAKA |
+|---|---|
+| **N1. Visibility of System Status** | Banner konektivitas 🟢/🟡/🔴 selalu tampil; `LiveStatsRow` real-time (node/range/alarm/relayed); snackbar global mengonfirmasi setiap aksi. |
+| **N2. Match Real World** | Ikon emergency universal (🚨🔥⚠️🌊); **Bahasa Indonesia default** sesuai pengguna target BPBD/Polri/PMI, toggle ke English. |
+| **N3. User Control & Freedom** | Tombol kembali di setiap layar; *Hold-to-Confirm* SOS reversibel < 2 detik; toggle aksesibilitas kapan saja. |
+| **N4. Consistency & Standards** | Material 3; skema warna per peran (BPBD=biru, Polri=amber, PMI=merah); tipografi terpusat (Rajdhani / Inter / JetBrains Mono). |
+| **N5. Error Prevention** | **Hold-to-Confirm 2 detik** cegah salah pencet SOS; dialog konfirmasi sebelum flag hoaks & reset identitas; validasi inline. |
+| **N6. Recognition > Recall** | *Onboarding Tour* 5 langkah otomatis + replay-able dari Help; badge peran selalu tampil; ikon ✓ Verified untuk otoritas. |
+| **N7. Flexibility & Efficiency** | Hold gesture & long-press shortcut; floating in-app alert tap-to-open; toggle aksesibilitas tanpa restart. |
+| **N8. Aesthetic & Minimalist** | Tema gelap taktis `#0A1628` + amber `#F59E0B`; glass-morphism halus; hierarki visual jelas; tanpa iklan. |
+| **N9. Error Recovery** | Pesan error inline dengan saran konkret; error otorisasi spesifik; status koneksi gagal di header chat. |
+| **N10. Help & Documentation** | Layar *Help* dengan 6 FAQ + ringkasan heuristik + a11y; `InfoTooltip` untuk istilah teknis. |
+
+#### B. Kepatuhan WCAG 2.1
+
+CARAKA memenuhi level **AA** (default) dan **AAA** (opsional via mode kontras tinggi):
+
+- **1.1.1 Non-text Content** — Semua ikon punya `contentDescription`.
+- **1.4.3 Contrast Minimum (AA)** — Palet default lulus rasio 4.5:1.
+- **1.4.6 Contrast Enhanced (AAA)** — Mode High-Contrast menaikkan rasio ke 7:1.
+- **1.4.4 Resize Text (AA)** — Mode Big-Text menambah +25 % skala font.
+- **2.5.5 Target Size (AAA)** — Semua tombol primer ≥ 48 dp.
+- **3.1.2 Language of Parts (AA)** — Toggle bahasa ID ↔ EN tanpa restart.
+- **4.1.2 Name, Role, Value (A)** — TalkBack dapat membaca setiap kontrol custom.
+
+#### C. Fitur Inklusif & Affective UX
+
+| Fitur | Manfaat |
+|---|---|
+| **Multibahasa ID/EN** | 175 string resource per locale; toggle 1 tap di Pengaturan. |
+| **Mode Teks Besar** | Memperbesar teks +25 % — krusial saat panik / pencahayaan rendah. |
+| **Mode Kontras Tinggi** | Palet WCAG AAA untuk pengguna *low-vision*. |
+| **Umpan Balik Haptik** | Pola berbeda (tick / light / heavy / waveform 3-pulsa untuk SOS). |
+| **Screen-Reader Ready** | `Modifier.semantics{}` di seluruh kontrol custom — TalkBack-friendly. |
+| **Snackbar Feedback** | Konfirmasi non-intrusif: "Pesan terkirim", "SOS disiarkan ke X node". |
+
+#### D. Studi Kasus User Flow — "Warga Panik Kirim SOS"
+
+1. Buka aplikasi → status **🔴 MESH ONLY** langsung terlihat (*N1 Visibility*).
+2. Tap tombol SOS 148 dp — jauh di atas batas WCAG 48 dp (*N4, WCAG 2.5.5*); haptic *heavy* mengonfirmasi tap.
+3. Pilih kategori dari 4 ikon universal: 🚨 / 🔥 / ⚠️ / 🌊 (*N2 Match real world*).
+4. **Tahan tombol 2 detik** untuk konfirmasi — mencegah salah pencet di tengah panik (*N5 Error Prevention*).
+5. Saat siaran berhasil: haptic 3-pulsa + label "SIARAN SOS TERKIRIM" + snackbar "SOS disiarkan ke X node" (*N1, N9*).
+6. Otomatis kembali ke Beranda setelah 1,8 detik — pengguna tidak perlu mencari tombol kembali saat krisis (*N3*).
+
+> **Dokumen lengkap dengan referensi baris kode tersedia di** `docs/HCI_EVALUATION.md` **di repositori.**
+
+Dengan kombinasi heuristik klasik, kepatuhan WCAG, dan fitur afektif (haptik, animasi denyut, multibahasa), CARAKA tidak hanya berjalan tanpa internet — ia juga **tetap dapat dipakai oleh siapa saja, dalam kondisi apa pun, tanpa pelatihan formal**. Inilah esensi resiliensi yang sesungguhnya: bukan hanya jaringan, tetapi juga manusia di ujungnya.
+
+---
+
 ## BAB V: PENUTUP
 
 ### 5.1 Kesimpulan
