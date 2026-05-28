@@ -9,23 +9,35 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.caraka.R
 import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.ui.theme.*
+import com.example.caraka.ui.util.rememberHaptics
 import com.example.caraka.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,22 +53,36 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0)
         ?: remember { mutableStateOf(0) }
 
-    // Attack Simulator state — when toggled, we pretend the grid is down (UI only)
     var attackSimActive by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Shield, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(26.dp))
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = stringResource(R.string.cd_app_logo),
+                            tint = AmberAccent,
+                            modifier = Modifier.size(26.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("CARAKA", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(
+                            stringResource(R.string.app_name),
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = AmberAccent)
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = stringResource(R.string.home_alerts_notif),
+                            tint = AmberAccent
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
@@ -73,7 +99,6 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            // ── Connectivity status banner ─────────────────────────────────
             item {
                 ConnectivityBanner(
                     status = if (attackSimActive) ConnectivityStatus.MESH_ONLY else connectivity,
@@ -82,7 +107,6 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
                 )
             }
 
-            // ── Live stats row ─────────────────────────────────────────────
             item {
                 LiveStatsRow(
                     nodeCount = meshNodeCount,
@@ -91,29 +115,40 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
                 )
             }
 
-            // ── SOS Button (animated pulsing) ─────────────────────────────
             item {
-                AnimatedSosButton(onClick = onNavigateToSos ?: {})
+                AnimatedSosButton(onClick = {
+                    haptics.heavy()
+                    onNavigateToSos?.invoke()
+                })
             }
 
-            // ── Attack Simulator card ──────────────────────────────────────
             item {
                 AttackSimulatorCard(
                     isActive = attackSimActive,
-                    onToggle = { attackSimActive = !attackSimActive }
+                    onToggle = {
+                        haptics.tick()
+                        attackSimActive = !attackSimActive
+                    }
                 )
             }
 
-            // ── Active Alerts ─────────────────────────────────────────────
             item {
-                Text("Active Alerts", color = AmberAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth())
+                Text(
+                    stringResource(R.string.home_active_alerts),
+                    color = AmberAccent,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             if (activeAlerts.isEmpty()) {
                 item {
-                    Text("No active alerts nearby.", color = TextSecondary,
-                        modifier = Modifier.padding(top = 4.dp))
+                    Text(
+                        stringResource(R.string.home_no_alerts),
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             } else {
                 items(activeAlerts.size) { i ->
@@ -139,10 +174,10 @@ private fun ConnectivityBanner(
     nodeCount: Int,
     isAttackSim: Boolean
 ) {
-    val (dot, label, color) = when (status) {
-        ConnectivityStatus.ONLINE    -> Triple(NeonMint,   "🟢 ONLINE — Mesh Standby",               NeonMint)
-        ConnectivityStatus.HYBRID    -> Triple(WarningYellow, "🟡 HYBRID — Internet + Mesh Active",     WarningYellow)
-        ConnectivityStatus.MESH_ONLY -> Triple(DangerRed,     "🔴 MESH ONLY — Grid Down, We Rise",      DangerRed)
+    val (dotColor, labelRes) = when (status) {
+        ConnectivityStatus.ONLINE    -> NeonMint        to R.string.home_status_online
+        ConnectivityStatus.HYBRID    -> WarningYellow   to R.string.home_status_hybrid
+        ConnectivityStatus.MESH_ONLY -> DangerRed       to R.string.home_status_mesh_only
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "banner")
@@ -155,27 +190,28 @@ private fun ConnectivityBanner(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp), ambientColor = color.copy(alpha = 0.5f), spotColor = color)
+            .shadow(8.dp, RoundedCornerShape(16.dp), ambientColor = dotColor.copy(alpha = 0.5f), spotColor = dotColor)
             .clip(RoundedCornerShape(16.dp))
             .background(GlassSurface)
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-            .padding(vertical = 16.dp, horizontal = 20.dp),
+            .border(1.dp, dotColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(vertical = 16.dp, horizontal = 20.dp)
+            .semantics { contentDescription = "Network status: $nodeCount nodes" },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(dot.copy(alpha = if (status == ConnectivityStatus.MESH_ONLY) alpha else 1f))
+                .background(dotColor.copy(alpha = if (status == ConnectivityStatus.MESH_ONLY) alpha else 1f))
         )
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(labelRes), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             if (isAttackSim) {
-                Text("⚠️ ATTACK SIMULATION ACTIVE", color = DangerRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.home_attack_active), color = DangerRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Text("$nodeCount nodes", color = TextSecondary, fontSize = 12.sp)
+        Text("$nodeCount ${stringResource(R.string.home_nodes_label)}", color = TextSecondary, fontSize = 12.sp)
     }
 }
 
@@ -187,10 +223,10 @@ private fun LiveStatsRow(nodeCount: Int, sosCount: Int, relayedCount: Int) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        MiniStatCard("🌐", "$nodeCount", "Nodes", Modifier.weight(1f))
-        MiniStatCard("📡", "${nodeCount * 100}m", "Range", Modifier.weight(1f))
-        MiniStatCard("🆘", "$sosCount", "Alerts", Modifier.weight(1f))
-        MiniStatCard("🔀", "$relayedCount", "Relayed", Modifier.weight(1f))
+        MiniStatCard("🌐", "$nodeCount", stringResource(R.string.home_stat_nodes), Modifier.weight(1f))
+        MiniStatCard("📡", "${nodeCount * 100}m", stringResource(R.string.home_stat_range), Modifier.weight(1f))
+        MiniStatCard("🆘", "$sosCount", stringResource(R.string.home_stat_alerts), Modifier.weight(1f))
+        MiniStatCard("🔀", "$relayedCount", stringResource(R.string.home_stat_relayed), Modifier.weight(1f))
     }
 }
 
@@ -202,7 +238,8 @@ private fun MiniStatCard(emoji: String, value: String, label: String, modifier: 
             .clip(RoundedCornerShape(16.dp))
             .background(GlassSurface)
             .border(1.dp, SurfaceDark, RoundedCornerShape(16.dp))
-            .padding(vertical = 12.dp, horizontal = 4.dp),
+            .padding(vertical = 12.dp, horizontal = 4.dp)
+            .semantics { contentDescription = "$label: $value" },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(emoji, fontSize = 18.sp)
@@ -227,6 +264,8 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
         label = "inner"
     )
 
+    val cdSos = stringResource(R.string.cd_sos_btn)
+
     Box(
         modifier = Modifier
             .size(240.dp)
@@ -234,35 +273,36 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
             .background(SurfaceDark.copy(alpha = 0.3f)),
         contentAlignment = Alignment.Center
     ) {
-        // Outer glow ring (pulsing)
         Box(
             modifier = Modifier
                 .size((200 * outerPulse).dp)
                 .clip(CircleShape)
                 .background(DangerRed.copy(alpha = 0.12f))
         )
-        // Mid ring
         Box(
             modifier = Modifier
                 .size((170 * innerPulse).dp)
                 .clip(CircleShape)
                 .border(3.dp, DangerRed.copy(alpha = 0.5f), CircleShape)
         )
-        // Inner button
         Box(
             modifier = Modifier
                 .size(148.dp)
                 .clip(CircleShape)
                 .background(DangerRed)
                 .shadow(12.dp, CircleShape)
-                .clickable { onClick() },
+                .clickable { onClick() }
+                .semantics {
+                    role = Role.Button
+                    contentDescription = cdSos
+                },
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.WifiTethering, contentDescription = null, tint = Color.White,
                     modifier = Modifier.size(32.dp))
-                Text("SOS", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-                Text("EMERGENCY", color = Color.White.copy(0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.home_sos_btn), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.home_sos_label), color = Color.White.copy(0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -272,7 +312,6 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
 
 @Composable
 private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
-    val bgColor = if (isActive) DangerRed.copy(alpha = 0.15f) else SurfaceDark
     val borderColor = if (isActive) DangerRed else SurfaceDark
 
     Row(
@@ -295,13 +334,15 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (isActive) "⚡ GRID DOWN — MESH ACTIVE" else "ATTACK SIMULATOR",
+                text = if (isActive) stringResource(R.string.home_attack_sim_active_title)
+                       else stringResource(R.string.home_attack_sim_title),
                 color = if (isActive) DangerRed else TextPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp
             )
             Text(
-                text = if (isActive) "Demonstrating offline mesh resilience" else "Simulate infrastructure attack for demo",
+                text = if (isActive) stringResource(R.string.home_attack_sim_active_subtitle)
+                       else stringResource(R.string.home_attack_sim_subtitle),
                 color = TextSecondary,
                 fontSize = 12.sp
             )
@@ -334,7 +375,8 @@ fun AlertCard(
             .clip(RoundedCornerShape(16.dp))
             .background(GlassSurface)
             .border(1.dp, iconTint.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .padding(16.dp)
+            .semantics { contentDescription = "Alert from $sender: $title" },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -355,35 +397,6 @@ fun AlertCard(
                 Spacer(Modifier.weight(1f))
                 Text(time, color = TextSecondary, fontSize = 12.sp)
             }
-        }
-    }
-}
-
-// ─── Old Composables kept for compatibility ───────────────────────────────────
-
-@Composable
-fun ConnectionBanner(connectedNodes: Int) {
-    ConnectivityBanner(ConnectivityStatus.MESH_ONLY, connectedNodes, false)
-}
-
-@Composable
-fun SosButtonBig(onClick: () -> Unit) {
-    AnimatedSosButton(onClick = onClick)
-}
-
-@Composable
-fun ActiveAlertsSection(alerts: List<com.example.caraka.data.local.entity.MessageEntity>) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Active Alerts", color = AmberAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp))
-        alerts.forEach { alert ->
-            AlertCard(
-                title = alert.content,
-                sender = "${alert.senderName} (${alert.senderRole})",
-                time = "Just now",
-                icon = if (alert.sosCategory == "MEDICAL") Icons.Default.LocalHospital else Icons.Default.Warning,
-                iconTint = if (alert.sosCategory == "MEDICAL") DangerRed else WarningYellow
-            )
         }
     }
 }

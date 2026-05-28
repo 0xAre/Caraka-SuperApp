@@ -10,7 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Lock
@@ -27,10 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.caraka.R
+import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
 import com.example.caraka.ui.components.ChatInputBar
@@ -51,6 +54,9 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
     var showFlagDialog by remember { mutableStateOf(false) }
 
     val peer = connectedPeers.find { it.id == peerId }
+    val snackbar = LocalSnackbar.current
+    val sentMsg = stringResource(R.string.snack_message_sent)
+    val flaggedMsg = stringResource(R.string.snack_flagged)
 
     val listState = rememberLazyListState()
 
@@ -72,19 +78,26 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                             Text(peer?.displayName ?: "Unknown Peer", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                             if (peer?.isAuthority == true) {
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.Verified, contentDescription = "Verified", tint = NeonMint, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Verified,
+                                    contentDescription = stringResource(R.string.cd_verified),
+                                    tint = NeonMint, modifier = Modifier.size(16.dp))
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (peer != null) NeonMint else TextSecondary))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (peer != null) "Connected via Mesh" else "Disconnected", color = TextSecondary, fontSize = 12.sp)
+                            Text(
+                                if (peer != null) stringResource(R.string.chat_connected_mesh) else stringResource(R.string.chat_disconnected),
+                                color = TextSecondary, fontSize = 12.sp
+                            )
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back_btn),
+                            tint = TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
@@ -97,6 +110,7 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                 onSend = {
                     if (messageText.isNotBlank()) {
                         viewModel?.sendDirectMessage(peerId, messageText)
+                        snackbar.tryEmit(sentMsg)
                         messageText = ""
                     }
                 },
@@ -121,7 +135,7 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
             ) {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("End-to-end encrypted", color = AmberAccent, fontSize = 12.sp)
+                Text(stringResource(R.string.chat_e2e_banner), color = AmberAccent, fontSize = 12.sp)
             }
 
             LazyColumn(
@@ -169,27 +183,22 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
         AlertDialog(
             onDismissRequest = { showFlagDialog = false },
             icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = WarningYellow) },
-            title = { Text("Flag as Suspicious?", color = TextPrimary) },
-            text = {
-                Text(
-                    "This message will be marked as potentially false/hoax. " +
-                    "If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.",
-                    color = TextSecondary
-                )
-            },
+            title = { Text(stringResource(R.string.chat_flag_title), color = TextPrimary) },
+            text = { Text(stringResource(R.string.chat_flag_desc), color = TextSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
                         flagTargetId?.let { viewModel?.flagMessage(it) }
+                        snackbar.tryEmit(flaggedMsg)
                         showFlagDialog = false
                         flagTargetId = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = WarningYellow)
-                ) { Text("Flag It", color = Color.Black, fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.chat_flag_confirm), color = Color.Black, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showFlagDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text(stringResource(R.string.chat_flag_cancel), color = TextSecondary)
                 }
             },
             containerColor = SurfaceDark
@@ -246,29 +255,33 @@ fun IncomingMessageBubble(
                     Text(message, color = TextPrimary, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                        if (!isAuthority) {
-                            Icon(Icons.Default.Flag, contentDescription = "Hold to flag",
-                                tint = TextSecondary.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
-                        }
+                    Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    if (!isAuthority) {
+                        Icon(Icons.Default.Flag,
+                            contentDescription = stringResource(R.string.chat_hold_to_flag),
+                            tint = TextSecondary.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
                     }
                 }
             }
-            // Warning badge when flagged by 3+ users
-            if (isFlagged) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(WarningYellow.copy(alpha = 0.2f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("⚠️ Flagged by $flagCount users — possible hoax", color = WarningYellow, fontSize = 12.sp)
-                }
+        }
+        // Warning badge when flagged by 3+ users
+        if (isFlagged) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(WarningYellow.copy(alpha = 0.2f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    String.format(stringResource(R.string.chat_flagged_by), flagCount),
+                    color = WarningYellow, fontSize = 12.sp
+                )
             }
+        }
         }
     }
 }

@@ -4,31 +4,41 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.caraka.R
+import com.example.caraka.ui.components.HoldToConfirmButton
+import com.example.caraka.ui.components.LocalSnackbar
+import com.example.caraka.ui.components.PillShapeChip
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
-import com.example.caraka.ui.components.PillShapeChip
-import androidx.compose.animation.core.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +48,15 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
     var sosSent by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val snackbar = LocalSnackbar.current
     var location by remember { mutableStateOf<Location?>(null) }
+
+    val medicalLabel  = stringResource(R.string.sos_cat_medical)
+    val fireLabel     = stringResource(R.string.sos_cat_fire)
+    val securityLabel = stringResource(R.string.sos_cat_security)
+    val disasterLabel = stringResource(R.string.sos_cat_disaster)
+    val sentSnackTpl  = stringResource(R.string.snack_sos_sent)
+    val pickFirstMsg  = stringResource(R.string.sos_select_category_first)
 
     LaunchedEffect(Unit) {
         @SuppressLint("MissingPermission")
@@ -56,7 +74,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
     val lat = location?.latitude ?: -6.2115
     val lng = location?.longitude ?: 106.8456
 
-    // After SOS is sent, show the green confirmation briefly then return to the previous screen.
+    // After SOS is sent, briefly show confirmation then go back.
     LaunchedEffect(sosSent) {
         if (sosSent) {
             kotlinx.coroutines.delay(1800L)
@@ -64,24 +82,10 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
         }
     }
 
-    // Pulsing animation for the SOS button
     val infiniteTransition = rememberInfiniteTransition(label = "sos")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
     val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 0.5f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "alpha"
     )
 
@@ -90,7 +94,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "EMERGENCY SOS",
+                        text = stringResource(R.string.sos_title),
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth().padding(end = 48.dp),
@@ -99,7 +103,11 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back", tint = TextPrimary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.sos_back),
+                            tint = TextPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
@@ -107,45 +115,26 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
         },
         containerColor = NavyBackground,
         bottomBar = {
-            Box(modifier = Modifier.padding(16.dp)) {
-                Button(
-                    onClick = {
-                        if (!sosSent) {
-                            selectedCategory?.let {
-                                viewModel?.broadcastSos(category = it, description = description, lat = lat, lng = lng)
-                                sosSent = true
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .graphicsLayer {
-                            scaleX = if (selectedCategory != null && !sosSent) pulseScale else 1f
-                            scaleY = if (selectedCategory != null && !sosSent) pulseScale else 1f
-                        }
-                        .shadow(
-                            elevation = if (selectedCategory != null) 24.dp else 0.dp,
-                            shape = RoundedCornerShape(24.dp),
-                            ambientColor = if (sosSent) NeonMint.copy(alpha = pulseAlpha) else DangerRed.copy(alpha = pulseAlpha),
-                            spotColor = if (sosSent) NeonMint else DangerRed
-                        ),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (sosSent) NeonMint else DangerRed.copy(alpha = 0.9f),
-                        disabledContainerColor = SurfaceDark
-                    ),
-                    shape = RoundedCornerShape(24.dp),
-                    enabled = selectedCategory != null
-                ) {
-                    if (sosSent) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("SOS BROADCAST SENT", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    } else {
-                        Icon(Icons.Default.WifiTethering, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("BROADCAST SOS", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.padding(16.dp)) {
+                HoldToConfirmButton(
+                    label = stringResource(R.string.sos_broadcast_btn),
+                    holdingLabel = stringResource(R.string.sos_confirming),
+                    completedLabel = stringResource(R.string.sos_sent_title),
+                    enabled = selectedCategory != null && !sosSent,
+                    completed = sosSent,
+                    holdDurationMs = 2000L,
+                    onConfirm = {
+                        selectedCategory?.let {
+                            viewModel?.broadcastSos(category = it, description = description, lat = lat, lng = lng)
+                            sosSent = true
+                            snackbar.tryEmit(String.format(sentSnackTpl, viewModel?.meshNodeCount?.value ?: 1))
+                        } ?: snackbar.tryEmit(pickFirstMsg)
                     }
+                )
+                if (selectedCategory == null && !sosSent) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(pickFirstMsg, color = WarningYellow, fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(start = 4.dp))
                 }
             }
         }
@@ -159,31 +148,31 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(24.dp))
 
             if (sosSent) {
-                // Confirmation state
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(NeonMint.copy(alpha = 0.12f))
-                        .border(1.dp, NeonMint.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                        .border(1.dp, NeonMint.copy(alpha = 0.4f * pulseAlpha + 0.3f), RoundedCornerShape(16.dp))
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonMint, modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text("SOS broadcast sent to the mesh!", color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("Help is on the way. Stay calm.", color = TextSecondary, fontSize = 14.sp)
+                        Text(stringResource(R.string.sos_sent_title), color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.sos_sent_subtitle), color = TextSecondary, fontSize = 14.sp)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             Text(
-                "What is your emergency?",
+                stringResource(R.string.sos_question),
                 color = TextPrimary,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { contentDescription = "Emergency category prompt" }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -193,36 +182,20 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                PillShapeChip(
-                    text = "🚨 Medical",
-                    isSelected = selectedCategory == "Medical",
-                    onClick = { if (!sosSent) selectedCategory = "Medical" },
-                    selectedColor = DangerRed
-                )
-                PillShapeChip(
-                    text = "🔥 Fire",
-                    isSelected = selectedCategory == "Fire",
-                    onClick = { if (!sosSent) selectedCategory = "Fire" },
-                    selectedColor = WarningYellow
-                )
-                PillShapeChip(
-                    text = "⚠️ Security",
-                    isSelected = selectedCategory == "Security",
-                    onClick = { if (!sosSent) selectedCategory = "Security" },
-                    selectedColor = WarningYellow
-                )
-                PillShapeChip(
-                    text = "🌊 Disaster",
-                    isSelected = selectedCategory == "Disaster",
-                    onClick = { if (!sosSent) selectedCategory = "Disaster" },
-                    selectedColor = DisasterBlue
-                )
+                PillShapeChip(text = medicalLabel,  isSelected = selectedCategory == "Medical",
+                    onClick = { if (!sosSent) selectedCategory = "Medical" }, selectedColor = DangerRed)
+                PillShapeChip(text = fireLabel,     isSelected = selectedCategory == "Fire",
+                    onClick = { if (!sosSent) selectedCategory = "Fire" }, selectedColor = WarningYellow)
+                PillShapeChip(text = securityLabel, isSelected = selectedCategory == "Security",
+                    onClick = { if (!sosSent) selectedCategory = "Security" }, selectedColor = WarningYellow)
+                PillShapeChip(text = disasterLabel, isSelected = selectedCategory == "Disaster",
+                    onClick = { if (!sosSent) selectedCategory = "Disaster" }, selectedColor = DisasterBlue)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                "Any additional details?",
+                stringResource(R.string.sos_details_label),
                 color = TextSecondary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
@@ -235,7 +208,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp),
-                placeholder = { Text("E.g., 2 people injured, need ambulance...", color = TextSecondary) },
+                placeholder = { Text(stringResource(R.string.sos_details_placeholder), color = TextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = GlassSurface,
                     unfocusedContainerColor = GlassSurface,
@@ -251,7 +224,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                "Your location",
+                stringResource(R.string.sos_location_label),
                 color = TextSecondary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
@@ -273,7 +246,8 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = NeonMint, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            if (location != null) "GPS DETECTED" else "DEFAULT LOCATION",
+                            if (location != null) stringResource(R.string.sos_gps_detected)
+                            else stringResource(R.string.sos_default_location),
                             color = if (location != null) NeonMint else WarningYellow,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -287,7 +261,8 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        if (location != null) "Live GPS position" else "Jakarta, Indonesia",
+                        if (location != null) stringResource(R.string.sos_gps_live)
+                        else stringResource(R.string.sos_gps_default),
                         color = TextSecondary,
                         fontSize = 14.sp
                     )
@@ -309,13 +284,5 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 }
             }
         }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewSosScreen() {
-    CarakaTheme {
-        SosScreen()
     }
 }

@@ -19,19 +19,22 @@ When coordinated attacks take down internet, power, and cellular networks, most 
 | WiFi Direct P2P | Implemented | Device discovery and connection without internet (~100 m) |
 | Encrypted messaging | Implemented | E2E encryption (X25519, Ed25519, libsodium via Lazysodium) |
 | Multi-hop relay | Implemented | JSON mesh protocol with TTL-based forwarding |
-| SOS broadcast | Implemented | One-tap emergency alerts with categories |
+| SOS broadcast | Implemented | One-tap emergency alerts with categories + **2-second hold-to-confirm** |
 | Network map | Implemented | Real-time mesh topology UI |
 | Verified roles | Demo | BPBD, Polri, PMI authority badges (demo passwords) |
+| **HCI-grade UX** | Implemented | i18n (ID/EN), big-text mode, high-contrast (WCAG AAA), haptic feedback, onboarding tour, in-app help, screen-reader semantics |
 | Message flagging / hybrid mode | Planned | See [PRD.md](PRD.md) |
 
 ## Tech stack
 
 - **Kotlin** + **Jetpack Compose** (Material 3)
+- **Downloadable Google Fonts**: Rajdhani (display/title), Inter (body), JetBrains Mono (peer IDs)
 - **WiFi Direct** for P2P connectivity
 - **TCP sockets** + length-prefixed JSON (`MeshProtocol`)
 - **Room** for local message/peer storage
-- **DataStore** for identity keys
+- **DataStore** for identity keys + UI/accessibility preferences
 - **Lazysodium** (libsodium) for cryptography
+- **HCI / UX**: dual-locale strings (`values/`, `values-en/`), accessibility toggles, haptic feedback, onboarding overlay, in-app help
 
 ## Project structure
 
@@ -94,6 +97,7 @@ Use **two or more physical phones** on the same WiFi Direct group:
 
 - [PRD.md](PRD.md) — full product requirements and scope
 - [Garuda-Mesh.md](Garuda-Mesh.md) — architecture and hackathon narrative
+- [docs/HCI_EVALUATION.md](docs/HCI_EVALUATION.md) — mapping to Nielsen heuristics + WCAG 2.1 (HCI assessment artefact)
 - [proposal/PROPOSAL_GARUDA_MESH.md](proposal/PROPOSAL_GARUDA_MESH.md) — competition proposal
 
 ## Security note

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CARAKA</string>
+    <string name="app_tagline">When the Grid Falls, We Rise</string>
+
+    <!-- ───── Bottom Navigation ───── -->
+    <string name="nav_home">Home</string>
+    <string name="nav_messages">Messages</string>
+    <string name="nav_network">Network</string>
+    <string name="nav_sos">SOS</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- ───── Profile Setup ───── -->
+    <string name="setup_title">PROFILE SETUP</string>
+    <string name="setup_welcome">Welcome to CARAKA</string>
+    <string name="setup_subtitle">Set up your identity before joining the network.</string>
+    <string name="setup_select_role">Select Role:</string>
+    <string name="setup_role_civilian">Civilian</string>
+    <string name="setup_role_bpbd">BPBD Response</string>
+    <string name="setup_role_polri">Polri Security</string>
+    <string name="setup_role_pmi">PMI Medical</string>
+    <string name="setup_requires_password">Requires authorization password</string>
+    <string name="setup_password_label">Authorization Password</string>
+    <string name="setup_display_name">Display Name</string>
+    <string name="setup_enter_name">Enter your name</string>
+    <string name="setup_enter_password">Enter password for %1$s</string>
+    <string name="setup_password_wrong">Wrong password! Access denied.</string>
+    <string name="setup_name_required">Display name is required for Civilian role.</string>
+    <string name="setup_btn_join">JOIN NETWORK</string>
+    <string name="setup_btn_authorize">AUTHORIZE &amp; JOIN</string>
+    <string name="setup_show_password">Show password</string>
+    <string name="setup_hide_password">Hide password</string>
+
+    <!-- ───── Home Screen ───── -->
+    <string name="home_status_online">🟢 ONLINE — Mesh Standby</string>
+    <string name="home_status_hybrid">🟡 HYBRID — Internet + Mesh Active</string>
+    <string name="home_status_mesh_only">🔴 MESH ONLY — Grid Down, We Rise</string>
+    <string name="home_attack_active">⚠️ ATTACK SIMULATION ACTIVE</string>
+    <string name="home_nodes_label">nodes</string>
+    <string name="home_stat_nodes">Nodes</string>
+    <string name="home_stat_range">Range</string>
+    <string name="home_stat_alerts">Alerts</string>
+    <string name="home_stat_relayed">Relayed</string>
+    <string name="home_sos_btn">SOS</string>
+    <string name="home_sos_label">EMERGENCY</string>
+    <string name="home_sos_hint">Press the button below to broadcast an emergency signal</string>
+    <string name="home_attack_sim_title">ATTACK SIMULATOR</string>
+    <string name="home_attack_sim_subtitle">Simulate infrastructure attack for demo</string>
+    <string name="home_attack_sim_active_title">⚡ GRID DOWN — MESH ACTIVE</string>
+    <string name="home_attack_sim_active_subtitle">Demonstrating offline mesh resilience</string>
+    <string name="home_active_alerts">Active Alerts</string>
+    <string name="home_no_alerts">No active alerts nearby.</string>
+    <string name="home_alerts_notif">Alert notifications</string>
+
+    <!-- ───── SOS Screen ───── -->
+    <string name="sos_title">EMERGENCY SOS</string>
+    <string name="sos_question">What is your emergency?</string>
+    <string name="sos_cat_medical">🚨 Medical</string>
+    <string name="sos_cat_fire">🔥 Fire</string>
+    <string name="sos_cat_security">⚠️ Security</string>
+    <string name="sos_cat_disaster">🌊 Disaster</string>
+    <string name="sos_details_label">Any additional details?</string>
+    <string name="sos_details_placeholder">E.g., 2 people injured, need ambulance…</string>
+    <string name="sos_location_label">Your location</string>
+    <string name="sos_gps_detected">GPS DETECTED</string>
+    <string name="sos_default_location">DEFAULT LOCATION</string>
+    <string name="sos_gps_live">Live GPS position</string>
+    <string name="sos_gps_default">Jakarta, Indonesia</string>
+    <string name="sos_broadcast_btn">BROADCAST SOS</string>
+    <string name="sos_hold_hint">Hold for 2 seconds to confirm</string>
+    <string name="sos_confirming">Holding… release to cancel</string>
+    <string name="sos_sent_title">SOS BROADCAST SENT</string>
+    <string name="sos_sent_subtitle">Help is on the way. Stay calm.</string>
+    <string name="sos_select_category_first">Select an emergency category first</string>
+    <string name="sos_back">Back</string>
+
+    <!-- ───── Messages / Chat ───── -->
+    <string name="messages_title">MESSAGES</string>
+    <string name="messages_no_peers">No peers connected</string>
+    <string name="messages_no_peers_hint">Go to the Network tab to connect with nearby devices</string>
+    <string name="messages_e2e_hint">E2E Encrypted · Tap to chat</string>
+    <string name="messages_connected">Connected</string>
+    <string name="messages_you_prefix">You: </string>
+
+    <string name="chat_input_placeholder">Type an emergency message…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_e2e_banner">End-to-end encrypted</string>
+    <string name="chat_connected_mesh">Connected via Mesh</string>
+    <string name="chat_disconnected">Disconnected</string>
+    <string name="chat_hold_to_flag">Hold to flag</string>
+    <string name="chat_flag_title">Flag as Suspicious?</string>
+    <string name="chat_flag_desc">This message will be marked as potentially hoax. If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.</string>
+    <string name="chat_flag_confirm">Flag It</string>
+    <string name="chat_flag_cancel">Cancel</string>
+    <string name="chat_flagged_by">⚠️ Flagged by %1$d users — possible hoax</string>
+
+    <!-- ───── Network Screen ───── -->
+    <string name="network_title">NETWORK MAP</string>
+    <string name="network_scan">Scan</string>
+    <string name="network_legend_self">You</string>
+    <string name="network_legend_authority">Authority</string>
+    <string name="network_legend_direct">Direct</string>
+    <string name="network_legend_relay">Relay (Multi-hop)</string>
+    <string name="network_stat_range">Range</string>
+    <string name="network_stat_sos">SOS</string>
+
+    <!-- ───── Settings ───── -->
+    <string name="settings_title">SETTINGS</string>
+    <string name="settings_peer_id">Peer ID</string>
+    <string name="settings_network_stats">Network Stats</string>
+    <string name="settings_stat_nodes">Nodes</string>
+    <string name="settings_stat_peers">Peers</string>
+    <string name="settings_stat_relayed">Relayed</string>
+    <string name="settings_about">About</string>
+    <string name="settings_app_info">CARAKA Mesh v1.0</string>
+    <string name="settings_protocol">WiFi Direct + LAN Broadcast</string>
+    <string name="settings_encryption">X25519 + Ed25519 (Lazysodium)</string>
+    <string name="settings_relay">Multi-hop TTL mesh routing</string>
+    <string name="settings_accessibility">Accessibility</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_id">Bahasa Indonesia</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_big_text">Large Text Mode</string>
+    <string name="settings_big_text_desc">Enlarges text for better readability in emergencies</string>
+    <string name="settings_high_contrast">High Contrast Mode</string>
+    <string name="settings_high_contrast_desc">Increases color contrast per WCAG AAA standards</string>
+    <string name="settings_haptics">Haptic Feedback</string>
+    <string name="settings_haptics_desc">Vibrate device on important actions</string>
+    <string name="settings_help">Help &amp; HCI Info</string>
+    <string name="settings_danger_zone">Danger Zone</string>
+    <string name="settings_reset_btn">Reset Identity &amp; Logout</string>
+    <string name="settings_reset_dialog_title">Reset Identity?</string>
+    <string name="settings_reset_dialog_desc">This will delete your cryptographic identity and all local data. You will be logged out.</string>
+    <string name="settings_reset_confirm">Reset</string>
+    <string name="settings_cancel">Cancel</string>
+
+    <!-- ───── Help Screen ───── -->
+    <string name="help_title">HELP</string>
+    <string name="help_section_basics">CARAKA Basics</string>
+    <string name="help_q_what_is_mesh">What is a mesh network?</string>
+    <string name="help_a_what_is_mesh">A mesh is a decentralized network where every device acts as a node that can forward messages to other devices — without a central server or internet.</string>
+    <string name="help_q_ttl">What is TTL (Time-To-Live)?</string>
+    <string name="help_a_ttl">TTL caps the number of hops a message can take before being discarded. CARAKA default: 5 hops, preventing messages from circulating forever.</string>
+    <string name="help_q_e2e">How does encryption work?</string>
+    <string name="help_a_e2e">CARAKA uses X25519 for key exchange, Ed25519 for digital signatures, and XChaCha20-Poly1305 for symmetric encryption. Only the sender and recipient can read the message.</string>
+    <string name="help_q_authority">What is the ✓ Verified badge?</string>
+    <string name="help_a_authority">Pre-registered BPBD, Polri, and PMI accounts carry a ✓. Their messages are cryptographically signed — civilians cannot impersonate them.</string>
+    <string name="help_q_sos">When should I press SOS?</string>
+    <string name="help_a_sos">Press SOS only for real emergencies (medical, fire, security, disaster). SOS messages carry top priority and are broadcast to all nearby nodes.</string>
+    <string name="help_q_flag">How do I report a hoax?</string>
+    <string name="help_a_flag">Long-press the suspicious message and confirm. When 3+ users flag the same message, a ⚠️ warning appears for everyone in the mesh.</string>
+
+    <string name="help_section_hci">HCI Principles Applied</string>
+    <string name="help_hci_intro">CARAKA is designed against the 10 Nielsen usability heuristics and WCAG 2.1.</string>
+    <string name="help_hci_visibility">Visibility of System Status — Connectivity banner + node stats always visible.</string>
+    <string name="help_hci_match">Match Real World — Icons 🚨🔥⚠️🌊 follow universal emergency conventions.</string>
+    <string name="help_hci_control">User Control &amp; Freedom — Back buttons, hold-to-confirm SOS, snackbar undo.</string>
+    <string name="help_hci_consistency">Consistency — Material 3, color-coded roles (amber=authority, mint=verified, red=emergency).</string>
+    <string name="help_hci_error_prev">Error Prevention — SOS requires 2-second hold; confirmation dialog before flag/reset.</string>
+    <string name="help_hci_recognition">Recognition &gt; Recall — First-run coach marks, role badges always shown.</string>
+    <string name="help_hci_flexibility">Flexibility &amp; Efficiency — Hold gestures, swipe back, language toggle.</string>
+    <string name="help_hci_minimalist">Aesthetic &amp; Minimalist Design — Tactical dark theme, clear visual hierarchy.</string>
+    <string name="help_hci_recovery">Error Recovery — Inline error messages with corrective suggestions.</string>
+    <string name="help_hci_help">Help &amp; Documentation — This very screen 🙂</string>
+
+    <string name="help_section_a11y">Accessibility</string>
+    <string name="help_a11y_a">CARAKA supports TalkBack (screen reader), system font scaling up to 200%, optional AAA contrast, haptic feedback, ≥48dp touch targets, and keyboard navigation.</string>
+    <string name="help_back">Back</string>
+
+    <!-- ───── Onboarding Tour ───── -->
+    <string name="tour_skip">Skip</string>
+    <string name="tour_next">Next</string>
+    <string name="tour_done">Start</string>
+    <string name="tour_step1_title">Welcome to CARAKA</string>
+    <string name="tour_step1_desc">Offline emergency comms when internet, power, and cellular are down. Let\'s tour the features.</string>
+    <string name="tour_step2_title">Network Status Indicator</string>
+    <string name="tour_step2_desc">This banner always shows your connectivity mode: 🟢 Online, 🟡 Hybrid, or 🔴 Mesh Only.</string>
+    <string name="tour_step3_title">SOS Button</string>
+    <string name="tour_step3_desc">Tap to open the emergency screen. To prevent mis-taps, you must hold the button for 2 seconds before broadcasting.</string>
+    <string name="tour_step4_title">Live Mesh Stats</string>
+    <string name="tour_step4_desc">Track node count, range, active alerts, and how many messages you\'ve relayed to the network.</string>
+    <string name="tour_step5_title">Ready to Roll</string>
+    <string name="tour_step5_desc">You can open the full guide anytime from Settings → Help. Stay safe!</string>
+
+    <!-- ───── Snackbar feedback ───── -->
+    <string name="snack_message_sent">Message sent</string>
+    <string name="snack_peer_connected">Peer connected: %1$s</string>
+    <string name="snack_peer_lost">Peer disconnected</string>
+    <string name="snack_relay_done">Message relayed to mesh</string>
+    <string name="snack_flagged">Message flagged as suspicious</string>
+    <string name="snack_sos_sent">SOS broadcast to %1$d nodes</string>
+
+    <!-- ───── Accessibility content descriptions ───── -->
+    <string name="cd_app_logo">CARAKA logo</string>
+    <string name="cd_alerts_icon">Emergency alerts icon</string>
+    <string name="cd_sos_btn">Emergency SOS button. Tap to open the emergency screen.</string>
+    <string name="cd_back_btn">Back button</string>
+    <string name="cd_verified">Verified account</string>
+    <string name="cd_send_btn">Send message</string>
+    <string name="cd_scan_btn">Scan nearby peers</string>
+    <string name="cd_settings_btn">Open settings</string>
+    <string name="cd_info_tooltip">More info</string>
+</resources>

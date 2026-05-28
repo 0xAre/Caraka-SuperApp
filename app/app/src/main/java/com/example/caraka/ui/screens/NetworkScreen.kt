@@ -23,10 +23,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.caraka.R
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MeshNodeUi
 import com.example.caraka.viewmodel.MainViewModel
@@ -71,10 +73,10 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("NETWORK MAP", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.network_title), color = TextPrimary, fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { viewModel?.discoverPeers() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Scan", tint = AmberAccent)
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_scan_btn), tint = AmberAccent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)

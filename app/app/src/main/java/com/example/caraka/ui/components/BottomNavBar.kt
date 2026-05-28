@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -23,23 +24,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.caraka.R
 import com.example.caraka.ui.theme.AmberAccent
 import com.example.caraka.ui.theme.DangerRed
 import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
 
-sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Home : Screen("home", "Home", Icons.Default.Home)
-    object Messages : Screen("messages", "Messages", Icons.AutoMirrored.Filled.Message)
-    object Network : Screen("network", "Network", Icons.Default.Map)
-    object Sos : Screen("sos", "SOS", Icons.Default.Warning)
-    object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
+    object Home : Screen("home", R.string.nav_home, Icons.Default.Home)
+    object Messages : Screen("messages", R.string.nav_messages, Icons.AutoMirrored.Filled.Message)
+    object Network : Screen("network", R.string.nav_network, Icons.Default.Map)
+    object Sos : Screen("sos", R.string.nav_sos, Icons.Default.Warning)
+    object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
 }
 
 val items = listOf(
@@ -70,17 +73,18 @@ fun BottomNavBar(navController: NavController) {
 
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
+                val title = stringResource(screen.titleRes)
                 NavigationBarItem(
                     icon = {
                         Icon(
                             screen.icon,
-                            contentDescription = screen.title,
+                            contentDescription = title,
                             modifier = Modifier.size(22.dp)
                         )
                     },
                     label = {
                         Text(
-                            screen.title,
+                            title,
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             maxLines = 1,
@@ -99,6 +103,7 @@ fun BottomNavBar(navController: NavController) {
                             restoreState = true
                         }
                     },
+                    modifier = Modifier.semantics { contentDescription = title },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
                         unselectedIconColor = TextSecondary,

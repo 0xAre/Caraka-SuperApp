@@ -1,17 +1,19 @@
 package com.example.caraka.ui.theme
 
 import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+private val DefaultColorScheme = darkColorScheme(
     primary = AmberAccent,
     secondary = NeonMint,
     tertiary = DisasterBlue,
@@ -26,24 +28,55 @@ private val DarkColorScheme = darkColorScheme(
     onError = TextPrimary
 )
 
+// WCAG AAA boost — pure white-on-pure-navy and stronger amber for visually impaired users.
+private val HighContrastScheme = DefaultColorScheme.copy(
+    background = androidx.compose.ui.graphics.Color(0xFF000814),
+    surface    = androidx.compose.ui.graphics.Color(0xFF0B1A33),
+    onBackground = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
+    onSurface    = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
+    primary    = androidx.compose.ui.graphics.Color(0xFFFFC857), // brighter amber
+    secondary  = androidx.compose.ui.graphics.Color(0xFF34E89E)  // brighter mint
+)
+
+/**
+ * CARAKA theme.
+ *
+ * Always dark (per PRD), but reacts to:
+ *  • [highContrast] — swaps to a WCAG-AAA boosted palette.
+ *  • [bigText]      — bumps the system density font-scale by 25% so labels & body grow.
+ */
 @Composable
 fun CarakaTheme(
+    highContrast: Boolean = false,
+    bigText: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // Garuda Mesh is always dark mode based on PRD and Mockups
-    val colorScheme = DarkColorScheme
+    val colorScheme = if (highContrast) HighContrastScheme else DefaultColorScheme
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = NavyBackground.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val baseDensity = LocalDensity.current
+    val density = if (bigText) {
+        Density(density = baseDensity.density, fontScale = baseDensity.fontScale * 1.25f)
+    } else baseDensity
+
+    CompositionLocalProvider(LocalDensity provides density) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = {
+                // Make sure default Text color follows the scheme rather than parent stale colour.
+                CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground) {
+                    content()
+                }
+            }
+        )
+    }
 }

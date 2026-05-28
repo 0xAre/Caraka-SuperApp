@@ -19,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.caraka.R
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
@@ -39,7 +41,7 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MESSAGES", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.messages_title), color = TextPrimary, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
             )
         },
@@ -61,14 +63,14 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "No peers connected",
+                        stringResource(R.string.messages_no_peers),
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Go to Network tab to connect with nearby devices",
+                        stringResource(R.string.messages_no_peers_hint),
                         color = TextSecondary,
                         fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -145,7 +147,7 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
                                 if (lastMsg != null) {
                                     if (!lastMsg.isIncoming) {
                                         Text(
-                                            "You: ",
+                                            stringResource(R.string.messages_you_prefix),
                                             color = TextSecondary,
                                             fontSize = 13.sp
                                         )
@@ -162,7 +164,7 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(11.dp))
                                         Spacer(Modifier.width(3.dp))
-                                        Text("E2E Encrypted · Tap to chat", color = TextSecondary, fontSize = 13.sp)
+                                        Text(stringResource(R.string.messages_e2e_hint), color = TextSecondary, fontSize = 13.sp)
                                     }
                                 }
                             }
@@ -186,7 +188,7 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
                                         .background(NeonMint)
                                 )
                                 Spacer(Modifier.width(3.dp))
-                                Text("Connected", color = NeonMint, fontSize = 10.sp)
+                                Text(stringResource(R.string.messages_connected), color = NeonMint, fontSize = 10.sp)
                             }
                         }
                     }
