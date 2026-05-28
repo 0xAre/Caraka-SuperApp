@@ -2,6 +2,7 @@ package com.example.caraka.ui.prefs
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -36,17 +37,27 @@ val LocalUiPrefs = compositionLocalOf { UiPrefsState() }
 @Composable
 fun ProvideLocalizedContext(language: String, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
+    val activityResultRegistryOwner = LocalActivityResultRegistryOwner.current
     val localizedCtx = remember(ctx, language) { ctx.withLocale(language) }
     val config = remember(language) {
         Configuration(ctx.resources.configuration).apply {
             setLocale(Locale.forLanguageTag(language))
         }
     }
-    CompositionLocalProvider(
-        LocalContext provides localizedCtx,
-        LocalConfiguration provides config,
-        content = content
-    )
+    if (activityResultRegistryOwner != null) {
+        CompositionLocalProvider(
+            LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
+            LocalContext provides localizedCtx,
+            LocalConfiguration provides config,
+            content = content
+        )
+    } else {
+        CompositionLocalProvider(
+            LocalContext provides localizedCtx,
+            LocalConfiguration provides config,
+            content = content
+        )
+    }
 }
 
 private fun Context.withLocale(language: String): Context {
