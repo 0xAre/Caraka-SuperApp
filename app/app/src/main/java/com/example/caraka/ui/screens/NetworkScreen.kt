@@ -1,5 +1,7 @@
 package com.example.caraka.ui.screens
 
+import android.graphics.Paint as NativePaint
+import android.graphics.Typeface
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -19,6 +21,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -195,6 +199,26 @@ private fun MeshNetworkGraph(
         }
     }
 
+    // Text paints for node labels — created outside Canvas to avoid allocation on each frame
+    val namePaint = remember {
+        NativePaint().apply {
+            color = android.graphics.Color.argb(220, 248, 250, 252)
+            textSize = 34f
+            textAlign = NativePaint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            isAntiAlias = true
+        }
+    }
+    val rolePaint = remember {
+        NativePaint().apply {
+            color = android.graphics.Color.argb(150, 148, 163, 184)
+            textSize = 26f
+            textAlign = NativePaint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+    }
+
     Canvas(modifier = modifier) {
         val cx = size.width / 2f
         val cy = size.height / 2f
@@ -350,6 +374,24 @@ private fun MeshNetworkGraph(
                     drawCircle(color = SurfaceDark, radius = 16.dp.toPx(), center = p)
                     drawCircle(color = AmberAccent.copy(alpha = 0.7f), radius = 9.dp.toPx(), center = p)
                     drawCircle(color = AmberAccent, radius = 9.dp.toPx(), center = p, style = Stroke(1.dp.toPx()))
+                }
+            }
+        }
+
+        // ── Node Labels ────────────────────────────────────────────────────────
+        drawIntoCanvas { canvas ->
+            nodes.forEach { node ->
+                val p = pos(node)
+                val nodeRadius = when {
+                    node.id == "SELF" -> 28.dp.toPx()
+                    node.isAuthority -> 22.dp.toPx()
+                    else -> 18.dp.toPx()
+                }
+                val labelY = p.y + nodeRadius + 14.dp.toPx()
+                val name = if (node.id == "SELF") "YOU" else node.name.take(11)
+                canvas.nativeCanvas.drawText(name, p.x, labelY, namePaint)
+                if (node.id != "SELF" && node.role.isNotBlank() && node.role !in listOf("DISCOVERED", "AVAILABLE", "CONNECTED")) {
+                    canvas.nativeCanvas.drawText(node.role, p.x, labelY + 15.dp.toPx(), rolePaint)
                 }
             }
         }

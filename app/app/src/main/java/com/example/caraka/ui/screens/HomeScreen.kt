@@ -51,7 +51,7 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("GARUDA MESH", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text("CARAKA", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
                 },
                 actions = {

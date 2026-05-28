@@ -38,6 +38,10 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE type = 'SOS' AND timestamp > :since ORDER BY timestamp DESC")
     fun getRecentAlerts(since: Long = System.currentTimeMillis() - 86_400_000): Flow<List<MessageEntity>>
 
+    /** Get all direct (non-broadcast) TEXT messages ordered by time — used for last-message preview */
+    @Query("SELECT * FROM messages WHERE type = 'TEXT' AND recipientId != 'BROADCAST' ORDER BY timestamp ASC")
+    fun getAllDirectMessages(): Flow<List<MessageEntity>>
+
     /** Check if a message ID already exists (for dedup) */
     @Query("SELECT COUNT(*) > 0 FROM messages WHERE id = :messageId")
     suspend fun messageExists(messageId: String): Boolean

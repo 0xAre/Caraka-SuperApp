@@ -82,7 +82,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Welcome to Garuda Mesh",
+                        text = "Welcome to CARAKA",
                         color = TextPrimary,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold

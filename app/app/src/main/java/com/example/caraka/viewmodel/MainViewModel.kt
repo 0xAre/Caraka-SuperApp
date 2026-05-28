@@ -11,6 +11,7 @@ import com.example.caraka.network.ConnectivityMonitor
 import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.network.WifiDirectManager
 import com.example.caraka.repository.MeshRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,8 +37,17 @@ class MainViewModel(
 
     // ========== STATE FLOWS (Identity) ==========
 
-    private val _hasIdentity = kotlinx.coroutines.flow.MutableStateFlow(true)
+    private val _hasIdentity = MutableStateFlow(true)
     val hasIdentity: StateFlow<Boolean> = _hasIdentity
+
+    private val _displayName = MutableStateFlow("")
+    val displayName: StateFlow<String> = _displayName
+
+    private val _myRole = MutableStateFlow("")
+    val myRole: StateFlow<String> = _myRole
+
+    private val _myPeerId = MutableStateFlow("")
+    val myPeerId: StateFlow<String> = _myPeerId
 
     // ========== STATE FLOWS (DB) ==========
 
@@ -103,12 +113,31 @@ class MainViewModel(
     /** Messages relayed for other nodes (multi-hop stat). */
     val relayedMessageCount: StateFlow<Int> = wifiDirectManager.relayedMessageCount
 
+    /** Fires when a direct chat arrives — drives the floating in-app alert. */
+    val incomingChatAlert = wifiDirectManager.incomingChatAlert
+
+    /** Last direct message per peer ID — used for Messages screen preview. */
+    val lastMessagesPerPeer: StateFlow<Map<String, com.example.caraka.data.local.entity.MessageEntity>> =
+        repository.getAllDirectMessages()
+            .map { messages ->
+                val perPeer = mutableMapOf<String, com.example.caraka.data.local.entity.MessageEntity>()
+                messages.forEach { msg ->
+                    val peerId = if (msg.isIncoming) msg.senderId else msg.recipientId
+                    perPeer[peerId] = msg
+                }
+                perPeer
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     init {
         viewModelScope.launch {
             repository.disconnectAllPeers()
             _hasIdentity.value = identityManager.hasIdentity()
             if (_hasIdentity.value) {
-                wifiDirectManager.updateDeviceName(identityManager.getDisplayName())
+                _displayName.value = identityManager.getDisplayName()
+                _myRole.value = identityManager.getRole()
+                _myPeerId.value = identityManager.getPeerId()
+                wifiDirectManager.updateDeviceName(_displayName.value)
                 wifiDirectManager.startFallbackDiscovery()
             }
         }
@@ -130,7 +159,10 @@ class MainViewModel(
             } else {
                 identityManager.loadAuthorityIdentity(role)
             }
-            wifiDirectManager.updateDeviceName(displayName)
+            _displayName.value = identityManager.getDisplayName()
+            _myRole.value = identityManager.getRole()
+            _myPeerId.value = identityManager.getPeerId()
+            wifiDirectManager.updateDeviceName(_displayName.value)
             wifiDirectManager.startFallbackDiscovery()
             _hasIdentity.value = true
         }
@@ -138,7 +170,13 @@ class MainViewModel(
 
     fun clearIdentity() {
         viewModelScope.launch {
+            wifiDirectManager.stopListening()
+            repository.clearAllData()
             identityManager.clearIdentity()
+            chatFlowCache.clear()
+            _displayName.value = ""
+            _myRole.value = ""
+            _myPeerId.value = ""
             _hasIdentity.value = false
         }
     }

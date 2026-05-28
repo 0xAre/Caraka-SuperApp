@@ -44,6 +44,13 @@ class MeshRepository(
         peerDao.disconnectAll()
     }
 
+    /** Wipe all local data — called on identity reset/logout so nothing leaks across accounts. */
+    suspend fun clearAllData() {
+        messageDao.deleteAllMessages()
+        peerDao.deleteAllPeers()
+        relayDao.deleteAll()
+    }
+
     // ========== MESSAGING ==========
 
     suspend fun saveMessage(message: MessageEntity) {
@@ -55,6 +62,8 @@ class MeshRepository(
     }
 
     fun getSosMessages(): Flow<List<MessageEntity>> = messageDao.getSosMessages()
+
+    fun getAllDirectMessages(): Flow<List<MessageEntity>> = messageDao.getAllDirectMessages()
 
     fun getRecentAlerts(): Flow<List<MessageEntity>> = messageDao.getRecentAlerts()
 

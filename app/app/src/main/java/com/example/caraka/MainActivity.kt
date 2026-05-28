@@ -13,9 +13,11 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,17 +55,14 @@ class MainActivity : ComponentActivity() {
                         viewModel.setupIdentity(name, role)
                     }
                 } else {
+                    // Always start WiFi Direct — per-operation SecurityExceptions are handled inside
                     val permissionLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestMultiplePermissions()
-                    ) { permissions ->
-                        val allGranted = permissions.values.all { it }
-                        if (allGranted) {
-                            viewModel.startWifiDirect()
-                        }
+                    ) { _ ->
+                        viewModel.startWifiDirect()
                     }
 
                     LaunchedEffect(Unit) {
-                        // Request permissions on launch
                         val permissions = mutableListOf(
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -86,33 +85,61 @@ class MainActivity : ComponentActivity() {
 
                     val navController = rememberNavController()
 
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        bottomBar = { BottomNavBar(navController = navController) }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = Screen.Home.route,
-                            modifier = Modifier
-                                .padding(innerPadding)
-                                .consumeWindowInsets(innerPadding)
-                        ) {
-                            composable(Screen.Home.route) { HomeScreen(viewModel) }
-                            composable(Screen.Messages.route) { 
-                                MessagesScreen(viewModel) { peerId ->
-                                    navController.navigate("chat/$peerId")
-                                }
-                            }
-                            composable("chat/{peerId}") { backStackEntry ->
-                                val peerId = backStackEntry.arguments?.getString("peerId") ?: return@composable
-                                ChatScreen(viewModel, peerId = peerId) {
-                                    navController.popBackStack()
-                                }
-                            }
-                            composable(Screen.Network.route) { NetworkScreen(viewModel) }
-                            composable(Screen.Sos.route) { SosScreen(viewModel) }
-                            composable(Screen.Settings.route) { SettingsScreen(viewModel) }
+                    // Floating in-app chat alert (heads-up style)
+                    var chatAlert by androidx.compose.runtime.remember {
+                        androidx.compose.runtime.mutableStateOf<com.example.caraka.network.ChatAlert?>(null)
+                    }
+                    LaunchedEffect(Unit) {
+                        viewModel.incomingChatAlert.collect { chatAlert = it }
+                    }
+                    LaunchedEffect(chatAlert) {
+                        if (chatAlert != null) {
+                            kotlinx.coroutines.delay(4000L)
+                            chatAlert = null
                         }
+                    }
+
+                    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            bottomBar = { BottomNavBar(navController = navController) }
+                        ) { innerPadding ->
+                            NavHost(
+                                navController = navController,
+                                startDestination = Screen.Home.route,
+                                modifier = Modifier
+                                    .padding(innerPadding)
+                                    .consumeWindowInsets(innerPadding)
+                            ) {
+                                composable(Screen.Home.route) { HomeScreen(viewModel, onNavigateToSos = { navController.navigate(Screen.Sos.route) }) }
+                                composable(Screen.Messages.route) {
+                                    MessagesScreen(viewModel) { peerId ->
+                                        navController.navigate("chat/$peerId")
+                                    }
+                                }
+                                composable("chat/{peerId}") { backStackEntry ->
+                                    val peerId = backStackEntry.arguments?.getString("peerId") ?: return@composable
+                                    ChatScreen(viewModel, peerId = peerId) {
+                                        navController.popBackStack()
+                                    }
+                                }
+                                composable(Screen.Network.route) { NetworkScreen(viewModel) }
+                                composable(Screen.Sos.route) { SosScreen(viewModel, onBack = { navController.popBackStack() }) }
+                                composable(Screen.Settings.route) { SettingsScreen(viewModel) }
+                            }
+                        }
+
+                        com.example.caraka.ui.components.FloatingChatAlert(
+                            alert = chatAlert,
+                            onClick = { alert ->
+                                chatAlert = null
+                                navController.navigate("chat/${alert.senderId}")
+                            },
+                            onDismiss = { chatAlert = null },
+                            modifier = Modifier
+                                .align(androidx.compose.ui.Alignment.TopCenter)
+                                .statusBarsPadding()
+                        )
                     }
                 }
             }
