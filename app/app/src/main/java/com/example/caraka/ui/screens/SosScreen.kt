@@ -38,6 +38,7 @@ import com.example.caraka.ui.components.HoldToConfirmButton
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.components.PillShapeChip
 import com.example.caraka.ui.theme.*
+import com.example.caraka.ui.util.rememberHaptics
 import com.example.caraka.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +50,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
 
     val context = LocalContext.current
     val snackbar = LocalSnackbar.current
+    val haptics = rememberHaptics()
     var location by remember { mutableStateOf<Location?>(null) }
 
     val medicalLabel  = stringResource(R.string.sos_cat_medical)
@@ -183,13 +185,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 PillShapeChip(text = medicalLabel,  isSelected = selectedCategory == "Medical",
-                    onClick = { if (!sosSent) selectedCategory = "Medical" }, selectedColor = DangerRed)
+                    onClick = { if (!sosSent) { haptics.tick(); selectedCategory = "Medical" } }, selectedColor = DangerRed)
                 PillShapeChip(text = fireLabel,     isSelected = selectedCategory == "Fire",
-                    onClick = { if (!sosSent) selectedCategory = "Fire" }, selectedColor = WarningYellow)
+                    onClick = { if (!sosSent) { haptics.tick(); selectedCategory = "Fire" } }, selectedColor = WarningYellow)
                 PillShapeChip(text = securityLabel, isSelected = selectedCategory == "Security",
-                    onClick = { if (!sosSent) selectedCategory = "Security" }, selectedColor = WarningYellow)
+                    onClick = { if (!sosSent) { haptics.tick(); selectedCategory = "Security" } }, selectedColor = WarningYellow)
                 PillShapeChip(text = disasterLabel, isSelected = selectedCategory == "Disaster",
-                    onClick = { if (!sosSent) selectedCategory = "Disaster" }, selectedColor = DisasterBlue)
+                    onClick = { if (!sosSent) { haptics.tick(); selectedCategory = "Disaster" } }, selectedColor = DisasterBlue)
             }
 
             Spacer(modifier = Modifier.height(32.dp))

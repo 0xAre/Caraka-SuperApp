@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.example.caraka.R
 import com.example.caraka.network.ChatAlert
 import com.example.caraka.ui.theme.*
 
@@ -89,7 +91,7 @@ fun FloatingChatAlert(
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("· new message", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text("· ${stringResource(R.string.alert_new_message)}", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -102,7 +104,7 @@ fun FloatingChatAlert(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                "Tap",
+                stringResource(R.string.alert_tap_to_open),
                 color = accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,

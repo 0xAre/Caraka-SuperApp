@@ -69,7 +69,7 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
     }
 
     fun startServer() {
-        serverJob?.cancel()
+        if (serverJob?.isActive == true) return
         serverJob = scope.launch {
             try {
                 serverSocket = ServerSocket(PORT)

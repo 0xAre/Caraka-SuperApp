@@ -6,12 +6,15 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
@@ -54,7 +57,7 @@ val items = listOf(
 )
 
 @Composable
-fun BottomNavBar(navController: NavController) {
+fun BottomNavBar(navController: NavController, sosBadgeCount: Int = 0) {
     Surface(
         modifier = Modifier
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -63,7 +66,7 @@ fun BottomNavBar(navController: NavController) {
         color = GlassSurface
     ) {
         NavigationBar(
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            containerColor = Color.Transparent,
             contentColor = TextSecondary,
             tonalElevation = 0.dp,
             modifier = Modifier.height(68.dp)
@@ -74,13 +77,22 @@ fun BottomNavBar(navController: NavController) {
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
                 val title = stringResource(screen.titleRes)
+                val accent = if (screen == Screen.Sos) DangerRed else AmberAccent
                 NavigationBarItem(
                     icon = {
-                        Icon(
-                            screen.icon,
-                            contentDescription = title,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        if (screen == Screen.Sos && sosBadgeCount > 0) {
+                            BadgedBox(
+                                badge = {
+                                    Badge(containerColor = DangerRed, contentColor = Color.White) {
+                                        Text("$sosBadgeCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            ) {
+                                Icon(screen.icon, contentDescription = title, modifier = Modifier.size(22.dp))
+                            }
+                        } else {
+                            Icon(screen.icon, contentDescription = title, modifier = Modifier.size(22.dp))
+                        }
                     },
                     label = {
                         Text(
@@ -105,11 +117,11 @@ fun BottomNavBar(navController: NavController) {
                     },
                     modifier = Modifier.semantics { contentDescription = title },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
+                        selectedIconColor = accent,
                         unselectedIconColor = TextSecondary,
-                        selectedTextColor = if (screen == Screen.Sos) DangerRed else AmberAccent,
+                        selectedTextColor = accent,
                         unselectedTextColor = TextSecondary,
-                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                        indicatorColor = accent.copy(alpha = 0.16f)
                     )
                 )
             }

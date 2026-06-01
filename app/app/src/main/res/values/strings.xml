@@ -43,6 +43,7 @@
     <string name="home_stat_relayed">Diteruskan</string>
     <string name="home_sos_btn">SOS</string>
     <string name="home_sos_label">DARURAT</string>
+    <string name="home_sos_hold">TAHAN…</string>
     <string name="home_sos_hint">Tekan tombol di bawah untuk membuat sinyal darurat</string>
     <string name="home_attack_sim_title">SIMULATOR SERANGAN</string>
     <string name="home_attack_sim_subtitle">Simulasikan serangan infrastruktur untuk demo</string>
@@ -81,11 +82,18 @@
     <string name="messages_e2e_hint">Terenkripsi E2E · Ketuk untuk chat</string>
     <string name="messages_connected">Terhubung</string>
     <string name="messages_you_prefix">Anda: </string>
+    <string name="messages_just_now">Baru saja</string>
+    <string name="messages_min_ago">m lalu</string>
+    <string name="alert_new_message">pesan baru</string>
+    <string name="alert_tap_to_open">Buka</string>
+    <string name="home_stat_range_unit">m</string>
 
     <string name="chat_input_placeholder">Ketik pesan darurat…</string>
     <string name="chat_send">Kirim</string>
     <string name="chat_e2e_banner">Terenkripsi end-to-end</string>
     <string name="chat_connected_mesh">Terhubung via Mesh</string>
+    <string name="chat_sent_via_mesh">Terkirim via mesh</string>
+    <string name="chat_mesh_label">Mesh</string>
     <string name="chat_disconnected">Terputus</string>
     <string name="chat_hold_to_flag">Tahan untuk menandai</string>
     <string name="chat_flag_title">Tandai sebagai Mencurigakan?</string>
@@ -116,6 +124,10 @@
     <string name="settings_protocol">WiFi Direct + LAN Broadcast</string>
     <string name="settings_encryption">X25519 + Ed25519 (Lazysodium)</string>
     <string name="settings_relay">Routing mesh multi-hop TTL</string>
+    <string name="settings_label_app">Aplikasi</string>
+    <string name="settings_label_protocol">Protokol</string>
+    <string name="settings_label_encryption">Enkripsi</string>
+    <string name="settings_label_relay">Relay</string>
     <string name="settings_accessibility">Aksesibilitas</string>
     <string name="settings_language">Bahasa</string>
     <string name="settings_language_id">Bahasa Indonesia</string>

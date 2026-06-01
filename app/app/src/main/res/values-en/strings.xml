@@ -43,6 +43,7 @@
     <string name="home_stat_relayed">Relayed</string>
     <string name="home_sos_btn">SOS</string>
     <string name="home_sos_label">EMERGENCY</string>
+    <string name="home_sos_hold">HOLD…</string>
     <string name="home_sos_hint">Press the button below to broadcast an emergency signal</string>
     <string name="home_attack_sim_title">ATTACK SIMULATOR</string>
     <string name="home_attack_sim_subtitle">Simulate infrastructure attack for demo</string>
@@ -81,11 +82,18 @@
     <string name="messages_e2e_hint">E2E Encrypted · Tap to chat</string>
     <string name="messages_connected">Connected</string>
     <string name="messages_you_prefix">You: </string>
+    <string name="messages_just_now">Just now</string>
+    <string name="messages_min_ago">m ago</string>
+    <string name="alert_new_message">new message</string>
+    <string name="alert_tap_to_open">Open</string>
+    <string name="home_stat_range_unit">m</string>
 
     <string name="chat_input_placeholder">Type an emergency message…</string>
     <string name="chat_send">Send</string>
     <string name="chat_e2e_banner">End-to-end encrypted</string>
     <string name="chat_connected_mesh">Connected via Mesh</string>
+    <string name="chat_sent_via_mesh">Sent via mesh</string>
+    <string name="chat_mesh_label">Mesh</string>
     <string name="chat_disconnected">Disconnected</string>
     <string name="chat_hold_to_flag">Hold to flag</string>
     <string name="chat_flag_title">Flag as Suspicious?</string>
@@ -116,6 +124,10 @@
     <string name="settings_protocol">WiFi Direct + LAN Broadcast</string>
     <string name="settings_encryption">X25519 + Ed25519 (Lazysodium)</string>
     <string name="settings_relay">Multi-hop TTL mesh routing</string>
+    <string name="settings_label_app">App</string>
+    <string name="settings_label_protocol">Protocol</string>
+    <string name="settings_label_encryption">Encryption</string>
+    <string name="settings_label_relay">Relay</string>
     <string name="settings_accessibility">Accessibility</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_id">Bahasa Indonesia</string>

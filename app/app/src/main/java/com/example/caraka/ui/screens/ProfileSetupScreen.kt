@@ -1,14 +1,22 @@
 package com.example.caraka.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.LocalPolice
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
@@ -19,6 +27,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -97,16 +107,28 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
 
             Text(stringResource(R.string.setup_select_role), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
 
+            val requiresPwdText = stringResource(R.string.setup_requires_password)
             roles.forEach { (roleValue, roleLabel) ->
                 val isSelected = selectedRole == roleValue
                 val isAuth = roleValue != IdentityManager.ROLE_CIVILIAN
+                val roleColor = roleColorFor(roleValue)
+
+                val borderColor by animateColorAsState(
+                    targetValue = if (isSelected) roleColor else SurfaceDark,
+                    label = "roleBorder"
+                )
+                val borderWidth by animateDpAsState(
+                    targetValue = if (isSelected) 1.5.dp else 1.dp,
+                    label = "roleBorderW"
+                )
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) SurfaceDark else NavyBackground)
-                        .then(if (isSelected) Modifier.border(1.dp, AmberAccent, RoundedCornerShape(8.dp)) else Modifier)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) roleColor.copy(alpha = 0.10f) else GlassSurface)
+                        .border(borderWidth, borderColor.copy(alpha = if (isSelected) 0.6f else 0.4f), RoundedCornerShape(12.dp))
                         .clickable {
                             haptics.tick()
                             selectedRole = roleValue
@@ -117,18 +139,40 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                         .semantics { contentDescription = "$roleLabel role option. ${if (isSelected) "selected" else "not selected"}" },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (isSelected) Icons.Default.Check else if (isAuth) Icons.Default.Lock else Icons.Default.Person,
-                        contentDescription = null,
-                        tint = if (isSelected) AmberAccent else TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(roleLabel, color = if (isSelected) TextPrimary else TextSecondary)
+                    // Colored role avatar
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(roleColor.copy(alpha = if (isSelected) 0.20f else 0.12f))
+                            .border(1.dp, roleColor.copy(alpha = if (isSelected) 0.6f else 0.3f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = roleIconFor(roleValue),
+                            contentDescription = null,
+                            tint = roleColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            roleLabel,
+                            color = if (isSelected) TextPrimary else TextSecondary,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
                         if (isAuth) {
-                            Text(stringResource(R.string.setup_requires_password), color = TextSecondary, fontSize = 11.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(11.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(requiresPwdText, color = TextSecondary, fontSize = 11.sp)
+                            }
                         }
+                    }
+                    // Animated check when selected
+                    AnimatedVisibility(visible = isSelected, enter = fadeIn(), exit = fadeOut()) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = roleColor, modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -242,4 +286,18 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             }
         }
     }
+}
+
+private fun roleColorFor(role: String): Color = when (role) {
+    IdentityManager.ROLE_BPBD  -> DisasterBlue
+    IdentityManager.ROLE_POLRI -> AmberAccent
+    IdentityManager.ROLE_PMI   -> DangerRed
+    else                       -> NeonMint
+}
+
+private fun roleIconFor(role: String): ImageVector = when (role) {
+    IdentityManager.ROLE_BPBD  -> Icons.Default.Shield
+    IdentityManager.ROLE_POLRI -> Icons.Default.LocalPolice
+    IdentityManager.ROLE_PMI   -> Icons.Default.LocalHospital
+    else                       -> Icons.Default.Person
 }

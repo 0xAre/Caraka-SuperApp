@@ -1,6 +1,6 @@
 # CARAKA — Progress Tracker
 > WRECK-IT 7.0 · Track: IoT Resilience · Theme: Cyber Warfare: Silent War on The Fifth Domain  
-> Deadline Proposal: **14 Juni 2026** · Last updated: 23 Mei 2026
+> Deadline Proposal: **14 Juni 2026** · Last updated: 1 Juni 2026
 
 ---
 
@@ -15,6 +15,22 @@
 ### 📡 Connectivity Monitor
 - [x] **ConnectivityMonitor.kt** — `NetworkCallback`-based real-time detection; emit `ConnectivityStatus` enum: `ONLINE` / `HYBRID` / `MESH_ONLY`
 - [x] **Integrasi ViewModel** — `connectivityStatus: StateFlow<ConnectivityStatus>` di-observe oleh HomeScreen
+
+### 🐛 Bug Fix (1 Juni 2026)
+- [x] **Fix 3-device connection** — `MeshSocketManager.startServer()` dijadikan idempotent (`if (serverJob?.isActive == true) return`). Root cause: tiap device ke-3 join group, GO restart server & drop koneksi existing. Sekarang bisa handle banyak client sekaligus. *(belum diverifikasi di 3 device fisik)*
+
+### 🎨 UI/UX Polish Round 2 (1 Juni 2026)
+- [x] **HomeScreen SOS** — Hapus `AnimatedSosButton` lama (pulsing ring), ganti hold-to-confirm 2 detik dengan arc putih menyapu 0→360° (Approach A). Label berubah jadi "TAHAN…"/"HOLD…" saat ditekan
+- [x] **HomeScreen LiveStatsRow** — Emoji 🌐📡🆘🔀 diganti Material icons (Hub / SettingsInputAntenna / Warning / SwapHoriz); range metric dapat prefix `~` (tilde)
+- [x] **BottomNavBar** — Tambah active indicator pill (`indicatorColor` tadinya Transparent → `accent.copy(alpha = 0.16f)`); badge count merah di tab SOS saat ada alert aktif (wired dari `viewModel.activeAlerts` di MainActivity)
+- [x] **ProfileSetupScreen** — Role cards dapat icon per-role (BPBD=Shield/biru, POLRI=LocalPolice/amber, PMI=LocalHospital/merah, Civilian=Person/mint) + animated border color + AnimatedVisibility check icon saat dipilih
+- [x] **ChatScreen** — Outgoing bubble dapat indikator "✓✓ Mesh" (DoneAll icon, NeonMint) = bukti terkirim via mesh tanpa internet
+- [x] **SosScreen** — Haptic `tick()` di tiap category chip onClick
+- [x] **MessagesScreen** — Timestamp hardcoded English ("Just now"/"m ago") dilokalkan ke string resources
+- [x] **FloatingChatAlert** — Label "· new message" & "Tap" dilokalkan ke string resources
+- [x] **SettingsScreen** — About section row labels dilokalkan (App/Protocol/Encryption/Relay)
+- [x] **strings.xml (ID + EN)** — Tambah 12 string baru: `home_sos_hold`, `messages_just_now`, `messages_min_ago`, `alert_new_message`, `alert_tap_to_open`, `home_stat_range_unit`, `chat_sent_via_mesh`, `chat_mesh_label`, `settings_label_*`
+- [x] **Build** — `BUILD SUCCESSFUL` 0 error, 1 pre-existing warning (deprecated ArrowForward di OnboardingTourOverlay)
 
 ### 🖥️ UI / UX Overhaul
 - [x] **HomeScreen rewrite** — `AnimatedSosButton` (double pulsing ring), `ConnectivityBanner` (🟢🟡🔴 + pulsing dot di MESH_ONLY), `LiveStatsRow` (nodes/range/alerts/relayed), `AttackSimulatorCard` (toggle switch demo grid-down)
@@ -76,7 +92,7 @@
 
 | Task | Est. | Impact |
 |------|------|--------|
-| **SQLCipher** — enkripsi Room database | ~3 jam | 🔒 Security layer data-at-rest |
+| **SQLCipher** — enkripsi Room database | ~3 jam | 🔒 Security data-at-rest; disimpan untuk 3 jam coding di babak final |
 | **QR Code identity** — scan peer via ZXing | ~4 jam | 📲 UX demo lebih mulus |
 | **Best Write-up** — dokumen teknis terpisah | ~5 jam | 💰 Prize Rp 1.000.000 terpisah |
 | **README update** — arsitektur diagram + setup guide | ~2 jam | ⭐ Kesan profesional di GitHub |
@@ -87,11 +103,13 @@
 
 ```
 Code upgrades    ████████████████████ 100%
-Proposal PDF     ████████████████████ 100%  ← tinggal isi nama tim & submit
+UI/UX polish     ████████████████████ 100%  ← selesai 1 Juni
+Proposal PDF     ████████████████████ 100%  ← tinggal isi nama tim & submit (Sabtu)
 Demo script      ████████████████████ 100%
 Title cards      ████████████████████ 100%
-Demo video       ░░░░░░░░░░░░░░░░░░░░   0%  ← perlu rekam
-SQLCipher        ░░░░░░░░░░░░░░░░░░░░   0%  (optional)
+GitHub repo      ░░░░░░░░░░░░░░░░░░░░   0%  ← Sabtu
+Demo video       ░░░░░░░░░░░░░░░░░░░░   0%  ← Sabtu, perlu 3 HP
+SQLCipher        ░░░░░░░░░░░░░░░░░░░░   0%  (disimpan untuk 3 jam coding final)
 QR Code          ░░░░░░░░░░░░░░░░░░░░   0%  (optional)
 Write-up         ░░░░░░░░░░░░░░░░░░░░   0%  (optional, prize terpisah)
 README           ░░░░░░░░░░░░░░░░░░░░   0%  (optional)

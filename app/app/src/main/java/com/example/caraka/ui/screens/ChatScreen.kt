@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Lock
@@ -70,7 +71,6 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
 
     Scaffold(
         topBar = {
-//... (keep top bar same)
             TopAppBar(
                 title = {
                     Column {
@@ -300,7 +300,23 @@ fun OutgoingMessageBubble(message: String, time: String) {
             Column {
                 Text(message, color = TextPrimary, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.align(Alignment.End))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.End)) {
+                    Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.DoneAll,
+                        contentDescription = stringResource(R.string.chat_sent_via_mesh),
+                        tint = NeonMint.copy(alpha = 0.9f),
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        stringResource(R.string.chat_mesh_label),
+                        color = NeonMint.copy(alpha = 0.9f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

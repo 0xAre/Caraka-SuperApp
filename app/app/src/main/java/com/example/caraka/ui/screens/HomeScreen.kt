@@ -1,9 +1,11 @@
 package com.example.caraka.ui.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -11,9 +13,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.SettingsInputAntenna
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.*
@@ -23,7 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -223,15 +231,15 @@ private fun LiveStatsRow(nodeCount: Int, sosCount: Int, relayedCount: Int) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        MiniStatCard("🌐", "$nodeCount", stringResource(R.string.home_stat_nodes), Modifier.weight(1f))
-        MiniStatCard("📡", "${nodeCount * 100}m", stringResource(R.string.home_stat_range), Modifier.weight(1f))
-        MiniStatCard("🆘", "$sosCount", stringResource(R.string.home_stat_alerts), Modifier.weight(1f))
-        MiniStatCard("🔀", "$relayedCount", stringResource(R.string.home_stat_relayed), Modifier.weight(1f))
+        MiniStatCard(Icons.Default.Hub, AmberAccent, "$nodeCount", stringResource(R.string.home_stat_nodes), Modifier.weight(1f))
+        MiniStatCard(Icons.Default.SettingsInputAntenna, NeonMint, "~${nodeCount * 100}m", stringResource(R.string.home_stat_range), Modifier.weight(1f))
+        MiniStatCard(Icons.Default.Warning, DangerRed, "$sosCount", stringResource(R.string.home_stat_alerts), Modifier.weight(1f))
+        MiniStatCard(Icons.Default.SwapHoriz, DisasterBlue, "$relayedCount", stringResource(R.string.home_stat_relayed), Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun MiniStatCard(emoji: String, value: String, label: String, modifier: Modifier = Modifier) {
+private fun MiniStatCard(icon: ImageVector, iconTint: Color, value: String, label: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .shadow(4.dp, RoundedCornerShape(16.dp), ambientColor = AmberAccent.copy(alpha = 0.2f), spotColor = SurfaceDark)
@@ -242,7 +250,8 @@ private fun MiniStatCard(emoji: String, value: String, label: String, modifier: 
             .semantics { contentDescription = "$label: $value" },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(emoji, fontSize = 18.sp)
+        Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(4.dp))
         Text(value, color = AmberAccent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
         Text(label, color = TextSecondary, fontSize = 10.sp)
     }
@@ -252,6 +261,24 @@ private fun MiniStatCard(emoji: String, value: String, label: String, modifier: 
 
 @Composable
 private fun AnimatedSosButton(onClick: () -> Unit) {
+    val haptics = rememberHaptics()
+    var isHolding by remember { mutableStateOf(false) }
+    var triggered by remember { mutableStateOf(false) }
+
+    val arcProgress by animateFloatAsState(
+        targetValue = if (isHolding) 1f else 0f,
+        animationSpec = if (isHolding) tween(2000, easing = LinearEasing)
+                        else tween(250, easing = FastOutSlowInEasing),
+        label = "hold-arc",
+        finishedListener = { value ->
+            if (value >= 1f && !triggered) {
+                triggered = true
+                isHolding = false
+                onClick()
+            }
+        }
+    )
+
     val infiniteTransition = rememberInfiniteTransition(label = "sos")
     val outerPulse by infiniteTransition.animateFloat(
         initialValue = 0.85f, targetValue = 1.15f,
@@ -277,21 +304,31 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
             modifier = Modifier
                 .size((200 * outerPulse).dp)
                 .clip(CircleShape)
-                .background(DangerRed.copy(alpha = 0.12f))
+                .background(DangerRed.copy(alpha = if (isHolding) 0.25f else 0.12f))
         )
         Box(
             modifier = Modifier
                 .size((170 * innerPulse).dp)
                 .clip(CircleShape)
-                .border(3.dp, DangerRed.copy(alpha = 0.5f), CircleShape)
+                .border(3.dp, DangerRed.copy(alpha = if (isHolding) 0.9f else 0.5f), CircleShape)
         )
         Box(
             modifier = Modifier
                 .size(148.dp)
                 .clip(CircleShape)
                 .background(DangerRed)
-                .shadow(12.dp, CircleShape)
-                .clickable { onClick() }
+                .shadow(if (isHolding) 24.dp else 12.dp, CircleShape)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            triggered = false
+                            isHolding = true
+                            haptics.tick()
+                            tryAwaitRelease()
+                            if (!triggered) isHolding = false
+                        }
+                    )
+                }
                 .semantics {
                     role = Role.Button
                     contentDescription = cdSos
@@ -299,10 +336,38 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.WifiTethering, contentDescription = null, tint = Color.White,
-                    modifier = Modifier.size(32.dp))
-                Text(stringResource(R.string.home_sos_btn), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
-                Text(stringResource(R.string.home_sos_label), color = Color.White.copy(0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    Icons.Default.WifiTethering,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+                Text(
+                    stringResource(R.string.home_sos_btn),
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = if (isHolding) stringResource(R.string.home_sos_hold)
+                           else stringResource(R.string.home_sos_label),
+                    color = Color.White.copy(0.8f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // White arc sweeps clockwise as user holds — 0° to 360° over 2 seconds
+        if (arcProgress > 0f) {
+            Canvas(modifier = Modifier.size(164.dp)) {
+                drawArc(
+                    color = Color.White.copy(alpha = 0.9f),
+                    startAngle = -90f,
+                    sweepAngle = 360f * arcProgress,
+                    useCenter = false,
+                    style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round)
+                )
             }
         }
     }

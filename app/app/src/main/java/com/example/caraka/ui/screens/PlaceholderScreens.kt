@@ -248,10 +248,10 @@ fun SettingsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SettingsInfoRow(Icons.Default.Info, "App", stringResource(R.string.settings_app_info))
-                SettingsInfoRow(Icons.Default.WifiTethering, "Protocol", stringResource(R.string.settings_protocol))
-                SettingsInfoRow(Icons.Default.Lock, "Encryption", stringResource(R.string.settings_encryption))
-                SettingsInfoRow(Icons.Default.Router, "Relay", stringResource(R.string.settings_relay))
+                SettingsInfoRow(Icons.Default.Info, stringResource(R.string.settings_label_app), stringResource(R.string.settings_app_info))
+                SettingsInfoRow(Icons.Default.WifiTethering, stringResource(R.string.settings_label_protocol), stringResource(R.string.settings_protocol))
+                SettingsInfoRow(Icons.Default.Lock, stringResource(R.string.settings_label_encryption), stringResource(R.string.settings_encryption))
+                SettingsInfoRow(Icons.Default.Router, stringResource(R.string.settings_label_relay), stringResource(R.string.settings_relay))
             }
 
             // ── Danger Zone ──────────────────────────────────────────────

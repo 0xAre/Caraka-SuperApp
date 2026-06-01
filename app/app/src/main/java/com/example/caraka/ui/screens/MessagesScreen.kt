@@ -88,12 +88,13 @@ fun MessagesScreen(viewModel: MainViewModel, onNavigateToChat: (String) -> Unit)
                 items(connectedPeers.size, key = { connectedPeers[it].id }) { index ->
                     val peer = connectedPeers[index]
                     val lastMsg = lastMessagesPerPeer[peer.id]
+                    val justNow = stringResource(R.string.messages_just_now)
+                    val minAgo = stringResource(R.string.messages_min_ago)
                     val timeStr = lastMsg?.let { msg ->
-                        val now = System.currentTimeMillis()
-                        val diff = now - msg.timestamp
+                        val diff = System.currentTimeMillis() - msg.timestamp
                         when {
-                            diff < 60_000 -> "Just now"
-                            diff < 3_600_000 -> "${diff / 60_000}m ago"
+                            diff < 60_000 -> justNow
+                            diff < 3_600_000 -> "${diff / 60_000}$minAgo"
                             diff < 86_400_000 -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp))
                             else -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(msg.timestamp))
                         }

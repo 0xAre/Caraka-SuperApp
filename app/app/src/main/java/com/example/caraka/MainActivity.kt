@@ -182,10 +182,13 @@ private fun CarakaNav(
     // Onboarding overlay
     var showTour by remember(onboardingDoneFlag) { mutableStateOf(!onboardingDoneFlag) }
 
+    // Active SOS alerts → badge on the SOS nav tab
+    val sosAlerts by viewModel.activeAlerts.collectAsStateWithLifecycle(initialValue = emptyList())
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            bottomBar = { BottomNavBar(navController = navController) },
+            bottomBar = { BottomNavBar(navController = navController, sosBadgeCount = sosAlerts.size) },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
             NavHost(

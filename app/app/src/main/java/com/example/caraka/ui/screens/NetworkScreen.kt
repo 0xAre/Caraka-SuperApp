@@ -421,7 +421,7 @@ private fun NetworkStatsPanel(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         StatChip(label = "Nodes",   value = "$nodeCount",          color = AmberAccent)
-        StatChip(label = "Range",   value = "${nodeCount * 100}m", color = NeonMint)
+        StatChip(label = "Range",   value = "~${nodeCount * 100}m", color = NeonMint)
         StatChip(label = "SOS",     value = "$sosCount",           color = DangerRed)
         StatChip(label = "Relayed", value = "$relayedCount",       color = DisasterBlue)
     }
