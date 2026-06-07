@@ -10,6 +10,8 @@ import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest
 import android.util.Log
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -61,10 +63,13 @@ class WifiDirectManager(
         private const val LAN_DISCOVERY_PORT = 8890
         private const val LAN_DISCOVERY_INTERVAL_MS = 3_000L
         private const val DISCOVERY_INTERVAL_MS = 6_000L
-        // Long cooldown is deliberate: a connect attempt makes us non-discoverable while it runs,
-        // so frequent attempts stop the peer from ever finding us. Staying discoverable most of
-        // the time lets BOTH peers see each other and lets GO negotiation succeed.
         private const val AUTO_CONNECT_COOLDOWN_MS = 20_000L
+
+        // WiFi P2P DNS-SD Service Discovery constants
+        // Only devices advertising "_caraka._tcp" will be discovered by CARAKA peers.
+        // Smart TVs, speakers, and other non-CARAKA devices are invisible to us.
+        private const val CARAKA_SERVICE_NAME = "caraka-mesh"
+        private const val CARAKA_SERVICE_TYPE = "_caraka._tcp"
     }
 
     private val manager: WifiP2pManager =
@@ -134,8 +139,14 @@ class WifiDirectManager(
     // Auto-connect cooldown tracker
     @Volatile private var lastConnectAttemptMs = 0L
 
-    /** WiFi Direct MACs / LAN hosts verified as CARAKA peers (Layer 2). */
+    /** MACs verified via DNS-SD service discovery (highest confidence — they ARE CARAKA). */
+    private val carakaServicePeerMacs = mutableSetOf<String>()
+
+    /** MACs verified via LAN UDP HANDSHAKE (also CARAKA). */
     private val carakaLanPeerMacs = mutableSetOf<String>()
+
+    @Volatile private var serviceDiscoveryRegistered = false
+    @Volatile private var serviceDiscoveryJob: Job? = null
 
     private var carakaValidationJob: Job? = null
     @Volatile private var carakaHandshakeValidated = false
@@ -174,6 +185,101 @@ class WifiDirectManager(
         clearGroupThenDiscover()
         startPeriodicDiscovery()
         startLanDiscovery()
+    }
+
+    /**
+     * Register CARAKA as a WiFi P2P DNS-SD (Bonjour) service.
+     * After this, other CARAKA devices running discoverServices() will find us.
+     * Non-CARAKA devices (TV, speakers, laptops) are completely invisible.
+     */
+    @SuppressLint("MissingPermission")
+    private fun registerCarakaService() {
+        if (serviceDiscoveryRegistered) return
+        val record = mapOf(
+            "v" to "1",
+            "app" to "caraka"
+        )
+        val serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+            CARAKA_SERVICE_NAME, CARAKA_SERVICE_TYPE, record
+        )
+        manager.addLocalService(channel, serviceInfo, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                serviceDiscoveryRegistered = true
+                Log.d(TAG, "CARAKA DNS-SD service registered — visible to other CARAKA peers")
+                setupServiceDiscoveryListeners()
+                startServiceDiscovery()
+            }
+            override fun onFailure(reason: Int) {
+                Log.w(TAG, "addLocalService failed ($reason) — falling back to peer discovery only")
+                // Fallback: use regular peer discovery with post-connect validation
+                discoverPeers()
+            }
+        })
+    }
+
+    /**
+     * Set up listeners for DNS-SD service responses.
+     * When a CARAKA peer is found via DNS-SD, their MAC is stored in carakaServicePeerMacs
+     * and auto-connect is attempted immediately.
+     */
+    private fun setupServiceDiscoveryListeners() {
+        // TXT record listener — fires when a CARAKA device's metadata arrives
+        val txtListener = WifiP2pManager.DnsSdTxtRecordListener { fullDomainName, record, device ->
+            if (fullDomainName.contains(CARAKA_SERVICE_NAME, ignoreCase = true)) {
+                Log.d(TAG, "CARAKA DNS-SD TXT: ${device.deviceName} (${device.deviceAddress}) record=$record")
+                carakaServicePeerMacs.add(device.deviceAddress)
+            }
+        }
+
+        // Service response listener — fires when a matching service is found
+        val serviceListener = WifiP2pManager.DnsSdServiceResponseListener { instanceName, registrationType, device ->
+            if (registrationType.contains(CARAKA_SERVICE_TYPE, ignoreCase = true)
+                || instanceName.contains(CARAKA_SERVICE_NAME, ignoreCase = true)) {
+                Log.d(TAG, "CARAKA peer found via DNS-SD: ${device.deviceName} (${device.deviceAddress})")
+                carakaServicePeerMacs.add(device.deviceAddress)
+                // Attempt connection immediately if not already connecting
+                if (_connectionState.value !in busyStates) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
+                        lastConnectAttemptMs = now
+                        Log.d(TAG, "Auto-connecting to DNS-SD CARAKA peer: ${device.deviceName}")
+                        connectToPeer(device)
+                    }
+                }
+            }
+        }
+
+        manager.setDnsSdResponseListeners(channel, serviceListener, txtListener)
+        Log.d(TAG, "DNS-SD response listeners configured")
+    }
+
+    /**
+     * Start WiFi P2P service discovery.
+     * This discovers ONLY devices advertising the CARAKA DNS-SD service type.
+     * Runs alongside regular discoverPeers() for robustness.
+     */
+    @SuppressLint("MissingPermission")
+    private fun startServiceDiscovery() {
+        val serviceRequest = WifiP2pDnsSdServiceRequest.newInstance(
+            CARAKA_SERVICE_NAME, CARAKA_SERVICE_TYPE
+        )
+        manager.addServiceRequest(channel, serviceRequest, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() {
+                        Log.d(TAG, "DNS-SD service discovery started — scanning for CARAKA peers")
+                    }
+                    override fun onFailure(reason: Int) {
+                        Log.w(TAG, "discoverServices failed ($reason) — using peer discovery fallback")
+                        discoverPeers()
+                    }
+                })
+            }
+            override fun onFailure(reason: Int) {
+                Log.w(TAG, "addServiceRequest failed ($reason) — using peer discovery fallback")
+                discoverPeers()
+            }
+        })
     }
 
     /** Remove stale active group + delete all persistent groups, then discover. */
@@ -455,11 +561,18 @@ class WifiDirectManager(
                     Log.d(TAG, "Device name retry after P2P enable: $name")
                 }
             }
+            // Register CARAKA DNS-SD service so only CARAKA peers find us.
+            // Also starts service discovery alongside regular peer discovery.
+            scope.launch {
+                delay(800L) // let channel fully initialize before adding service
+                registerCarakaService()
+            }
             requestCurrentPeers()
             discoverPeers()
         } else {
             _availablePeers.value = emptyList()
             _connectionState.value = "WIFI_P2P_DISABLED"
+            serviceDiscoveryRegistered = false // reset so it re-registers on next enable
         }
     }
 
@@ -475,42 +588,45 @@ class WifiDirectManager(
 
         Log.d(TAG, "Peers available: ${peers.size} — ${peers.map { it.deviceName }}")
 
-        // Auto-connect strategy: prefer LAN-verified CARAKA peers, fall back to any
-        // AVAILABLE device. Post-connect CARAKA validation (10s timeout) will kick
-        // non-CARAKA devices automatically. This is needed because setDeviceName via
-        // reflection fails on Android 10+ (hidden API restriction), so we cannot rely
-        // on the CRK: name prefix filter alone.
+        // Auto-connect priority:
+        // Tier 1: DNS-SD verified CARAKA peers (100% certain — they advertise our service)
+        // Tier 2: LAN UDP HANDSHAKE verified MACs
+        // Tier 3: CRK: name prefix (if setDeviceName worked on their device)
+        // Tier 4: Any AVAILABLE device — validated post-connect via CARAKA HANDSHAKE timeout
         if (peers.isNotEmpty() && prevState !in busyStates) {
             val now = System.currentTimeMillis()
             if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
-                // Tier 1: LAN-verified CARAKA peers (highest confidence)
+                // Tier 1: DNS-SD service verified — definitively a CARAKA peer
+                val dnsVerified = peers.firstOrNull {
+                    it.deviceAddress in carakaServicePeerMacs && it.status != WifiP2pDevice.CONNECTED
+                }
+                // Tier 2: LAN HANDSHAKE verified
                 val lanVerified = peers.firstOrNull {
                     it.deviceAddress in carakaLanPeerMacs && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 2: CRK:/CARAKA name prefix (works if setDeviceName succeeded)
+                // Tier 3: CRK:/CARAKA name prefix (works if setDeviceName succeeded)
                 val carakaByName = peers.firstOrNull {
                     it.isCarakaDevice() && it.status == WifiP2pDevice.AVAILABLE
                 } ?: peers.firstOrNull {
                     it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 3: Any AVAILABLE device — validated post-connect via CARAKA HANDSHAKE
-                // Non-CARAKA devices will be kicked automatically after 10s validation timeout
+                // Tier 4: Any AVAILABLE device — 10s CARAKA HANDSHAKE validation kicks non-CARAKA
                 val anyAvailable = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
                     ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
 
-                val candidate = lanVerified ?: carakaByName ?: anyAvailable
+                val candidate = dnsVerified ?: lanVerified ?: carakaByName ?: anyAvailable
                 if (candidate != null) {
                     lastConnectAttemptMs = now
-                    val tier = when {
-                        candidate == lanVerified -> "LAN-verified"
-                        candidate == carakaByName -> "CRK:-name"
+                    val tier = when (candidate) {
+                        dnsVerified -> "DNS-SD"
+                        lanVerified -> "LAN-verified"
+                        carakaByName -> "CRK:-name"
                         else -> "probe+validate"
                     }
                     Log.d(TAG, "Connecting to ${candidate.deviceName} [$tier] (${candidate.deviceAddress})")
                     connectToPeer(candidate)
-
                 } else {
-                    Log.d(TAG, "No CARAKA peers found (${peers.size} non-CARAKA devices nearby, skipping)")
+                    Log.d(TAG, "No peers to connect (${peers.size} devices, none CARAKA-verified)")
                 }
             }
         }
