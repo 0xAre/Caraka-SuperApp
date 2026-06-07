@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
  * Listener for mesh socket events.
  */
 interface MeshMessageListener {
-    fun onMessageReceived(protocol: MeshProtocol, fromAddress: String)
+    fun onMessageReceived(protocol: MeshProtocol, fromAddress: String, connId: String = "")
     /** Raw TCP socket is up — handshake not yet validated. */
     fun onSocketConnected(address: String, isServer: Boolean)
     /** Fires only after a valid CARAKA HANDSHAKE message is received. */
@@ -175,7 +175,7 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
                     if (isValidCarakaHandshake(protocol) && handshakeCompleted.add(handshakeKey)) {
                         listener.onPeerConnected(address, connectionRoles[handshakeKey] ?: false)
                     }
-                    listener.onMessageReceived(protocol, address)
+                    listener.onMessageReceived(protocol, address, connId)
                 } else {
                     Log.w(TAG, "Failed to parse message JSON")
                 }
@@ -192,7 +192,34 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
     }
 
     /**
-     * Send a length-prefixed JSON payload to the connected peer.
+     * Send a length-prefixed JSON payload to a specific connection (for multi-hop routing).
+     */
+    fun sendToConnection(connId: String, payload: String) {
+        scope.launch {
+            try {
+                val out = clientStreams[connId]
+                if (out == null) {
+                    Log.w(TAG, "Connection $connId not found for routing!")
+                    return@launch
+                }
+
+                val bytes = payload.toByteArray(Charsets.UTF_8)
+                val header = ByteBuffer.allocate(4).putInt(bytes.size).array()
+
+                synchronized(out) {
+                    out.write(header)
+                    out.write(bytes)
+                    out.flush()
+                }
+                Log.d(TAG, "Routed ${bytes.size} bytes to connId $connId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error routing payload to $connId", e)
+            }
+        }
+    }
+
+    /**
+     * Send a length-prefixed JSON payload to all connected peers (Broadcast).
      */
     fun sendPayload(payload: String) {
         scope.launch {

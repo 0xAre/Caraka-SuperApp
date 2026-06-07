@@ -1295,7 +1295,7 @@ class WifiDirectManager(
 
     // ========== MESH MESSAGE LISTENER ==========
 
-    override fun onMessageReceived(protocol: MeshProtocol, fromAddress: String) {
+    override fun onMessageReceived(protocol: MeshProtocol, fromAddress: String, connId: String) {
         if (protocol.type !in listOf("HANDSHAKE", "CONNECTION_REQUEST", "CONNECTION_ACCEPT", "CONNECTION_REJECT") &&
             socketManager.isDuplicate(protocol.id, protocol.timestamp)) {
             Log.d(TAG, "Anti-replay: dropped ${protocol.type} id=${protocol.id}")
