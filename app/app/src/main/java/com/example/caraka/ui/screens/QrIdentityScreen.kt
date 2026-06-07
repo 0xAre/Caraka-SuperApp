@@ -90,6 +90,9 @@ fun QrIdentityScreen(
             scannedPeer?.let { peer ->
                 scope.launch {
                     viewModel.saveVerifiedPeer(peer)
+                    // NEW: Send CONNECTION_REQUEST with autoAccept=true
+                    // Peer will auto-accept because QR scan = in-person consent
+                    viewModel.requestConnectionToPeer(peer.peerId, autoAccept = true)
                     // Trigger immediate WiFi Direct connect to this peer.
                     // Resets cooldown + starts discovery cycle so both devices
                     // connect within seconds of QR scan confirmation.

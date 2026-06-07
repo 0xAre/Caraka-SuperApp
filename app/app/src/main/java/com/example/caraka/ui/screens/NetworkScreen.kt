@@ -78,6 +78,7 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
     selectedNode?.let { node ->
         NodeDetailBottomSheet(
             node = node,
+            onConnect = { viewModel?.connectToNode(it) },
             onDismiss = { selectedNode = null }
         )
     }
@@ -167,8 +168,13 @@ private fun LegendItem(color: Color, label: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NodeDetailBottomSheet(node: MeshNodeUi, onDismiss: () -> Unit) {
+private fun NodeDetailBottomSheet(
+    node: MeshNodeUi,
+    onConnect: (MeshNodeUi) -> Unit = {},
+    onDismiss: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var requested by remember(node.id) { mutableStateOf(false) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -196,6 +202,25 @@ private fun NodeDetailBottomSheet(node: MeshNodeUi, onDismiss: () -> Unit) {
             if (node.isAuthority) {
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.network_node_authority), color = NeonMint, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+
+            // Manual connect action — only for peers that are not the local node and not yet connected.
+            if (node.id != "SELF" && !node.isConnected) {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        requested = true
+                        onConnect(node)
+                    },
+                    enabled = !requested,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AmberAccent, contentColor = NavyBackground)
+                ) {
+                    Text(
+                        if (requested) "Menghubungkan…" else "Hubungkan",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

@@ -30,11 +30,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -104,6 +106,7 @@ class WifiDirectManager(
     private var scanJob: Job? = null
     private var lanListenJob: Job? = null
     private var lanBroadcastJob: Job? = null
+    private var autoConnectLoopJob: Job? = null  // NEW: periodic connection requests to all peers
     private var lanSocket: DatagramSocket? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -141,6 +144,22 @@ class WifiDirectManager(
 
     /** IP addresses of LAN peers verified via UDP HANDSHAKE. */
     private val carakaLanPeerHosts = mutableSetOf<String>()
+
+    /**
+     * LAN mesh backbone registry: peerId → last-known IP address.
+     * This is the key to true full mesh — when all devices share a WiFi, any device can
+     * unicast directly to any other peer's IP (true B↔C), no Group-Owner relay needed.
+     */
+    private val peerIpRegistry = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** peerId → last time we received any LAN packet from them (for liveness pruning). */
+    private val peerLastLanSeen = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** How long a LAN peer stays "connected" without a fresh beacon before being pruned. */
+    private val LAN_PEER_TIMEOUT_MS = 20_000L
+
+    private var peerListGossipJob: Job? = null
+    private var livenessPruneJob: Job? = null
 
     /** WiFi Direct MACs of peers verified after a successful CARAKA HANDSHAKE. */
     private val carakaHandshakedMacs = mutableSetOf<String>()
@@ -202,6 +221,11 @@ class WifiDirectManager(
             intentFilter,
             ContextCompat.RECEIVER_EXPORTED
         )
+
+        // NOTE: No WiFi-Direct auto-connect loop. The LAN backbone (startLanDiscovery)
+        // auto-establishes the full mesh: every device broadcasts a beacon, hears every
+        // other beacon, and is marked ACTIVE_MESH. This avoids BUG-01 (inviting TVs) and
+        // the WiFi-Direct star-topology limitation (BUG-03).
         // Remove any stale P2P group from a previous session before starting fresh
         clearGroupThenDiscover()
         startPeriodicDiscovery()
@@ -258,15 +282,9 @@ class WifiDirectManager(
                 || instanceName.contains(CARAKA_SERVICE_NAME, ignoreCase = true)) {
                 Log.d(TAG, "CARAKA peer found via DNS-SD: ${device.deviceName} (${device.deviceAddress})")
                 carakaServicePeerMacs.add(device.deviceAddress)
-                // Attempt connection immediately if not already connecting
-                if (_connectionState.value !in busyStates) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
-                        lastConnectAttemptMs = now
-                        Log.d(TAG, "Auto-connecting to DNS-SD CARAKA peer: ${device.deviceName}")
-                        connectToPeer(device)
-                    }
-                }
+                // NEW: Just mark as discovered, don't auto-connect
+                // User will click [CONNECT] button from UI
+                Log.d(TAG, "DNS-SD CARAKA peer discovered (manual connect via UI): ${device.deviceName}")
             }
         }
 
@@ -274,10 +292,18 @@ class WifiDirectManager(
         Log.d(TAG, "DNS-SD response listeners configured")
     }
 
+    /** Backoff attempt counter for discoverServices BUSY recovery (BUG-04). */
+    @Volatile private var serviceDiscoveryAttempt = 0
+    private val MAX_SERVICE_DISCOVERY_BACKOFF_MS = 30_000L
+
     /**
      * Start WiFi P2P service discovery.
      * This discovers ONLY devices advertising the CARAKA DNS-SD service type.
      * Runs alongside regular discoverPeers() for robustness.
+     *
+     * BUG-04: On OEMs like XOS/MIUI/HiOS, discoverServices() frequently returns BUSY in a tight
+     * loop with no recovery. We add exponential backoff (capped) so the radio gets time to settle
+     * instead of hammering it. The LAN backbone keeps the mesh working regardless.
      */
     @SuppressLint("MissingPermission")
     private fun startServiceDiscovery() {
@@ -289,16 +315,37 @@ class WifiDirectManager(
                 manager.discoverServices(channel, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
                         Log.d(TAG, "DNS-SD service discovery started — scanning for CARAKA peers")
+                        serviceDiscoveryAttempt = 0 // reset backoff on success
                     }
                     override fun onFailure(reason: Int) {
-                        Log.w(TAG, "discoverServices failed ($reason) — using peer discovery fallback")
-                        discoverPeers()
+                        if (reason == WifiP2pManager.BUSY) {
+                            val backoff = minOf(
+                                1_000L * (1L shl serviceDiscoveryAttempt.coerceAtMost(5)),
+                                MAX_SERVICE_DISCOVERY_BACKOFF_MS
+                            )
+                            serviceDiscoveryAttempt++
+                            Log.w(TAG, "discoverServices BUSY — backing off ${backoff}ms (attempt $serviceDiscoveryAttempt)")
+                            scope.launch { delay(backoff); startServiceDiscovery() }
+                        } else {
+                            Log.w(TAG, "discoverServices failed ($reason) — using peer discovery fallback")
+                            discoverPeers()
+                        }
                     }
                 })
             }
             override fun onFailure(reason: Int) {
-                Log.w(TAG, "addServiceRequest failed ($reason) — using peer discovery fallback")
-                discoverPeers()
+                if (reason == WifiP2pManager.BUSY) {
+                    val backoff = minOf(
+                        1_000L * (1L shl serviceDiscoveryAttempt.coerceAtMost(5)),
+                        MAX_SERVICE_DISCOVERY_BACKOFF_MS
+                    )
+                    serviceDiscoveryAttempt++
+                    Log.w(TAG, "addServiceRequest BUSY — backing off ${backoff}ms (attempt $serviceDiscoveryAttempt)")
+                    scope.launch { delay(backoff); startServiceDiscovery() }
+                } else {
+                    Log.w(TAG, "addServiceRequest failed ($reason) — using peer discovery fallback")
+                    discoverPeers()
+                }
             }
         })
     }
@@ -391,6 +438,9 @@ class WifiDirectManager(
         scanJob?.cancel(); scanJob = null
         lanBroadcastJob?.cancel(); lanBroadcastJob = null
         lanListenJob?.cancel(); lanListenJob = null
+        autoConnectLoopJob?.cancel(); autoConnectLoopJob = null
+        peerListGossipJob?.cancel(); peerListGossipJob = null
+        livenessPruneJob?.cancel(); livenessPruneJob = null
         lanSocket?.close(); lanSocket = null
         releaseMulticastLock()
         socketManager.stopAll()
@@ -398,6 +448,55 @@ class WifiDirectManager(
 
     fun startFallbackDiscovery() {
         startLanDiscovery()
+    }
+
+    // NEW: Auto-connect loop for fully connected mesh
+    private fun startAutoConnectLoop() {
+        autoConnectLoopJob?.cancel()
+        autoConnectLoopJob = scope.launch {
+            try {
+                while (true) {
+                    delay(10_000L) // Check every 10 seconds
+                    autoConnectToPeers()
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Auto-connect loop cancelled")
+            }
+        }
+        Log.d(TAG, "Auto-connect loop started")
+    }
+
+    /**
+     * Send CONNECTION_REQUEST to all DISCOVERED peers automatically.
+     * This enables fully connected mesh where every device tries to connect to all others.
+     */
+    private suspend fun autoConnectToPeers() {
+        try {
+            // Get all discovered peers from database
+            val allPeers = repository.getPeersByStatus(com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED.name)
+                .first()  // Get current value from Flow
+
+            val now = System.currentTimeMillis()
+            val cooldownMs = 120_000L  // 2 minute cooldown between retries
+
+            allPeers.forEach { peer ->
+                // Skip if recently attempted
+                if (now - peer.lastAttempt < cooldownMs) {
+                    return@forEach
+                }
+
+                // Skip if already rejected multiple times (user said no)
+                if (peer.rejectionCount >= 3) {
+                    Log.d(TAG, "Skipping ${peer.displayName} — rejected 3+ times")
+                    return@forEach
+                }
+
+                Log.d(TAG, "Auto-requesting connection to ${peer.displayName} (${peer.id})")
+                requestConnectionToPeer(peer.id, autoAccept = false)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error in autoConnectToPeers", e)
+        }
     }
 
     // ========== WIFI DIRECT ACTIONS ==========
@@ -561,13 +660,92 @@ class WifiDirectManager(
     }
 
     /**
-     * Send a mesh message.
+     * Initiate a connection to a peer — used by QR fast-connect and any explicit [CONNECT] action.
+     *
+     * If the peer is already reachable on the LAN (we have its IP), the mesh link is effectively
+     * already up: we mark it ACTIVE_MESH immediately and send a directed hello so the other side
+     * does the same — instant connect, no waiting on discovery (fixes BUG-02).
+     *
+     * If the peer is NOT yet on the LAN, we broadcast a CONNECTION_REQUEST; the peer answers as
+     * soon as its beacon/registry entry appears.
+     */
+    fun requestConnectionToPeer(peerId: String, autoAccept: Boolean = false) {
+        scope.launch {
+            val peer = repository.getPeerById(peerId) ?: run {
+                Log.w(TAG, "Peer not found: $peerId")
+                return@launch
+            }
+
+            val myId = identityManager.getPeerId()
+            val myName = identityManager.getDisplayName()
+            val myRole = identityManager.getRole()
+
+            val knownIp = peerIpRegistry[peerId]
+            val request = MeshProtocol(
+                type = "CONNECTION_REQUEST",
+                id = java.util.UUID.randomUUID().toString(),
+                senderId = myId,
+                senderName = myName,
+                senderRole = myRole,
+                recipientId = peerId,
+                content = "Request to connect",
+                timestamp = System.currentTimeMillis(),
+                autoAccept = autoAccept
+            )
+
+            if (knownIp != null) {
+                // LAN path known → instant connect.
+                Log.d(TAG, "Peer $peerId reachable on LAN ($knownIp) — instant connect")
+                repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
+                sendToPeer(peerId, com.google.gson.Gson().toJson(request))
+            } else {
+                // No LAN path. Broadcast the request (in case they surface on the LAN)...
+                repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.PENDING_REQUEST)
+                Log.d(TAG, "No LAN path for $peerId — broadcasting CONNECTION_REQUEST (autoAccept=$autoAccept)")
+                sendMessage(com.google.gson.Gson().toJson(request))
+
+                // ...and if we know their WiFi-Direct MAC, kick off a P2P connection now (offline path).
+                val mac = peer.macAddress?.takeIf { it.isNotBlank() && !it.startsWith("lan:") }
+                if (mac != null) {
+                    connectToWifiDeviceByMac(mac)
+                }
+            }
+        }
+    }
+
+    /**
+     * Manually initiate a WiFi-Direct P2P connection to a specific device MAC, if it is currently
+     * in the discovered list. Used by the network map's "Hubungkan" button and the offline
+     * fallback in requestConnectionToPeer.
+     */
+    fun connectToWifiDeviceByMac(mac: String) {
+        val device = _availablePeers.value.firstOrNull { it.deviceAddress == mac }
+        if (device != null) {
+            Log.d(TAG, "Manual WiFi-Direct connect to ${device.deviceName} ($mac)")
+            connectToPeer(device)
+        } else {
+            Log.w(TAG, "WiFi-Direct device $mac not in discovered list — triggering rediscovery")
+            discoverPeers()
+        }
+    }
+
+    /**
+     * Send a mesh message (broadcast).
      * LAN UDP is tried first (more reliable, no star-topology limit, works across all Android
      * versions). WiFi Direct socket is also used so that offline (no-WiFi) scenarios work.
      */
     fun sendMessage(json: String) {
         sendLanPayload(json)       // LAN first — reliable, any-to-any
         socketManager.sendPayload(json) // WiFi Direct socket — offline fallback
+    }
+
+    /**
+     * Send a message directed at a specific peer. Uses LAN unicast straight to the peer's
+     * known IP (true B↔C delivery, no Group-Owner relay), falling back to broadcast and the
+     * WiFi-Direct socket when the IP isn't known.
+     */
+    fun sendToPeer(peerId: String, json: String) {
+        sendDirectedMessage(peerId, json)
     }
 
     // ========== CALLBACKS FROM BROADCAST RECEIVER ==========
@@ -600,8 +778,23 @@ class WifiDirectManager(
         }
     }
 
+    @Volatile private var lastNonEmptyPeersMs = 0L
+
     internal fun onPeersAvailable(peers: List<WifiP2pDevice>) {
-        _availablePeers.value = peers
+        // Smooth out transient empty reports. WiFi Direct on many OEMs flips between a full and an
+        // empty peer list every scan, which makes nodes blink in and out on the map. If we just
+        // got peers moments ago, ignore a sudden empty report rather than clearing the UI.
+        val now = System.currentTimeMillis()
+        if (peers.isEmpty()) {
+            if (now - lastNonEmptyPeersMs < 12_000L) {
+                Log.d(TAG, "Ignoring transient empty peer list (had peers ${now - lastNonEmptyPeersMs}ms ago)")
+                return
+            }
+            _availablePeers.value = emptyList()
+        } else {
+            lastNonEmptyPeersMs = now
+            _availablePeers.value = peers
+        }
         val prevState = _connectionState.value
 
         // Never overwrite a forming/active connection — doing so would resume discovery
@@ -619,12 +812,16 @@ class WifiDirectManager(
             return
         }
 
-        // Auto-connect priority:
-        // Tier 1: DNS-SD verified (100% CARAKA — they advertise our service)
-        // Tier 2: Post-HANDSHAKE WiFi Direct MACs (proven CARAKA after successful exchange)
-        // Tier 3: CRK: name prefix (if setDeviceName worked on their device)
-        // Tier 4: Any non-CONNECTED device — 10s CARAKA HANDSHAKE validation
-        if (peers.isNotEmpty() && prevState !in busyStates) {
+        // Auto-connect ONLY to verified CARAKA peers. This is the connectivity path that works
+        // with no shared router (forms a WiFi Direct group → star). The LAN backbone then layers
+        // full mesh on top when a router is present.
+        //
+        // BUG-01 fix: we deliberately DO NOT have a Tier-4 "any nearby device" fallback. Every
+        // tier below is CARAKA-only, so TVs / speakers / laptops are never invited.
+        //   Tier 1: DNS-SD verified  — they advertise our "_caraka._tcp" service
+        //   Tier 2: HANDSHAKE-verified MAC — proven CARAKA in a prior exchange
+        //   Tier 3: "CRK:" name prefix — CARAKA device whose name we can read
+        if (peers.isNotEmpty()) {
             val now = System.currentTimeMillis()
             if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
                 val dnsVerified = peers.firstOrNull {
@@ -638,26 +835,19 @@ class WifiDirectManager(
                 } ?: peers.firstOrNull {
                     it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 4: any non-CONNECTED peer (AVAILABLE, INVITED, FAILED, UNAVAILABLE)
-                // 10s post-connect CARAKA validation will kick non-CARAKA devices
-                val anyCandidate = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
-                    ?: peers.firstOrNull { it.status == WifiP2pDevice.INVITED }
-                    ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
-                    ?: peers.firstOrNull { it.status != WifiP2pDevice.CONNECTED }
 
-                val candidate = dnsVerified ?: handshakeVerified ?: carakaByName ?: anyCandidate
+                val candidate = dnsVerified ?: handshakeVerified ?: carakaByName
                 if (candidate != null) {
                     lastConnectAttemptMs = now
                     val tier = when (candidate) {
                         dnsVerified -> "DNS-SD"
                         handshakeVerified -> "HANDSHAKE-verified"
-                        carakaByName -> "CRK:-name"
-                        else -> "probe+validate"
+                        else -> "CRK:-name"
                     }
-                    Log.d(TAG, "Connecting to ${candidate.deviceName} [$tier] status=${candidate.status} (${candidate.deviceAddress})")
+                    Log.d(TAG, "Auto-connecting to CARAKA peer ${candidate.deviceName} [$tier] (${candidate.deviceAddress})")
                     connectToPeer(candidate)
                 } else {
-                    Log.d(TAG, "No connectable peers (${peers.size} total, all CONNECTED or empty)")
+                    Log.d(TAG, "No CARAKA peers to auto-connect (${peers.size} nearby, none verified) — ignoring non-CARAKA devices")
                 }
             }
         }
@@ -743,9 +933,13 @@ class WifiDirectManager(
         scanJob = scope.launch {
             while (true) {
                 delay(DISCOVERY_INTERVAL_MS)
-                // Only rediscover if not already connected
+                // Keep WiFi-Direct discovery alive unless we are in an ACTUAL P2P connection.
+                // (MESH_ACTIVE / PEERS_FOUND / DISCOVERING etc. must NOT block rediscovery.)
                 val state = _connectionState.value
-                if (state !in setOf("CONNECTED", "CONNECTED_GO", "CONNECTED_CLIENT", "CONNECTING")) {
+                if (state !in setOf("CONNECTED_GO", "CONNECTED_CLIENT", "CONNECTING")) {
+                    // Self-heal: clear a possibly-stuck in-flight flag so discovery can never
+                    // get permanently wedged (the root cause of "mDiscoveryStarted=false").
+                    discoveryInFlight = false
                     discoverPeers()
                 }
             }
@@ -758,6 +952,8 @@ class WifiDirectManager(
         acquireMulticastLock()
         startLanListener()
         startLanBroadcaster()
+        startPeerListGossip()
+        startLivenessPruning()
     }
 
     private fun acquireMulticastLock() {
@@ -795,10 +991,19 @@ class WifiDirectManager(
                     val myId = identityManager.getPeerId()
                     val hostAddress = packet.address.hostAddress ?: "unknown"
                     if (protocol.senderId.isBlank() || protocol.senderId == myId) continue
-                    if (protocol.type == "HANDSHAKE" && protocol.content == "LAN_DISCOVERY") {
-                        saveLanPeer(protocol, hostAddress)
-                    } else {
-                        onMessageReceived(protocol, "lan:$hostAddress")
+
+                    // Update the LAN registry on EVERY packet — this is what makes
+                    // direct unicast (true full mesh) possible.
+                    peerIpRegistry[protocol.senderId] = hostAddress
+                    peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
+
+                    when {
+                        protocol.type == "HANDSHAKE" && protocol.content == "LAN_DISCOVERY" ->
+                            saveLanPeer(protocol, hostAddress)
+                        protocol.type == "PEER_LIST" ->
+                            handlePeerList(protocol)
+                        else ->
+                            onMessageReceived(protocol, "lan:$hostAddress")
                     }
                 }
             } catch (_: SocketException) {
@@ -859,7 +1064,13 @@ class WifiDirectManager(
     }
 
     private suspend fun saveLanPeer(protocol: MeshProtocol, hostAddress: String) {
-        val peer = PeerEntity(
+        carakaLanPeerHosts.add(hostAddress)
+
+        // A peer we can hear on the LAN is, by definition, reachable — so we mark it
+        // ACTIVE_MESH directly (design decision: direct connect, no accept/reject dialog).
+        // Preserve any existing verification flag (e.g. from a prior QR scan).
+        val existing = repository.getPeerById(protocol.senderId)
+        val peer = (existing ?: PeerEntity(
             id = protocol.senderId,
             deviceName = protocol.senderName,
             displayName = protocol.senderName,
@@ -870,35 +1081,223 @@ class WifiDirectManager(
             isAuthority = protocol.senderRole in listOf("BPBD", "POLRI", "PMI"),
             macAddress = "lan:$hostAddress",
             lastSeen = System.currentTimeMillis(),
-            isConnected = true,
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
+            hopCount = 0
+        )).copy(
+            displayName = protocol.senderName,
+            role = protocol.senderRole,
+            publicKey = protocol.publicKey ?: existing?.publicKey ?: "",
+            signingKey = protocol.signingKey ?: existing?.signingKey ?: "",
+            macAddress = "lan:$hostAddress",
+            lastSeen = System.currentTimeMillis(),
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
             hopCount = 0
         )
-        carakaLanPeerHosts.add(hostAddress)
         repository.savePeer(peer)
-        _connectionState.value = "LAN_PEER_FOUND"
-        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress")
+        // Use a distinct, NON-busy state so WiFi-Direct peer discovery keeps running. Reusing
+        // "CONNECTED" here previously put us into busyStates and silently killed discovery.
+        if (_connectionState.value !in busyStates) _connectionState.value = "MESH_ACTIVE"
+        Log.d(TAG, "LAN peer ACTIVE_MESH: ${peer.displayName} at $hostAddress (verified=${peer.isVerified})")
+    }
+
+    // ========== PEER_LIST GOSSIP (full-mesh awareness) ==========
+
+    /**
+     * Merge a received PEER_LIST into our local DB so we learn about peers we have never
+     * directly heard from — e.g. client B learning about client C via Group Owner A,
+     * or any device backfilling peers that joined before it did.
+     */
+    private suspend fun handlePeerList(protocol: MeshProtocol) {
+        val myId = identityManager.getPeerId()
+        val shared = protocol.peers ?: return
+        shared.forEach { share ->
+            if (share.peerId.isBlank() || share.peerId == myId) return@forEach
+            share.ip?.takeIf { it.isNotBlank() }?.let { ip ->
+                // Only learn an IP if we don't already have a fresher one of our own.
+                peerIpRegistry.putIfAbsent(share.peerId, ip)
+            }
+            val existing = repository.getPeerById(share.peerId)
+            // Don't downgrade a peer we can already hear directly on the LAN.
+            val directlyLive = (System.currentTimeMillis() - (peerLastLanSeen[share.peerId] ?: 0L)) < LAN_PEER_TIMEOUT_MS
+            val status = if (directlyLive) com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH
+                         else com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED
+            val peer = (existing ?: PeerEntity(
+                id = share.peerId,
+                deviceName = share.name,
+                displayName = share.name,
+                role = share.role,
+                publicKey = share.encPub,
+                signingKey = share.signPub,
+                isVerified = false,
+                isAuthority = share.role in listOf("BPBD", "POLRI", "PMI"),
+                macAddress = share.ip?.let { "lan:$it" },
+                lastSeen = System.currentTimeMillis(),
+                status = status,
+                hopCount = 1
+            )).copy(
+                displayName = share.name,
+                role = share.role,
+                publicKey = share.encPub.ifBlank { existing?.publicKey ?: "" },
+                signingKey = share.signPub.ifBlank { existing?.signingKey ?: "" },
+                lastSeen = System.currentTimeMillis(),
+                status = status
+            )
+            repository.savePeer(peer)
+        }
+    }
+
+    /** Periodically broadcast everything we know so the whole mesh converges on a shared view. */
+    private fun startPeerListGossip() {
+        peerListGossipJob?.cancel()
+        peerListGossipJob = scope.launch {
+            try {
+                while (true) {
+                    delay(5_000L)
+                    broadcastPeerList()
+                }
+            } catch (_: Exception) { Log.d(TAG, "Peer-list gossip stopped") }
+        }
+    }
+
+    private suspend fun broadcastPeerList() {
+        val myId = identityManager.getPeerId()
+        if (myId.isBlank()) return
+        val known = repository.getAllPeers().first()
+        if (known.isEmpty()) return
+        val now = System.currentTimeMillis()
+        // Only advertise peers we are CURRENTLY, directly connected to (live within the timeout).
+        // This stops stale/phantom peers from a previous session propagating around the mesh and
+        // inflating everyone's node count.
+        val shares = known.mapNotNull { p ->
+            val live = (now - (peerLastLanSeen[p.id] ?: 0L)) < LAN_PEER_TIMEOUT_MS
+            if (p.id == myId || p.publicKey.isBlank() || !live) null
+            else PeerShare(
+                peerId = p.id,
+                name = p.displayName,
+                role = p.role,
+                encPub = p.publicKey,
+                signPub = p.signingKey,
+                ip = peerIpRegistry[p.id] ?: p.macAddress?.removePrefix("lan:")
+            )
+        }
+        if (shares.isEmpty()) return
+        val gossip = MeshProtocol(
+            type = "PEER_LIST",
+            id = UUID.randomUUID().toString(),
+            senderId = myId,
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = "BROADCAST",
+            content = "PEER_LIST",
+            timestamp = System.currentTimeMillis(),
+            peers = shares
+        )
+        val json = gossip.toJson()
+        sendLanPayload(json)            // reaches everyone on the same WiFi
+        socketManager.sendPayload(json) // and rides the WiFi-Direct relay when offline
+    }
+
+    // ========== LIVENESS PRUNING ==========
+
+    /**
+     * Downgrade LAN peers we haven't heard a beacon from within the timeout window.
+     *
+     * IMPORTANT: only peers established over the LAN (present in peerIpRegistry) are eligible.
+     * WiFi-Direct peers don't emit a 3s LAN beacon, so they are left to the WiFi-Direct
+     * disconnect callback (onPeerDisconnected) — pruning them here would wrongly drop a live
+     * P2P link and cause the "peer appears then vanishes" flicker.
+     */
+    private fun startLivenessPruning() {
+        livenessPruneJob?.cancel()
+        livenessPruneJob = scope.launch {
+            try {
+                while (true) {
+                    delay(8_000L)
+                    val now = System.currentTimeMillis()
+                    val active = repository.getActiveMeshPeers().first()
+                    active.forEach { p ->
+                        // Only LAN-registry peers are subject to beacon-based pruning.
+                        if (!peerIpRegistry.containsKey(p.id)) return@forEach
+                        val lastSeen = peerLastLanSeen[p.id] ?: 0L
+                        if (now - lastSeen > LAN_PEER_TIMEOUT_MS) {
+                            peerIpRegistry.remove(p.id)
+                            repository.updatePeerConnectionState(
+                                p.id,
+                                com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED
+                            )
+                            Log.d(TAG, "Pruned stale LAN peer ${p.displayName} (no beacon ${now - lastSeen}ms)")
+                        }
+                    }
+                }
+            } catch (_: Exception) { Log.d(TAG, "Liveness pruning stopped") }
+        }
+    }
+
+    /** Send a directed message straight to a peer's IP when we know it; else broadcast. */
+    private fun sendDirectedMessage(peerId: String, json: String) {
+        val ip = peerIpRegistry[peerId]
+        if (ip != null) {
+            sendLanUnicast(ip, json)
+        } else {
+            sendLanPayload(json)            // fall back to LAN broadcast
+        }
+        socketManager.sendPayload(json)     // and the WiFi-Direct relay for offline reach
+    }
+
+    private fun sendLanUnicast(ip: String, json: String) {
+        scope.launch {
+            try {
+                val bytes = json.toByteArray(Charsets.UTF_8)
+                DatagramSocket().use { socket ->
+                    val packet = DatagramPacket(bytes, bytes.size, InetAddress.getByName(ip), LAN_DISCOVERY_PORT)
+                    socket.send(packet)
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "LAN unicast to $ip failed (${e.message}) — falling back to broadcast")
+                sendLanPayload(json)
+            }
+        }
     }
 
     private fun localBroadcastAddresses(): Set<InetAddress> {
-        val addresses = linkedSetOf(InetAddress.getByName("255.255.255.255"))
+        // Always include the limited broadcast — it works even with no regular WiFi, and is the
+        // path that lets beacons traverse an active WiFi-Direct group (no router needed).
+        val addresses = linkedSetOf<InetAddress>(InetAddress.getByName("255.255.255.255"))
+
+        // Regular WiFi subnet broadcast (when connected to a router/hotspot).
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-        val dhcp = wifiManager?.dhcpInfo ?: return addresses
-        if (dhcp.ipAddress == 0) return emptySet() // Not connected to any WiFi — skip broadcast
-        val broadcast = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
-        val bytes = byteArrayOf(
-            (broadcast and 0xff).toByte(),
-            ((broadcast shr 8) and 0xff).toByte(),
-            ((broadcast shr 16) and 0xff).toByte(),
-            ((broadcast shr 24) and 0xff).toByte()
-        )
-        addresses.add(InetAddress.getByAddress(bytes))
+        val dhcp = wifiManager?.dhcpInfo
+        if (dhcp != null && dhcp.ipAddress != 0) {
+            val broadcast = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
+            addresses.add(InetAddress.getByAddress(byteArrayOf(
+                (broadcast and 0xff).toByte(),
+                ((broadcast shr 8) and 0xff).toByte(),
+                ((broadcast shr 16) and 0xff).toByte(),
+                ((broadcast shr 24) and 0xff).toByte()
+            )))
+        }
+
+        // Per-interface broadcast addresses — this picks up the WiFi-Direct group interface
+        // (p2p-...) so the LAN mesh works inside a WiFi Direct group with no router present.
+        try {
+            java.net.NetworkInterface.getNetworkInterfaces()?.toList()?.forEach { iface ->
+                if (!iface.isUp || iface.isLoopback) return@forEach
+                iface.interfaceAddresses.forEach { ia ->
+                    ia.broadcast?.let { addresses.add(it) }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Interface enumeration failed (${e.message})")
+        }
+
         return addresses
     }
 
     // ========== MESH MESSAGE LISTENER ==========
 
     override fun onMessageReceived(protocol: MeshProtocol, fromAddress: String) {
-        if (protocol.type != "HANDSHAKE" && socketManager.isDuplicate(protocol.id, protocol.timestamp)) {
+        if (protocol.type !in listOf("HANDSHAKE", "CONNECTION_REQUEST", "CONNECTION_ACCEPT", "CONNECTION_REJECT") &&
+            socketManager.isDuplicate(protocol.id, protocol.timestamp)) {
             Log.d(TAG, "Anti-replay: dropped ${protocol.type} id=${protocol.id}")
             return
         }
@@ -908,6 +1307,9 @@ class WifiDirectManager(
                 "TEXT"      -> handleTextMessage(protocol)
                 "SOS"       -> handleSosMessage(protocol)
                 "FLAG"      -> handleFlagMessage(protocol)
+                "CONNECTION_REQUEST" -> handleConnectionRequest(protocol, fromAddress)
+                "CONNECTION_ACCEPT"  -> handleConnectionAccept(protocol, fromAddress)
+                "CONNECTION_REJECT"  -> handleConnectionReject(protocol, fromAddress)
                 else -> Log.w(TAG, "Unknown type: ${protocol.type}")
             }
         }
@@ -971,7 +1373,10 @@ class WifiDirectManager(
             priorityPeerId = null
         }
 
-        val peer = PeerEntity(
+        // A completed HANDSHAKE over the WiFi-Direct socket means the peer is connected.
+        // Mark ACTIVE_MESH so it shows as connected; preserve any prior QR verification.
+        val existing = repository.getPeerById(protocol.senderId)
+        val peer = (existing ?: PeerEntity(
             id = protocol.senderId,
             deviceName = protocol.senderName,
             displayName = protocol.senderName,
@@ -982,11 +1387,22 @@ class WifiDirectManager(
             isAuthority = protocol.senderRole in listOf("BPBD", "POLRI", "PMI"),
             macAddress = wifiDirectMac,
             lastSeen = System.currentTimeMillis(),
-            isConnected = true,
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
+            hopCount = 0
+        )).copy(
+            displayName = protocol.senderName,
+            role = protocol.senderRole,
+            publicKey = protocol.publicKey ?: existing?.publicKey ?: "",
+            signingKey = protocol.signingKey ?: existing?.signingKey ?: "",
+            macAddress = wifiDirectMac,
+            lastSeen = System.currentTimeMillis(),
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
             hopCount = 0
         )
         repository.savePeer(peer)
-        Log.d(TAG, "Peer saved: ${peer.displayName}")
+        // Mark as freshly seen so liveness pruning treats this WiFi-Direct peer as live.
+        peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
+        Log.d(TAG, "Peer ACTIVE_MESH via WiFi-Direct HANDSHAKE: ${peer.displayName}")
     }
 
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
@@ -1075,6 +1491,96 @@ class WifiDirectManager(
         val targetId = protocol.content
         if (targetId.isNotBlank()) repository.flagMessageById(targetId)
         if (protocol.ttl > 1) sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
+    }
+
+    // ========== NEW: CONNECTION REQUEST HANDLERS ==========
+
+    /**
+     * Handle incoming CONNECTION_REQUEST from peer.
+     * Design decision: direct connect, no accept/reject dialog. We always accept and mark
+     * the peer ACTIVE_MESH. WiFi Direct P2P is only used as an offline fallback when the
+     * peer is NOT reachable on the LAN.
+     */
+    private suspend fun handleConnectionRequest(protocol: MeshProtocol, fromAddress: String) {
+        val peerId = protocol.senderId
+        Log.d(TAG, "CONNECTION_REQUEST from ${protocol.senderName} ($peerId)")
+
+        repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
+        sendConnectionAccept(peerId, protocol.senderName, protocol.senderRole)
+        connectToPeerAfterAccept(peerId)
+    }
+
+    /**
+     * Handle CONNECTION_ACCEPT response from peer.
+     */
+    private suspend fun handleConnectionAccept(protocol: MeshProtocol, fromAddress: String) {
+        val peerId = protocol.senderId
+        Log.d(TAG, "CONNECTION_ACCEPT from $peerId")
+        repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
+        connectToPeerAfterAccept(peerId)
+    }
+
+    /**
+     * Handle CONNECTION_REJECT response from peer.
+     * Means peer rejected our CONNECTION_REQUEST.
+     */
+    private suspend fun handleConnectionReject(protocol: MeshProtocol, fromAddress: String) {
+        val peerId = protocol.senderId
+        Log.w(TAG, "CONNECTION_REJECT from $peerId")
+
+        // Increment rejection count
+        repository.incrementRejectionCount(peerId)
+
+        // Reset to DISCOVERED, user can retry after cooldown
+        repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED)
+
+        _connectionState.value = "CONNECTION_REJECTED:$peerId"
+    }
+
+    /**
+     * Send CONNECTION_ACCEPT back to peer (private version called from handler).
+     */
+    private suspend fun sendConnectionAccept(peerId: String, peerName: String, peerRole: String) {
+        val accept = MeshProtocol(
+            type = "CONNECTION_ACCEPT",
+            id = java.util.UUID.randomUUID().toString(),
+            senderId = identityManager.getPeerId(),
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = peerId,
+            content = "Accept connection",
+            timestamp = System.currentTimeMillis()
+        )
+        Log.d(TAG, "Sending CONNECTION_ACCEPT to $peerId")
+        sendMessage(accept.toJson())
+    }
+
+    /**
+     * PUBLIC: Send CONNECTION_ACCEPT message (called from ViewModel after user accepts).
+     */
+    fun sendConnectionAcceptMessage(peerId: String, peerName: String, peerRole: String) {
+        scope.launch {
+            sendConnectionAccept(peerId, peerName, peerRole)
+        }
+    }
+
+    /**
+     * Establish a path to the peer. If the peer is reachable on the LAN (the common case
+     * when all devices share a WiFi), do NOTHING — LAN unicast/broadcast already carries
+     * traffic both ways, and the mesh is fully connected without any Group-Owner relay.
+     *
+     * WiFi Direct P2P is reserved strictly for the offline fallback: when we have no LAN IP
+     * for the peer at all. This is what prevents BUG-01 — we never blindly invite whatever
+     * WiFi-Direct device happens to be nearby (TVs, speakers, laptops).
+     */
+    private fun connectToPeerAfterAccept(peerId: String) {
+        if (peerIpRegistry.containsKey(peerId)) {
+            Log.d(TAG, "Peer $peerId reachable on LAN — no WiFi Direct needed (full mesh via LAN)")
+            return
+        }
+        Log.d(TAG, "Peer $peerId has no LAN path — offline WiFi Direct fallback not auto-triggered")
+        // Intentionally NOT auto-connecting to arbitrary WiFi-Direct devices.
+        // Offline P2P is initiated only by explicit user action via connectToPeer(device).
     }
 
     private fun showSosNotification(sender: String, message: String) {

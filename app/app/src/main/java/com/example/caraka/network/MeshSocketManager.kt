@@ -41,11 +41,18 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
     private var clientJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Support multiple connections per peer by using unique connection IDs
+    // Key: unique connection ID (generated per connection)
+    // Value: output stream for that connection
     private val clientStreams = java.util.concurrent.ConcurrentHashMap<String, OutputStream>()
     private val connectionRoles = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val connectionAddresses = java.util.concurrent.ConcurrentHashMap<String, String>() // connId -> address
     private val handshakeCompleted = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var activeSocket: Socket? = null // Keep for client close
     private var serverSocket: ServerSocket? = null
+
+    // Generate unique connection ID
+    private fun generateConnectionId(): String = java.util.UUID.randomUUID().toString()
 
     private fun isValidCarakaHandshake(protocol: MeshProtocol): Boolean {
         return protocol.type == "HANDSHAKE"
@@ -90,16 +97,19 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
                 while (isActive) {
                     val clientSocket = serverSocket!!.accept()
                     val address = clientSocket.inetAddress.hostAddress ?: "unknown"
-                    Log.d(TAG, "Client connected: $address")
+                    val connId = generateConnectionId()
+                    Log.d(TAG, "Client connected: $address (connId=$connId)")
 
                     val out = clientSocket.getOutputStream()
-                    clientStreams[address] = out
-                    connectionRoles[address] = true
+                    clientStreams[connId] = out
+                    connectionRoles[connId] = true
+                    connectionAddresses[connId] = address
                     listener.onSocketConnected(address, isServer = true)
 
                     scope.launch {
-                        handleIncomingData(clientSocket.getInputStream(), address)
-                        clientStreams.remove(address)
+                        handleIncomingData(clientSocket.getInputStream(), address, connId)
+                        clientStreams.remove(connId)
+                        connectionAddresses.remove(connId)
                     }
                 }
             } catch (e: Exception) {
@@ -116,17 +126,20 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
             try {
                 val socket = Socket()
                 socket.bind(null)
-                Log.d(TAG, "Connecting to GO at $hostAddress:$PORT...")
+                val connId = generateConnectionId()
+                Log.d(TAG, "Connecting to GO at $hostAddress:$PORT (connId=$connId)...")
                 socket.connect(InetSocketAddress(hostAddress, PORT), TIMEOUT)
                 Log.d(TAG, "Client connected to GO!")
 
                 val out = socket.getOutputStream()
-                clientStreams[hostAddress] = out
-                connectionRoles[hostAddress] = false
+                clientStreams[connId] = out
+                connectionRoles[connId] = false
+                connectionAddresses[connId] = hostAddress
                 listener.onSocketConnected(hostAddress, isServer = false)
 
-                handleIncomingData(socket.getInputStream(), hostAddress)
-                clientStreams.remove(hostAddress)
+                handleIncomingData(socket.getInputStream(), hostAddress, connId)
+                clientStreams.remove(connId)
+                connectionAddresses.remove(connId)
             } catch (e: Exception) {
                 if (isActive) {
                     Log.e(TAG, "Client error", e)
@@ -139,8 +152,9 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
      * Read length-prefixed messages from the stream.
      * Format: [4-byte big-endian length][JSON payload]
      */
-    private suspend fun handleIncomingData(inputStream: InputStream, address: String) {
+    private suspend fun handleIncomingData(inputStream: InputStream, address: String, connId: String = "") {
         val dataInput = DataInputStream(BufferedInputStream(inputStream))
+        val handshakeKey = if (connId.isNotBlank()) connId else address
 
         try {
             while (currentCoroutineContext().isActive) {
@@ -158,8 +172,8 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
 
                 val protocol = MeshProtocol.fromJson(json)
                 if (protocol != null) {
-                    if (isValidCarakaHandshake(protocol) && handshakeCompleted.add(address)) {
-                        listener.onPeerConnected(address, connectionRoles[address] ?: false)
+                    if (isValidCarakaHandshake(protocol) && handshakeCompleted.add(handshakeKey)) {
+                        listener.onPeerConnected(address, connectionRoles[handshakeKey] ?: false)
                     }
                     listener.onMessageReceived(protocol, address)
                 } else {

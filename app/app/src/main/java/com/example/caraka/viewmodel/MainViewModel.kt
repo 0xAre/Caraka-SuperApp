@@ -72,6 +72,10 @@ class MainViewModel(
 
     val connectionState: StateFlow<String> = wifiDirectManager.connectionState
 
+    // NEW: Connection request dialog state
+    private val _incomingConnectionRequest = MutableStateFlow<String?>(null)
+    val incomingConnectionRequest: StateFlow<String?> = _incomingConnectionRequest
+
     val meshNodes: StateFlow<List<MeshNodeUi>> = combine(connectedPeers, availablePeers) { connected, available ->
         val connectedMacs = connected.mapNotNull { it.macAddress }.toSet()
         val connectedNodes = connected.map { peer ->
@@ -84,8 +88,15 @@ class MainViewModel(
                 isConnected = true
             )
         }
+        // Only surface CARAKA devices as discovered nodes. Non-CARAKA WiFi-Direct devices
+        // (TVs, speakers, other phones' P2P interfaces) are filtered out so they neither
+        // clutter the map nor inflate the node count.
         val discoveredNodes = available
             .filterNot { device -> device.deviceAddress in connectedMacs }
+            .filter { device ->
+                val n = device.deviceName
+                n.startsWith("CRK", ignoreCase = true) || n.contains("CARAKA", ignoreCase = true)
+            }
             .map { device ->
                 MeshNodeUi(
                     id = "wifi:${device.deviceAddress}",
@@ -135,6 +146,10 @@ class MainViewModel(
 
     init {
         viewModelScope.launch {
+            // Reset connection state on launch; live peers re-mark themselves ACTIVE_MESH within
+            // seconds via beacons/handshake. We intentionally do NOT delete peers here — the
+            // gossip-live filter and CARAKA-name filter already keep the node count accurate,
+            // and deleting on every restart would cold-start the mesh during testing.
             repository.disconnectAllPeers()
             _hasIdentity.value = identityManager.hasIdentity()
             if (_hasIdentity.value) {
@@ -266,6 +281,78 @@ class MainViewModel(
     fun triggerPriorityConnect(peerId: String) {
         wifiDirectManager.setPriorityPeerId(peerId)
         Log.d("MainViewModel", "Priority connect triggered for peerId: $peerId")
+    }
+
+    // ========== NEW: CONNECTION REQUEST METHODS ==========
+
+    /**
+     * Show incoming connection request dialog.
+     * Called from WifiDirectManager when CONNECTION_REQUEST is received.
+     */
+    fun showConnectionRequestDialog(peerId: String) {
+        _incomingConnectionRequest.value = peerId
+    }
+
+    /**
+     * Dismiss the connection request dialog.
+     */
+    fun dismissConnectionRequestDialog() {
+        _incomingConnectionRequest.value = null
+    }
+
+    /**
+     * Accept an incoming connection request.
+     * Sends CONNECTION_ACCEPT back to peer and attempts WiFi P2P connection.
+     */
+    fun acceptConnectionRequest(peerId: String) {
+        viewModelScope.launch {
+            Log.d("MainViewModel", "Accepting connection request from $peerId")
+            repository.updatePeerConnectionState(
+                peerId,
+                com.example.caraka.data.local.entity.ConnectionStatus.CONNECTED
+            )
+            // Send accept message via mesh
+            val peer = repository.getPeerById(peerId) ?: return@launch
+            wifiDirectManager.sendConnectionAcceptMessage(peerId, peer.displayName, peer.role)
+        }
+        _incomingConnectionRequest.value = null
+    }
+
+    /**
+     * Reject an incoming connection request.
+     * Sends CONNECTION_REJECT back to peer.
+     */
+    fun rejectConnectionRequest(peerId: String) {
+        viewModelScope.launch {
+            Log.d("MainViewModel", "Rejecting connection request from $peerId")
+            repository.incrementRejectionCount(peerId)
+            repository.updatePeerConnectionState(
+                peerId,
+                com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED
+            )
+        }
+        _incomingConnectionRequest.value = null
+    }
+
+    /**
+     * NEW: Request connection to a peer (user clicks [CONNECT] button).
+     * Sends CONNECTION_REQUEST message and marks peer as PENDING_REQUEST.
+     */
+    fun requestConnectionToPeer(peerId: String, autoAccept: Boolean = false) {
+        wifiDirectManager.requestConnectionToPeer(peerId, autoAccept)
+    }
+
+    /**
+     * Manual connect from the network map. A node id of "wifi:<MAC>" is a raw WiFi-Direct
+     * device → initiate a P2P connection directly. Any other id is a CARAKA peerId → go
+     * through the LAN/registry path (instant connect if reachable, else broadcast request).
+     */
+    fun connectToNode(node: MeshNodeUi) {
+        if (node.id.startsWith("wifi:")) {
+            wifiDirectManager.connectToWifiDeviceByMac(node.id.removePrefix("wifi:"))
+        } else {
+            wifiDirectManager.requestConnectionToPeer(node.id)
+        }
     }
 
     override fun onCleared() {

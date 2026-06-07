@@ -31,6 +31,8 @@ class MeshRepository(
     fun getConnectedPeers(): Flow<List<PeerEntity>> = peerDao.getConnectedPeers()
     fun getAllPeers(): Flow<List<PeerEntity>> = peerDao.getAllPeers()
     fun getConnectedPeerCount(): Flow<Int> = peerDao.getConnectedPeerCount()
+    fun getPeersByStatus(statusName: String): Flow<List<PeerEntity>> = peerDao.getPeersByStatus(statusName)
+    fun getActiveMeshPeers(): Flow<List<PeerEntity>> = peerDao.getActiveMeshPeers()
 
     suspend fun getPeerById(peerId: String): PeerEntity? {
         return peerDao.getPeerById(peerId)
@@ -41,7 +43,12 @@ class MeshRepository(
     }
 
     suspend fun disconnectAllPeers() {
-        peerDao.disconnectAll()
+        peerDao.resetAllToDiscovered()
+    }
+
+    /** Clear stale unverified peers (called on launch). QR-verified peers are preserved. */
+    suspend fun clearUnverifiedPeers() {
+        peerDao.deleteUnverifiedPeers()
     }
 
     /**
@@ -76,9 +83,26 @@ class MeshRepository(
             isAuthority = role in listOf("BPBD", "POLRI", "PMI"),
             macAddress = null,
             lastSeen = System.currentTimeMillis(),
-            isConnected = false
+            status = com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED
         )
         peerDao.insertPeer(peer)
+    }
+
+    // NEW: Connection state management for manual request flow
+    suspend fun updatePeerConnectionState(peerId: String, status: com.example.caraka.data.local.entity.ConnectionStatus) {
+        peerDao.updateConnectionState(peerId, status.name)
+    }
+
+    suspend fun updateLastAttempt(peerId: String) {
+        peerDao.updateLastAttempt(peerId)
+    }
+
+    suspend fun incrementRejectionCount(peerId: String) {
+        peerDao.incrementRejectionCount(peerId)
+    }
+
+    suspend fun resetRejectionCount(peerId: String) {
+        peerDao.resetRejectionCount(peerId)
     }
 
     /** Wipe all local data — called on identity reset/logout so nothing leaks across accounts. */
@@ -205,7 +229,8 @@ class MeshRepository(
             priority = "NORMAL",
             signature = signature
         )
-        wifiDirectManager?.sendMessage(protocol.toJson())
+        // Directed message → LAN unicast straight to the recipient (true B↔C delivery)
+        wifiDirectManager?.sendToPeer(recipientId, protocol.toJson())
     }
 
     /**
