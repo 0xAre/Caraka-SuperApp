@@ -13,6 +13,9 @@ import java.nio.ByteBuffer
  */
 interface MeshMessageListener {
     fun onMessageReceived(protocol: MeshProtocol, fromAddress: String)
+    /** Raw TCP socket is up — handshake not yet validated. */
+    fun onSocketConnected(address: String, isServer: Boolean)
+    /** Fires only after a valid CARAKA HANDSHAKE message is received. */
     fun onPeerConnected(address: String, isServer: Boolean)
     fun onPeerDisconnected(address: String)
 }
@@ -39,8 +42,17 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val clientStreams = java.util.concurrent.ConcurrentHashMap<String, OutputStream>()
+    private val connectionRoles = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val handshakeCompleted = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var activeSocket: Socket? = null // Keep for client close
     private var serverSocket: ServerSocket? = null
+
+    private fun isValidCarakaHandshake(protocol: MeshProtocol): Boolean {
+        return protocol.type == "HANDSHAKE"
+            && protocol.content == "HANDSHAKE"
+            && protocol.senderId.isNotBlank()
+            && !protocol.publicKey.isNullOrBlank()
+    }
 
     /**
      * Anti-replay cache.
@@ -82,7 +94,8 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
 
                     val out = clientSocket.getOutputStream()
                     clientStreams[address] = out
-                    listener.onPeerConnected(address, isServer = true)
+                    connectionRoles[address] = true
+                    listener.onSocketConnected(address, isServer = true)
 
                     scope.launch {
                         handleIncomingData(clientSocket.getInputStream(), address)
@@ -109,7 +122,8 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
 
                 val out = socket.getOutputStream()
                 clientStreams[hostAddress] = out
-                listener.onPeerConnected(hostAddress, isServer = false)
+                connectionRoles[hostAddress] = false
+                listener.onSocketConnected(hostAddress, isServer = false)
 
                 handleIncomingData(socket.getInputStream(), hostAddress)
                 clientStreams.remove(hostAddress)
@@ -144,6 +158,9 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
 
                 val protocol = MeshProtocol.fromJson(json)
                 if (protocol != null) {
+                    if (isValidCarakaHandshake(protocol) && handshakeCompleted.add(address)) {
+                        listener.onPeerConnected(address, connectionRoles[address] ?: false)
+                    }
                     listener.onMessageReceived(protocol, address)
                 } else {
                     Log.w(TAG, "Failed to parse message JSON")
@@ -197,6 +214,8 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
         clientJob?.cancel()
         clientStreams.values.forEach { try { it.close() } catch (_: Exception) {} }
         clientStreams.clear()
+        connectionRoles.clear()
+        handshakeCompleted.clear()
         try { activeSocket?.close() } catch (_: Exception) {}
         try { serverSocket?.close() } catch (_: Exception) {}
         activeSocket = null

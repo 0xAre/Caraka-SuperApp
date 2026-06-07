@@ -134,6 +134,12 @@ class WifiDirectManager(
     // Auto-connect cooldown tracker
     @Volatile private var lastConnectAttemptMs = 0L
 
+    /** WiFi Direct MACs / LAN hosts verified as CARAKA peers (Layer 2). */
+    private val carakaLanPeerMacs = mutableSetOf<String>()
+
+    private var carakaValidationJob: Job? = null
+    @Volatile private var carakaHandshakeValidated = false
+
     // Cached authority flag — read once from IdentityManager on first connect
     @Volatile private var cachedIsAuthority = false
 
@@ -339,6 +345,7 @@ class WifiDirectManager(
     }
 
     fun updateDeviceName(name: String) {
+        val carakaName = if (name.startsWith("CRK:", ignoreCase = true)) name else "CRK:$name"
         try {
             val method = manager.javaClass.getMethod(
                 "setDeviceName",
@@ -346,13 +353,18 @@ class WifiDirectManager(
                 String::class.java,
                 WifiP2pManager.ActionListener::class.java
             )
-            method.invoke(manager, channel, name, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() { Log.d(TAG, "Device name set to $name") }
+            method.invoke(manager, channel, carakaName, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() { Log.d(TAG, "Device name set to $carakaName") }
                 override fun onFailure(reason: Int) { Log.w(TAG, "setDeviceName failed: $reason") }
             })
         } catch (e: Exception) {
             Log.w(TAG, "Reflection setDeviceName failed", e)
         }
+    }
+
+    private fun WifiP2pDevice.isCarakaDevice(): Boolean {
+        return deviceName.startsWith("CRK:", ignoreCase = true)
+            || deviceName.startsWith("CARAKA", ignoreCase = true)
     }
 
     @Volatile private var connectInFlight = false
@@ -446,20 +458,31 @@ class WifiDirectManager(
 
         Log.d(TAG, "Peers available: ${peers.size} — ${peers.map { it.deviceName }}")
 
-        // Auto-connect to the first available peer if we're not already connected
+        // Auto-connect only to verified CARAKA peers (3-tier filter)
         if (peers.isNotEmpty() && prevState !in busyStates) {
             val now = System.currentTimeMillis()
             if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
-                val candidate = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
-                    ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
-                    ?: peers.firstOrNull()
+                // Tier 1: LAN-verified CARAKA peers (MAC learned via LAN or prior handshake)
+                val lanVerified = peers.firstOrNull {
+                    it.deviceAddress in carakaLanPeerMacs && it.status != WifiP2pDevice.CONNECTED
+                }
+                // Tier 2: name-prefix filter — device with CRK: or CARAKA prefix
+                val carakaByName = peers.firstOrNull {
+                    it.isCarakaDevice() && it.status == WifiP2pDevice.AVAILABLE
+                } ?: peers.firstOrNull {
+                    it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
+                }
+                // Tier 3: no fallback to unknown devices
+                val candidate = lanVerified ?: carakaByName
                 if (candidate != null) {
                     // Both sides keep discovering AND initiating — WiFi Direct requires both peers
                     // to be discoverable for GO negotiation, so a "wait for the other" scheme breaks
                     // it. The connectInFlight guard + cooldown stop a single device from storming.
                     lastConnectAttemptMs = now
-                    Log.d(TAG, "Auto-connecting to ${candidate.deviceName} (${candidate.deviceAddress})")
+                    Log.d(TAG, "Auto-connecting to CARAKA peer ${candidate.deviceName} (${candidate.deviceAddress})")
                     connectToPeer(candidate)
+                } else {
+                    Log.d(TAG, "No CARAKA peers found (${peers.size} non-CARAKA devices nearby, skipping)")
                 }
             }
         }
@@ -473,17 +496,48 @@ class WifiDirectManager(
             Log.d(TAG, "I am Group Owner — starting server socket")
             _connectionState.value = "CONNECTED_GO"
             socketManager.startServer()
+            startCarakaValidation()
         } else if (info.groupFormed) {
             Log.d(TAG, "I am Client — connecting to GO: $groupOwnerAddress")
             _connectionState.value = "CONNECTED_CLIENT"
             if (groupOwnerAddress != null) {
                 socketManager.startClient(groupOwnerAddress)
             }
+            startCarakaValidation()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startCarakaValidation() {
+        carakaValidationJob?.cancel()
+        carakaHandshakeValidated = false
+        carakaValidationJob = scope.launch {
+            delay(10_000L)
+            if (!carakaHandshakeValidated) {
+                Log.w(TAG, "No CARAKA HANDSHAKE received in 10s — disconnecting non-CARAKA device")
+                try {
+                    manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() {
+                            Log.d(TAG, "Removed non-CARAKA group after validation timeout")
+                            clearGroupThenDiscover()
+                        }
+                        override fun onFailure(reason: Int) {
+                            Log.w(TAG, "removeGroup after validation timeout failed ($reason)")
+                            clearGroupThenDiscover()
+                        }
+                    })
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "Permission missing during non-CARAKA disconnect", e)
+                    clearGroupThenDiscover()
+                }
+            }
         }
     }
 
     internal fun onDisconnected() {
         Log.d(TAG, "P2P disconnected")
+        carakaValidationJob?.cancel()
+        carakaHandshakeValidated = false
         _connectionState.value = "DISCONNECTED"
         connectInFlight = false
         socketManager.stopAll()
@@ -644,9 +698,10 @@ class WifiDirectManager(
             isConnected = true,
             hopCount = 0
         )
+        carakaLanPeerMacs.add(hostAddress)
         repository.savePeer(peer)
         _connectionState.value = "LAN_PEER_FOUND"
-        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress")
+        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress (tracked for P2P priority)")
     }
 
     private fun localBroadcastAddresses(): Set<InetAddress> {
@@ -683,10 +738,16 @@ class WifiDirectManager(
         }
     }
 
-    override fun onPeerConnected(address: String, isServer: Boolean) {
-        Log.d(TAG, "Socket connected: $address (server=$isServer)")
-        _connectionState.value = "CONNECTED"
+    override fun onSocketConnected(address: String, isServer: Boolean) {
+        Log.d(TAG, "Socket ready: $address (server=$isServer) — sending HANDSHAKE")
         scope.launch { sendHandshake() }
+    }
+
+    override fun onPeerConnected(address: String, isServer: Boolean) {
+        Log.d(TAG, "CARAKA peer validated: $address (server=$isServer)")
+        carakaHandshakeValidated = true
+        carakaValidationJob?.cancel()
+        _connectionState.value = "CONNECTED"
     }
 
     override fun onPeerDisconnected(address: String) {
@@ -714,11 +775,17 @@ class WifiDirectManager(
     }
 
     private suspend fun handleHandshake(protocol: MeshProtocol, fromAddress: String) {
+        if (protocol.content != "HANDSHAKE") return
         Log.d(TAG, "HANDSHAKE from ${protocol.senderName} (${protocol.senderId})")
+        carakaHandshakeValidated = true
+        carakaValidationJob?.cancel()
         val wifiDirectMac = pendingWifiDirectMac
-            ?: _availablePeers.value.firstOrNull()?.deviceAddress
+            ?: _availablePeers.value.firstOrNull { it.isCarakaDevice() }?.deviceAddress
             ?: fromAddress
         pendingWifiDirectMac = null
+        if (wifiDirectMac.isNotBlank() && !wifiDirectMac.startsWith("lan:")) {
+            carakaLanPeerMacs.add(wifiDirectMac)
+        }
 
         val peer = PeerEntity(
             id = protocol.senderId,
