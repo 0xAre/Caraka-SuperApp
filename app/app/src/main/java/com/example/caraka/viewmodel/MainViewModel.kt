@@ -1,6 +1,7 @@
 package com.example.caraka.viewmodel
 
 import android.net.wifi.p2p.WifiP2pDevice
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -255,6 +256,16 @@ class MainViewModel(
             encPubKey = payload.encPub,
             signPubKey = payload.signPub
         )
+    }
+
+    /**
+     * After QR scan is confirmed, set this peer as priority connection target.
+     * Resets the auto-connect cooldown and triggers an immediate WiFi Direct discovery
+     * cycle so the app connects as soon as the peer is discovered.
+     */
+    fun triggerPriorityConnect(peerId: String) {
+        wifiDirectManager.setPriorityPeerId(peerId)
+        Log.d("MainViewModel", "Priority connect triggered for peerId: $peerId")
     }
 
     override fun onCleared() {

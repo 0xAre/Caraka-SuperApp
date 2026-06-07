@@ -90,6 +90,10 @@ fun QrIdentityScreen(
             scannedPeer?.let { peer ->
                 scope.launch {
                     viewModel.saveVerifiedPeer(peer)
+                    // Trigger immediate WiFi Direct connect to this peer.
+                    // Resets cooldown + starts discovery cycle so both devices
+                    // connect within seconds of QR scan confirmation.
+                    viewModel.triggerPriorityConnect(peer.peerId)
                     saveSuccess = true
                     showTrustSheet = false
                 }

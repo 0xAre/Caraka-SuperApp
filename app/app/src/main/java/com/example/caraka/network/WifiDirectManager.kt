@@ -139,20 +139,34 @@ class WifiDirectManager(
     // Auto-connect cooldown tracker
     @Volatile private var lastConnectAttemptMs = 0L
 
-    /** MACs verified via DNS-SD service discovery (highest confidence — they ARE CARAKA). */
-    private val carakaServicePeerMacs = mutableSetOf<String>()
+    /** IP addresses of LAN peers verified via UDP HANDSHAKE. */
+    private val carakaLanPeerHosts = mutableSetOf<String>()
 
-    /** MACs verified via LAN UDP HANDSHAKE (also CARAKA). */
-    private val carakaLanPeerMacs = mutableSetOf<String>()
-
-    @Volatile private var serviceDiscoveryRegistered = false
-    @Volatile private var serviceDiscoveryJob: Job? = null
+    /** WiFi Direct MACs of peers verified after a successful CARAKA HANDSHAKE. */
+    private val carakaHandshakedMacs = mutableSetOf<String>()
 
     private var carakaValidationJob: Job? = null
     @Volatile private var carakaHandshakeValidated = false
 
     // Cached authority flag — read once from IdentityManager on first connect
     @Volatile private var cachedIsAuthority = false
+
+    /** Tracks whether the CARAKA DNS-SD local service has been registered. */
+    @Volatile private var serviceDiscoveryRegistered = false
+
+    /**
+     * PeerId of a QR-scanned peer we want to connect to ASAP.
+     * Cleared once the peer's HANDSHAKE is received.
+     * Resets auto-connect cooldown so next discovery cycle attempts immediately.
+     */
+    @Volatile private var priorityPeerId: String? = null
+
+    fun setPriorityPeerId(peerId: String) {
+        priorityPeerId = peerId
+        lastConnectAttemptMs = 0L
+        Log.d(TAG, "Priority peer set: $peerId — cooldown reset, connecting on next scan")
+        discoverPeers()  // trigger immediate discovery
+    }
 
     /** Current battery level (0-100). Updated on each connect attempt. */
     private val _batteryLevel = MutableStateFlow(100)
@@ -389,8 +403,6 @@ class WifiDirectManager(
     private val busyStates = setOf("CONNECTING", "CONNECTED", "CONNECTED_GO", "CONNECTED_CLIENT")
 
     // Serialize discovery: only one stop→discover cycle in flight, and only one BUSY retry pending.
-    // Without this, the many discovery triggers (periodic loop, wifi-state, receiver, group-clear)
-    // stack up and each BUSY schedules its own retry → a self-amplifying BUSY storm.
     @Volatile private var discoveryInFlight = false
     @Volatile private var retryScheduled = false
 
@@ -541,9 +553,14 @@ class WifiDirectManager(
         }
     }
 
+    /**
+     * Send a mesh message.
+     * LAN UDP is tried first (more reliable, no star-topology limit, works across all Android
+     * versions). WiFi Direct socket is also used so that offline (no-WiFi) scenarios work.
+     */
     fun sendMessage(json: String) {
-        socketManager.sendPayload(json)
-        sendLanPayload(json)
+        sendLanPayload(json)       // LAN first — reliable, any-to-any
+        socketManager.sendPayload(json) // WiFi Direct socket — offline fallback
     }
 
     // ========== CALLBACKS FROM BROADCAST RECEIVER ==========
@@ -552,8 +569,6 @@ class WifiDirectManager(
         _isWifiP2pEnabled.value = isEnabled
         Log.d(TAG, "WiFi P2P enabled: $isEnabled")
         if (isEnabled) {
-            // Retry device name — setDeviceName fails silently if called before
-            // the P2P stack is fully ready. Delay 600ms to let channel settle.
             pendingDeviceName?.let { name ->
                 scope.launch {
                     delay(600L)
@@ -561,18 +576,20 @@ class WifiDirectManager(
                     Log.d(TAG, "Device name retry after P2P enable: $name")
                 }
             }
-            // Register CARAKA DNS-SD service so only CARAKA peers find us.
-            // Also starts service discovery alongside regular peer discovery.
+            // registerCarakaService() internally starts discoverServices() which
+            // subsumes discoverPeers(). Calling both causes BUSY storm.
+            // Only call discoverPeers() directly if service registration fails (handled in fallback).
             scope.launch {
-                delay(800L) // let channel fully initialize before adding service
+                delay(800L)
                 registerCarakaService()
             }
             requestCurrentPeers()
-            discoverPeers()
+            // Delay discoverPeers so it doesn't conflict with discoverServices()
+            scope.launch { delay(1_200L); if (!serviceDiscoveryRegistered) discoverPeers() }
         } else {
             _availablePeers.value = emptyList()
             _connectionState.value = "WIFI_P2P_DISABLED"
-            serviceDiscoveryRegistered = false // reset so it re-registers on next enable
+            serviceDiscoveryRegistered = false
         }
     }
 
@@ -588,45 +605,52 @@ class WifiDirectManager(
 
         Log.d(TAG, "Peers available: ${peers.size} — ${peers.map { it.deviceName }}")
 
+        // Skip auto-connect if this device is already a Group Owner.
+        // As GO, clients will connect TO us — we don't need to initiate.
+        if (_connectionState.value == "CONNECTED_GO") {
+            Log.d(TAG, "Already GO — skipping auto-connect, waiting for clients")
+            return
+        }
+
         // Auto-connect priority:
-        // Tier 1: DNS-SD verified CARAKA peers (100% certain — they advertise our service)
-        // Tier 2: LAN UDP HANDSHAKE verified MACs
+        // Tier 1: DNS-SD verified (100% CARAKA — they advertise our service)
+        // Tier 2: Post-HANDSHAKE WiFi Direct MACs (proven CARAKA after successful exchange)
         // Tier 3: CRK: name prefix (if setDeviceName worked on their device)
-        // Tier 4: Any AVAILABLE device — validated post-connect via CARAKA HANDSHAKE timeout
+        // Tier 4: Any non-CONNECTED device — 10s CARAKA HANDSHAKE validation
         if (peers.isNotEmpty() && prevState !in busyStates) {
             val now = System.currentTimeMillis()
             if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
-                // Tier 1: DNS-SD service verified — definitively a CARAKA peer
                 val dnsVerified = peers.firstOrNull {
                     it.deviceAddress in carakaServicePeerMacs && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 2: LAN HANDSHAKE verified
-                val lanVerified = peers.firstOrNull {
-                    it.deviceAddress in carakaLanPeerMacs && it.status != WifiP2pDevice.CONNECTED
+                val handshakeVerified = peers.firstOrNull {
+                    it.deviceAddress in carakaHandshakedMacs && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 3: CRK:/CARAKA name prefix (works if setDeviceName succeeded)
                 val carakaByName = peers.firstOrNull {
                     it.isCarakaDevice() && it.status == WifiP2pDevice.AVAILABLE
                 } ?: peers.firstOrNull {
                     it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 4: Any AVAILABLE device — 10s CARAKA HANDSHAKE validation kicks non-CARAKA
-                val anyAvailable = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
+                // Tier 4: any non-CONNECTED peer (AVAILABLE, INVITED, FAILED, UNAVAILABLE)
+                // 10s post-connect CARAKA validation will kick non-CARAKA devices
+                val anyCandidate = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
+                    ?: peers.firstOrNull { it.status == WifiP2pDevice.INVITED }
                     ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
+                    ?: peers.firstOrNull { it.status != WifiP2pDevice.CONNECTED }
 
-                val candidate = dnsVerified ?: lanVerified ?: carakaByName ?: anyAvailable
+                val candidate = dnsVerified ?: handshakeVerified ?: carakaByName ?: anyCandidate
                 if (candidate != null) {
                     lastConnectAttemptMs = now
                     val tier = when (candidate) {
                         dnsVerified -> "DNS-SD"
-                        lanVerified -> "LAN-verified"
+                        handshakeVerified -> "HANDSHAKE-verified"
                         carakaByName -> "CRK:-name"
                         else -> "probe+validate"
                     }
-                    Log.d(TAG, "Connecting to ${candidate.deviceName} [$tier] (${candidate.deviceAddress})")
+                    Log.d(TAG, "Connecting to ${candidate.deviceName} [$tier] status=${candidate.status} (${candidate.deviceAddress})")
                     connectToPeer(candidate)
                 } else {
-                    Log.d(TAG, "No peers to connect (${peers.size} devices, none CARAKA-verified)")
+                    Log.d(TAG, "No connectable peers (${peers.size} total, all CONNECTED or empty)")
                 }
             }
         }
@@ -842,10 +866,10 @@ class WifiDirectManager(
             isConnected = true,
             hopCount = 0
         )
-        carakaLanPeerMacs.add(hostAddress)
+        carakaLanPeerHosts.add(hostAddress)
         repository.savePeer(peer)
         _connectionState.value = "LAN_PEER_FOUND"
-        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress (tracked for P2P priority)")
+        Log.d(TAG, "LAN peer saved: ${peer.displayName} at $hostAddress")
     }
 
     private fun localBroadcastAddresses(): Set<InetAddress> {
@@ -923,12 +947,21 @@ class WifiDirectManager(
         Log.d(TAG, "HANDSHAKE from ${protocol.senderName} (${protocol.senderId})")
         carakaHandshakeValidated = true
         carakaValidationJob?.cancel()
+        // Track the WiFi Direct MAC of this verified CARAKA peer
         val wifiDirectMac = pendingWifiDirectMac
             ?: _availablePeers.value.firstOrNull { it.isCarakaDevice() }?.deviceAddress
             ?: fromAddress
-        pendingWifiDirectMac = null
         if (wifiDirectMac.isNotBlank() && !wifiDirectMac.startsWith("lan:")) {
-            carakaLanPeerMacs.add(wifiDirectMac)
+            carakaHandshakedMacs.add(wifiDirectMac)
+            Log.d(TAG, "HANDSHAKE verified peer MAC: $wifiDirectMac")
+        }
+
+        // QR priority peer fast-track: if this HANDSHAKE matches the peer we just QR-scanned,
+        // log it and clear the priority flag.
+        val priority = priorityPeerId
+        if (priority != null && protocol.senderId == priority) {
+            Log.d(TAG, "Priority peer connected via QR: ${protocol.senderName}")
+            priorityPeerId = null
         }
 
         val peer = PeerEntity(
