@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.crypto.QrIdentityManager
-import com.example.caraka.ui.components.ConfirmTrustSheet
 import com.example.caraka.ui.components.IdentityQrCard
+import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
 import com.journeyapps.barcodescanner.ScanContract
@@ -39,9 +39,11 @@ import kotlinx.coroutines.withContext
 @Composable
 fun QrIdentityScreen(
     viewModel: MainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToChat: (peerId: String) -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val snackbar = LocalSnackbar.current
 
     val displayName by viewModel.displayName.collectAsStateWithLifecycle()
     val myRole by viewModel.myRole.collectAsStateWithLifecycle()
@@ -50,10 +52,7 @@ fun QrIdentityScreen(
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var qrVisible by remember { mutableStateOf(false) }
 
-    var scannedPeer by remember { mutableStateOf<QrIdentityManager.QrIdentityPayload?>(null) }
     var scanError by remember { mutableStateOf<String?>(null) }
-    var saveSuccess by remember { mutableStateOf(false) }
-    var showTrustSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(myPeerId, displayName, myRole) {
         if (myPeerId.isBlank()) return@LaunchedEffect
@@ -75,35 +74,18 @@ fun QrIdentityScreen(
         val parsed = QrIdentityManager.parseQrPayload(raw)
         if (parsed == null) {
             scanError = "QR tidak valid — bukan identitas CARAKA"
-        } else {
-            scannedPeer = parsed
-            scanError = null
-            saveSuccess = false
-            showTrustSheet = true
+            return@rememberLauncherForActivityResult
+        }
+        // Scan QR in person = consent. Verify + connect + jump straight into chat — no extra taps.
+        scanError = null
+        scope.launch {
+            viewModel.saveVerifiedPeer(parsed)               // trust + store their public keys
+            viewModel.requestConnectionToPeer(parsed.peerId, autoAccept = true) // proactively link
+            viewModel.triggerPriorityConnect(parsed.peerId)  // fast-track WiFi-Direct fallback path
+            snackbar.tryEmit("Terhubung dengan ${parsed.name} ✓")
+            onNavigateToChat(parsed.peerId)                  // land in the conversation
         }
     }
-
-    ConfirmTrustSheet(
-        visible = showTrustSheet && !saveSuccess,
-        peer = scannedPeer,
-        onConfirm = {
-            scannedPeer?.let { peer ->
-                scope.launch {
-                    viewModel.saveVerifiedPeer(peer)
-                    // NEW: Send CONNECTION_REQUEST with autoAccept=true
-                    // Peer will auto-accept because QR scan = in-person consent
-                    viewModel.requestConnectionToPeer(peer.peerId, autoAccept = true)
-                    // Trigger immediate WiFi Direct connect to this peer.
-                    // Resets cooldown + starts discovery cycle so both devices
-                    // connect within seconds of QR scan confirmation.
-                    viewModel.triggerPriorityConnect(peer.peerId)
-                    saveSuccess = true
-                    showTrustSheet = false
-                }
-            }
-        },
-        onDismiss = { showTrustSheet = false }
-    )
 
     Scaffold(
         topBar = {
@@ -174,10 +156,7 @@ fun QrIdentityScreen(
 
                 Button(
                     onClick = {
-                        scannedPeer = null
                         scanError = null
-                        saveSuccess = false
-                        showTrustSheet = false
                         val options = ScanOptions().apply {
                             setPrompt("Arahkan kamera ke QR identitas CARAKA peer")
                             setBeepEnabled(true)
@@ -212,76 +191,9 @@ fun QrIdentityScreen(
                         Text(err, color = DangerRed, fontSize = 13.sp)
                     }
                 }
-
-                scannedPeer?.let { peer ->
-                    if (saveSuccess) {
-                        Spacer(Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(NeonMint.copy(alpha = 0.15f))
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonMint, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("${peer.name} disimpan sebagai verified peer ✓", color = NeonMint, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        }
-                    } else if (!showTrustSheet) {
-                        Spacer(Modifier.height(12.dp))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(NeonMint.copy(alpha = 0.07f))
-                                .border(1.dp, NeonMint.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                                .padding(16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = NeonMint, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("IDENTITAS TERDETEKSI", color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 0.8.sp)
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            PeerInfoRow("Nama", peer.name)
-                            PeerInfoRow("Role", peer.role)
-                            PeerInfoRow("Peer ID", peer.peerId.take(20) + "…")
-                            Spacer(Modifier.height(12.dp))
-                            Button(
-                                onClick = { showTrustSheet = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = NeonMint),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color.White)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Simpan sebagai Verified Peer", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
             }
 
             Spacer(Modifier.height(16.dp))
         }
-    }
-}
-
-@Composable
-private fun PeerInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = TextSecondary, fontSize = 12.sp)
-        Text(
-            value,
-            color = TextPrimary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            fontFamily = if (label == "Peer ID") FontFamily.Monospace else FontFamily.Default
-        )
     }
 }

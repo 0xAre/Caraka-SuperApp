@@ -273,7 +273,14 @@ private fun CarakaNav(
                 composable(Screen.QrIdentity.route) {
                     QrIdentityScreen(
                         viewModel = viewModel,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onNavigateToChat = { peerId ->
+                            // Replace the QR screen on the back stack so "back" from chat
+                            // returns to Settings, not the camera scanner.
+                            navController.navigate(Screen.chatRoute(peerId)) {
+                                popUpTo(Screen.QrIdentity.route) { inclusive = true }
+                            }
+                        }
                     )
                 }
                 composable(Screen.Alerts.route) {
