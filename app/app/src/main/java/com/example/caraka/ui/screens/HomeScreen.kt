@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.SettingsInputAntenna
 import androidx.compose.material.icons.filled.Shield
@@ -44,13 +43,20 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
 import com.example.caraka.network.ConnectivityStatus
+import com.example.caraka.ui.components.AlertsBottomSheet
+import com.example.caraka.ui.components.EmergencyAlertCard
+import com.example.caraka.ui.components.MeshStatusBanner
 import com.example.caraka.ui.theme.*
 import com.example.caraka.ui.util.rememberHaptics
 import com.example.caraka.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? = null) {
+fun HomeScreen(
+    viewModel: MainViewModel? = null,
+    onNavigateToSos: (() -> Unit)? = null,
+    onNavigateToAlerts: (() -> Unit)? = null
+) {
     val activeAlerts by viewModel?.activeAlerts?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
     val meshNodeCount by viewModel?.meshNodeCount?.collectAsStateWithLifecycle(initialValue = 1)
@@ -58,11 +64,23 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
     val connectivity by viewModel?.connectivityStatus?.collectAsStateWithLifecycle(
         initialValue = ConnectivityStatus.MESH_ONLY)
         ?: remember { mutableStateOf(ConnectivityStatus.MESH_ONLY) }
+    val connectionState by viewModel?.connectionState?.collectAsStateWithLifecycle(initialValue = "IDLE")
+        ?: remember { mutableStateOf("IDLE") }
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0)
         ?: remember { mutableStateOf(0) }
 
     var attackSimActive by remember { mutableStateOf(false) }
+    var showAlertsSheet by remember { mutableStateOf(false) }
     val haptics = rememberHaptics()
+
+    val effectiveConnectivity = if (attackSimActive) ConnectivityStatus.MESH_ONLY else connectivity
+
+    AlertsBottomSheet(
+        visible = showAlertsSheet,
+        alerts = activeAlerts,
+        onDismiss = { showAlertsSheet = false },
+        onViewAll = onNavigateToAlerts
+    )
 
     Scaffold(
         topBar = {
@@ -85,12 +103,25 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = stringResource(R.string.home_alerts_notif),
-                            tint = AmberAccent
-                        )
+                    BadgedBox(
+                        badge = {
+                            if (activeAlerts.isNotEmpty()) {
+                                Badge(containerColor = DangerRed) {
+                                    Text("${activeAlerts.size}", fontSize = 9.sp)
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = {
+                            haptics.tick()
+                            showAlertsSheet = true
+                        }) {
+                            Icon(
+                                Icons.Default.Notifications,
+                                contentDescription = stringResource(R.string.home_alerts_notif),
+                                tint = AmberAccent
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
@@ -108,9 +139,10 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
             item {
-                ConnectivityBanner(
-                    status = if (attackSimActive) ConnectivityStatus.MESH_ONLY else connectivity,
+                MeshStatusBanner(
+                    connectivityStatus = effectiveConnectivity,
                     nodeCount = meshNodeCount,
+                    connectionState = connectionState,
                     isAttackSim = attackSimActive
                 )
             }
@@ -160,70 +192,12 @@ fun HomeScreen(viewModel: MainViewModel? = null, onNavigateToSos: (() -> Unit)? 
                 }
             } else {
                 items(activeAlerts.size) { i ->
-                    val alert = activeAlerts[i]
-                    AlertCard(
-                        title = alert.content,
-                        sender = "${alert.senderName} (${alert.senderRole})",
-                        time = "Just now",
-                        icon = if (alert.sosCategory == "MEDICAL") Icons.Default.LocalHospital else Icons.Default.Warning,
-                        iconTint = if (alert.sosCategory == "MEDICAL") DangerRed else WarningYellow
-                    )
+                    EmergencyAlertCard(alert = activeAlerts[i])
                 }
             }
         }
     }
 }
-
-// ─── Connectivity Banner ─────────────────────────────────────────────────────
-
-@Composable
-private fun ConnectivityBanner(
-    status: ConnectivityStatus,
-    nodeCount: Int,
-    isAttackSim: Boolean
-) {
-    val (dotColor, labelRes) = when (status) {
-        ConnectivityStatus.ONLINE    -> NeonMint        to R.string.home_status_online
-        ConnectivityStatus.HYBRID    -> WarningYellow   to R.string.home_status_hybrid
-        ConnectivityStatus.MESH_ONLY -> DangerRed       to R.string.home_status_mesh_only
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "banner")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "alpha"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp), ambientColor = dotColor.copy(alpha = 0.5f), spotColor = dotColor)
-            .clip(RoundedCornerShape(16.dp))
-            .background(GlassSurface)
-            .border(1.dp, dotColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-            .padding(vertical = 16.dp, horizontal = 20.dp)
-            .semantics { contentDescription = "Network status: $nodeCount nodes" },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(dotColor.copy(alpha = if (status == ConnectivityStatus.MESH_ONLY) alpha else 1f))
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(labelRes), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (isAttackSim) {
-                Text(stringResource(R.string.home_attack_active), color = DangerRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-        Text("$nodeCount ${stringResource(R.string.home_nodes_label)}", color = TextSecondary, fontSize = 12.sp)
-    }
-}
-
-// ─── Live Stats Row ───────────────────────────────────────────────────────────
 
 @Composable
 private fun LiveStatsRow(nodeCount: Int, sosCount: Int, relayedCount: Int) {
@@ -252,12 +226,10 @@ private fun MiniStatCard(icon: ImageVector, iconTint: Color, value: String, labe
     ) {
         Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(4.dp))
-        Text(value, color = AmberAccent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(value, color = AmberAccent, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+        Text(label, color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
-
-// ─── Animated Pulsing SOS Button ─────────────────────────────────────────────
 
 @Composable
 private fun AnimatedSosButton(onClick: () -> Unit) {
@@ -291,7 +263,7 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
         label = "inner"
     )
 
-    val cdSos = stringResource(R.string.cd_sos_btn)
+    val cdSos = stringResource(R.string.cd_sos_hold_emergency)
 
     Box(
         modifier = Modifier
@@ -350,7 +322,7 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
                 )
                 Text(
                     text = if (isHolding) stringResource(R.string.home_sos_hold)
-                           else stringResource(R.string.home_sos_label),
+                           else stringResource(R.string.home_sos_hold_label),
                     color = Color.White.copy(0.8f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -358,7 +330,6 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
             }
         }
 
-        // White arc sweeps clockwise as user holds — 0° to 360° over 2 seconds
         if (arcProgress > 0f) {
             Canvas(modifier = Modifier.size(164.dp)) {
                 drawArc(
@@ -372,8 +343,6 @@ private fun AnimatedSosButton(onClick: () -> Unit) {
         }
     }
 }
-
-// ─── Attack Simulator Card ────────────────────────────────────────────────────
 
 @Composable
 private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
@@ -420,49 +389,6 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
                 checkedTrackColor = DangerRed
             )
         )
-    }
-}
-
-// ─── Alert Card ───────────────────────────────────────────────────────────────
-
-@Composable
-fun AlertCard(
-    title: String,
-    sender: String,
-    time: String,
-    icon: ImageVector,
-    iconTint: Color
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .background(GlassSurface)
-            .border(1.dp, iconTint.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-            .padding(16.dp)
-            .semantics { contentDescription = "Alert from $sender: $title" },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(28.dp))
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sender, color = TextSecondary, fontSize = 13.sp)
-                Spacer(Modifier.weight(1f))
-                Text(time, color = TextSecondary, fontSize = 12.sp)
-            }
-        }
     }
 }
 

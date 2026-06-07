@@ -52,6 +52,29 @@
     <string name="home_active_alerts">Active Alerts</string>
     <string name="home_no_alerts">No active alerts nearby.</string>
     <string name="home_alerts_notif">Alert notifications</string>
+    <string name="home_sos_hold_label">Hold for emergency</string>
+
+    <!-- ───── Mesh Status Banner ───── -->
+    <string name="mesh_status_connected">Connected · %1$d nodes</string>
+    <string name="mesh_status_connecting">Connecting…</string>
+    <string name="mesh_status_reconnecting">Reconnecting…</string>
+    <string name="mesh_status_searching">Searching for peers…</string>
+    <string name="mesh_status_cd">Network status: %1$d nodes. %2$s</string>
+
+    <!-- ───── Alerts Sheet / Screen ───── -->
+    <string name="alerts_sheet_title">Emergency Alerts</string>
+    <string name="alerts_sheet_subtitle">%1$d active alerts on mesh</string>
+    <string name="alerts_view_all">View all alerts</string>
+    <string name="alerts_screen_title">EMERGENCY LOG</string>
+    <string name="alerts_screen_subtitle">Active SOS signals on the mesh network</string>
+    <string name="alerts_empty">No emergency alerts right now.</string>
+    <string name="alerts_empty_title">No alerts yet</string>
+    <string name="alerts_empty_subtitle">SOS and authority broadcasts will appear here.</string>
+    <string name="alerts_filter_all">All</string>
+    <string name="alerts_filter_medical">Medical</string>
+    <string name="alerts_filter_fire">Fire</string>
+    <string name="alerts_filter_security">Security</string>
+    <string name="alerts_filter_disaster">Disaster</string>
 
     <!-- ───── SOS Screen ───── -->
     <string name="sos_title">EMERGENCY SOS</string>
@@ -74,6 +97,10 @@
     <string name="sos_sent_subtitle">Help is on the way. Stay calm.</string>
     <string name="sos_select_category_first">Select an emergency category first</string>
     <string name="sos_back">Back</string>
+    <string name="sos_mesh_sent_banner">SOS sent to mesh network</string>
+    <string name="sos_calming_message">Response teams will receive your signal. Stay calm.</string>
+    <string name="sos_location_estimated">Estimated location — GPS unavailable</string>
+    <string name="sos_estimated_location">⚠ Estimated location</string>
 
     <!-- ───── Messages / Chat ───── -->
     <string name="messages_title">MESSAGES</string>
@@ -84,6 +111,16 @@
     <string name="messages_you_prefix">You: </string>
     <string name="messages_just_now">Just now</string>
     <string name="messages_min_ago">m ago</string>
+    <string name="messages_search_hint">Search peers or messages…</string>
+    <string name="messages_search_cd">Search messages</string>
+    <string name="messages_no_results">No results</string>
+    <string name="messages_no_results_hint">Try a different keyword</string>
+    <string name="messages_empty_offline_hint">Open the Network Map to find nearby peers — works without internet.</string>
+    <string name="messages_open_network">Open Network Map</string>
+    <string name="messages_search_empty">No results for this search</string>
+    <string name="messages_empty_title">No conversations yet</string>
+    <string name="messages_empty_action">Open Network Map</string>
+    <string name="peer_list_item_cd">Chat with %1$s. %2$d unread</string>
     <string name="alert_new_message">new message</string>
     <string name="alert_tap_to_open">Open</string>
     <string name="home_stat_range_unit">m</string>
@@ -95,6 +132,12 @@
     <string name="chat_sent_via_mesh">Sent via mesh</string>
     <string name="chat_mesh_label">Mesh</string>
     <string name="chat_disconnected">Disconnected</string>
+    <string name="chat_direct_peer">Direct peer</string>
+    <string name="chat_via_relay">Via mesh relay</string>
+    <string name="chat_unknown_peer">Unknown peer</string>
+    <string name="msg_status_queued">Queued</string>
+    <string name="msg_status_sent">Sent</string>
+    <string name="msg_status_relayed">Relayed</string>
     <string name="chat_hold_to_flag">Hold to flag</string>
     <string name="chat_flag_title">Flag as Suspicious?</string>
     <string name="chat_flag_desc">This message will be marked as potentially hoax. If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.</string>
@@ -111,10 +154,44 @@
     <string name="network_legend_relay">Relay (Multi-hop)</string>
     <string name="network_stat_range">Range</string>
     <string name="network_stat_sos">SOS</string>
+    <string name="network_legend_sos">Active SOS</string>
+    <string name="network_node_role">Role: %1$s</string>
+    <string name="network_node_connected">Status: Connected</string>
+    <string name="network_node_discovered">Status: Discovered</string>
+    <string name="network_node_hops">Relay hops: %1$d</string>
+    <string name="network_node_authority">✓ Verified authority account</string>
 
     <!-- ───── Settings ───── -->
     <string name="settings_title">SETTINGS</string>
     <string name="settings_peer_id">Peer ID</string>
+    <string name="settings_qr_btn">View / Scan QR Identity</string>
+    <string name="identity_copied">Peer ID copied</string>
+    <string name="identity_copy">Copy peer ID</string>
+    <string name="identity_qr_shortcut">Open QR identity</string>
+    <string name="identity_fingerprint">Fingerprint: %1$s</string>
+    <string name="identity_row_cd">Peer ID, fingerprint %1$s</string>
+    <string name="identity_copy_cd">Copy peer ID</string>
+    <string name="identity_qr_cd">Open QR identity</string>
+    <string name="settings_go_intent">GO Intent</string>
+
+    <!-- ───── QR Identity ───── -->
+    <string name="qr_screen_title">QR Identity</string>
+    <string name="qr_my_identity_title">MY IDENTITY QR</string>
+    <string name="qr_show_hint">Show this QR to a peer for in-person identity verification</string>
+    <string name="qr_trust_warning">Only scan from devices you trust</string>
+    <string name="qr_cd_identity">Identity QR for %1$s</string>
+    <string name="qr_image_cd">Identity QR for %1$s</string>
+    <string name="qr_verbal_fingerprint">Verbal verify: %1$s</string>
+    <string name="trust_sheet_title">Confirm Trust</string>
+    <string name="trust_sheet_warning">Make sure you know this person in person before saving as a verified contact.</string>
+    <string name="trust_label_name">Name</string>
+    <string name="trust_label_role">Role</string>
+    <string name="trust_label_peer_id">Peer ID</string>
+    <string name="trust_label_fingerprint">Fingerprint</string>
+    <string name="trust_confirm_save">Save as Verified Peer</string>
+    <string name="trust_confirm_btn">Save as Verified Peer</string>
+    <string name="trust_cancel">Cancel</string>
+    <string name="trust_cancel_btn">Cancel</string>
     <string name="settings_network_stats">Network Stats</string>
     <string name="settings_stat_nodes">Nodes</string>
     <string name="settings_stat_peers">Peers</string>
@@ -178,6 +255,12 @@
     <string name="help_section_a11y">Accessibility</string>
     <string name="help_a11y_a">CARAKA supports TalkBack (screen reader), system font scaling up to 200%, optional AAA contrast, haptic feedback, ≥48dp touch targets, and keyboard navigation.</string>
     <string name="help_back">Back</string>
+    <string name="help_section_offline">Works Offline</string>
+    <string name="help_offline_sos">SOS works without internet — signals broadcast to all nearby mesh nodes.</string>
+    <string name="help_q_offline_flag">Can I report hoaxes while offline?</string>
+    <string name="help_offline_flag">Report hoaxes by long-pressing messages, even when offline.</string>
+    <string name="help_q_offline_qr">How to verify identity without a server?</string>
+    <string name="help_offline_qr">Verify peer identity in person via QR scan — no central server needed.</string>
 
     <!-- ───── Onboarding Tour ───── -->
     <string name="tour_skip">Skip</string>
@@ -212,4 +295,5 @@
     <string name="cd_scan_btn">Scan nearby peers</string>
     <string name="cd_settings_btn">Open settings</string>
     <string name="cd_info_tooltip">More info</string>
+    <string name="cd_sos_hold_emergency">Emergency SOS button. Hold for emergency.</string>
 </resources>

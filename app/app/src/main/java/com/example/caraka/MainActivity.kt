@@ -31,9 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.caraka.ui.components.BottomNavBar
 import com.example.caraka.ui.components.FloatingChatAlert
 import com.example.caraka.ui.components.LocalSnackbar
@@ -43,12 +45,14 @@ import com.example.caraka.ui.prefs.LocalUiPrefs
 import com.example.caraka.ui.prefs.ProvideLocalizedContext
 import com.example.caraka.ui.prefs.UiPreferences
 import com.example.caraka.ui.prefs.UiPrefsState
+import com.example.caraka.ui.screens.AlertsScreen
 import com.example.caraka.ui.screens.ChatScreen
 import com.example.caraka.ui.screens.HelpScreen
 import com.example.caraka.ui.screens.HomeScreen
 import com.example.caraka.ui.screens.MessagesScreen
 import com.example.caraka.ui.screens.NetworkScreen
 import com.example.caraka.ui.screens.ProfileSetupScreen
+import com.example.caraka.ui.screens.QrIdentityScreen
 import com.example.caraka.ui.screens.SettingsScreen
 import com.example.caraka.ui.screens.SosScreen
 import com.example.caraka.ui.theme.CarakaTheme
@@ -89,7 +93,7 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
     val bigText by uiPrefs.bigText.collectAsState(initial = false)
     val highContrast by uiPrefs.highContrast.collectAsState(initial = false)
     val haptics by uiPrefs.haptics.collectAsState(initial = true)
-    val onboardingDone by uiPrefs.onboardingDone.collectAsState(initial = true) // assume true until DataStore resolves
+    val onboardingDone by uiPrefs.onboardingDone.collectAsState(initial = true)
 
     val prefsState = UiPrefsState(
         language = language,
@@ -119,6 +123,7 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
             CarakaTheme(highContrast = highContrast, bigText = bigText) {
                 CarakaNav(
                     viewModel = viewModel,
+                    uiPrefs = uiPrefs,
                     snackbarHostState = snackbarHostState,
                     onboardingDoneFlag = onboardingDone,
                     onOnboardingDismissed = { scope.launch { uiPrefs.setOnboardingDone(true) } }
@@ -131,6 +136,7 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
 @Composable
 private fun CarakaNav(
     viewModel: MainViewModel,
+    uiPrefs: UiPreferences,
     snackbarHostState: SnackbarHostState,
     onboardingDoneFlag: Boolean,
     onOnboardingDismissed: () -> Unit
@@ -144,7 +150,6 @@ private fun CarakaNav(
 
     val ctx = androidx.compose.ui.platform.LocalContext.current
 
-    // Permission flow (unchanged)
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> viewModel.startWifiDirect() }
@@ -167,9 +172,8 @@ private fun CarakaNav(
 
     val navController = rememberNavController()
 
-    // Floating in-app chat alert
     var chatAlert by remember {
-        androidx.compose.runtime.mutableStateOf<com.example.caraka.network.ChatAlert?>(null)
+        mutableStateOf<com.example.caraka.network.ChatAlert?>(null)
     }
     LaunchedEffect(Unit) { viewModel.incomingChatAlert.collect { chatAlert = it } }
     LaunchedEffect(chatAlert) {
@@ -179,16 +183,28 @@ private fun CarakaNav(
         }
     }
 
-    // Onboarding overlay
     var showTour by remember(onboardingDoneFlag) { mutableStateOf(!onboardingDoneFlag) }
 
-    // Active SOS alerts → badge on the SOS nav tab
     val sosAlerts by viewModel.activeAlerts.collectAsStateWithLifecycle(initialValue = emptyList())
+    val lastMessagesPerPeer by viewModel.lastMessagesPerPeer.collectAsStateWithLifecycle(initialValue = emptyMap())
+    val lastReadMap by uiPrefs.observeLastReadMap().collectAsStateWithLifecycle(initialValue = emptyMap())
+
+    val messagesUnreadCount = remember(lastMessagesPerPeer, lastReadMap) {
+        lastMessagesPerPeer.count { (peerId, msg) ->
+            msg.isIncoming && msg.timestamp > (lastReadMap[peerId] ?: 0L)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            bottomBar = { BottomNavBar(navController = navController, sosBadgeCount = sosAlerts.size) },
+            bottomBar = {
+                BottomNavBar(
+                    navController = navController,
+                    sosBadgeCount = sosAlerts.size,
+                    messagesBadgeCount = messagesUnreadCount
+                )
+            },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
             NavHost(
@@ -199,24 +215,61 @@ private fun CarakaNav(
                     .consumeWindowInsets(innerPadding)
             ) {
                 composable(Screen.Home.route) {
-                    HomeScreen(viewModel, onNavigateToSos = { navController.navigate(Screen.Sos.route) })
+                    HomeScreen(
+                        viewModel = viewModel,
+                        onNavigateToSos = { navController.navigate(Screen.Sos.route) },
+                        onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) }
+                    )
                 }
                 composable(Screen.Messages.route) {
-                    MessagesScreen(viewModel) { peerId -> navController.navigate("chat/$peerId") }
+                    MessagesScreen(
+                        viewModel = viewModel,
+                        uiPrefs = uiPrefs,
+                        onNavigateToChat = { peerId ->
+                            navController.navigate(Screen.chatRoute(peerId))
+                        },
+                        onNavigateToNetwork = { navController.navigate(Screen.Network.route) }
+                    )
                 }
-                composable("chat/{peerId}") { backStackEntry ->
+                composable(
+                    route = Screen.CHAT_ROUTE_PATTERN,
+                    arguments = listOf(navArgument("peerId") { type = NavType.StringType })
+                ) { backStackEntry ->
                     val peerId = backStackEntry.arguments?.getString("peerId") ?: return@composable
-                    ChatScreen(viewModel, peerId = peerId) { navController.popBackStack() }
+                    ChatScreen(
+                        viewModel = viewModel,
+                        peerId = peerId,
+                        uiPrefs = uiPrefs,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 composable(Screen.Network.route) { NetworkScreen(viewModel) }
-                composable(Screen.Sos.route) { SosScreen(viewModel, onBack = { navController.popBackStack() }) }
-                composable(Screen.Settings.route) {
-                    SettingsScreen(viewModel, onOpenHelp = { navController.navigate("help") })
+                composable(Screen.Sos.route) {
+                    SosScreen(viewModel, onBack = { navController.popBackStack() })
                 }
-                composable("help") {
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        viewModel,
+                        onOpenHelp = { navController.navigate(Screen.Help.route) },
+                        onOpenQr = { navController.navigate(Screen.QrIdentity.route) }
+                    )
+                }
+                composable(Screen.Help.route) {
                     HelpScreen(
                         onBack = { navController.popBackStack() },
                         onLaunchTour = { showTour = true }
+                    )
+                }
+                composable(Screen.QrIdentity.route) {
+                    QrIdentityScreen(
+                        viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable(Screen.Alerts.route) {
+                    AlertsScreen(
+                        viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }
@@ -226,7 +279,7 @@ private fun CarakaNav(
             alert = chatAlert,
             onClick = { alert ->
                 chatAlert = null
-                navController.navigate("chat/${alert.senderId}")
+                navController.navigate(Screen.chatRoute(alert.senderId))
             },
             onDismiss = { chatAlert = null },
             modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()

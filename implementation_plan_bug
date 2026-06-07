@@ -1,0 +1,164 @@
+# Fix: Auto-Connect ke Non-CARAKA Devices (TV, Speaker, dll)
+
+## Masalah
+
+CARAKA saat ini melakukan `auto-connect` ke **semua** WiFi Direct device di sekitar tanpa filter —
+termasuk Smart TV, Bluetooth speaker, laptop Windows, dan device lain yang BUKAN CARAKA.
+Akibatnya:
+1. Semua device sekitar menerima "invitation" WiFi Direct yang tidak diinginkan
+2. Koneksi selalu gagal (device bukan CARAKA, tidak tahu cara respond)
+3. Cooldown 20 detik habis dipakai untuk reconnect ke TV → device CARAKA yang sebenarnya tidak pernah dicoba
+
+## Root Cause (Line 453–464, `WifiDirectManager.onPeersAvailable`)
+
+```kotlin
+// ❌ KODE LAMA — tidak ada filter sama sekali
+val candidate = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
+    ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
+    ?: peers.firstOrNull()   // ← ini bisa return TV, speaker, laptop apapun!
+connectToPeer(candidate)
+```
+
+WiFi Direct API tidak menyediakan cara untuk mengetahui apakah sebuah device menjalankan
+CARAKA sebelum terhubung — kita hanya mendapat `deviceName` dan `deviceAddress`.
+
+## Solusi: 3-Layer Defense
+
+### Layer 1 — Device Name Prefix `CRK:`
+Set WiFi Direct device name menjadi `"CRK:<nama_user>"` saat setup identity.
+Auto-connect hanya ke device yang namanya **diawali dengan `"CRK:"`**.
+
+```
+Sebelum: "Budi Santoso"       ← tidak bisa dibedakan dari device lain
+Sesudah: "CRK:Budi Santoso"  ← teridentifikasi sebagai CARAKA node
+```
+
+- Smart TV biasanya bernama: "Samsung TV", "BRAVIA", "LG SmartTV"
+- Speaker: "JBL Charge", "Harman Kardon"
+- Tidak ada device non-CARAKA yang namanya diawali `"CRK:"`
+
+### Layer 2 — LAN-Discovered Peers List (Priority Connect)
+LAN UDP broadcast sudah berjalan dan hanya device CARAKA yang kirim HANDSHAKE paket.
+Simpan MAC address semua peer yang sudah diverifikasi via LAN → prioritaskan mereka untuk
+WiFi Direct auto-connect.
+
+```
+LAN peer terdeteksi → simpan MAC-nya → auto-connect hanya ke MAC tersebut
+```
+
+### Layer 3 — Post-Connect CARAKA Validation Timeout
+Setelah WiFi Direct connect berhasil, tunggu HANDSHAKE response.
+Jika dalam 8 detik tidak ada valid CARAKA HANDSHAKE → kick/disconnect.
+(Layer ini sudah 80% ada via `sendHandshake()` tapi tidak ada timeout disconnect-nya)
+
+---
+
+## Proposed Changes
+
+### [MODIFY] `WifiDirectManager.kt`
+
+#### 1. `updateDeviceName()` — tambah prefix `CRK:`
+```kotlin
+// Line 341 — ubah:
+method.invoke(manager, channel, name, ...)
+// menjadi:
+val carakaName = if (name.startsWith("CRK:")) name else "CRK:$name"
+method.invoke(manager, channel, carakaName, ...)
+```
+
+#### 2. Tambah `carakaLanPeerMacs: MutableSet<String>` field
+Track MAC address device yang sudah terverifikasi via LAN HANDSHAKE.
+
+#### 3. `saveLanPeer()` — simpan MAC ke set
+```kotlin
+carakaLanPeerMacs.add(hostAddress)  // atau MAC jika bisa
+```
+
+#### 4. `onPeersAvailable()` — rewrite auto-connect dengan 3-tier filter
+```kotlin
+// Tier 1: prioritas utama — LAN-verified CARAKA peers
+val lanVerified = peers.firstOrNull { it.deviceAddress in carakaLanPeerMacs 
+                                      && it.status != WifiP2pDevice.CONNECTED }
+
+// Tier 2: name-prefix filter — device dengan nama "CRK:..."
+val carakaByName = peers.firstOrNull { it.isCarakaDevice()
+                                       && it.status == WifiP2pDevice.AVAILABLE }
+    ?: peers.firstOrNull { it.isCarakaDevice() 
+                           && it.status != WifiP2pDevice.CONNECTED }
+
+// Tier 3: fallback — tidak auto-connect ke unknown device
+val candidate = lanVerified ?: carakaByName  // ← TIDAK ada "?: peers.firstOrNull()" lagi
+
+if (candidate != null) {
+    connectToPeer(candidate)
+} else {
+    Log.d(TAG, "No CARAKA peers found (${peers.size} non-CARAKA devices nearby, skipping)")
+}
+```
+
+#### 5. Extension function `WifiP2pDevice.isCarakaDevice()`
+```kotlin
+private fun WifiP2pDevice.isCarakaDevice(): Boolean {
+    return deviceName.startsWith("CRK:", ignoreCase = true)
+        || deviceName.startsWith("CARAKA", ignoreCase = true)
+}
+```
+
+#### 6. Post-connect CARAKA validation
+Setelah `onConnectionInfoAvailable()` — jika 10 detik tidak ada HANDSHAKE → disconnect.
+```kotlin
+private var carakaValidationJob: Job? = null
+
+private fun startCarakaValidation() {
+    carakaValidationJob?.cancel()
+    carakaValidationJob = scope.launch {
+        delay(10_000L)
+        val isCarakaConnected = repository.getConnectedPeerCount() > 0 // ada peer CARAKA?
+        if (!isCarakaConnected) {
+            Log.w(TAG, "No CARAKA HANDSHAKE received in 10s — disconnecting non-CARAKA device")
+            manager.removeGroup(channel, ...)
+            clearGroupThenDiscover()
+        }
+    }
+}
+```
+
+### [MODIFY] `MeshSocketManager.kt`
+Pastikan `onPeerConnected` di-call hanya setelah HANDSHAKE valid, bukan saat socket connect.
+
+### [NO CHANGE] `MeshProtocol.kt`, `IdentityManager.kt`, UI screens
+
+---
+
+## Display Name Handling
+
+Prefix `CRK:` hanya untuk WiFi Direct device name (bukan display name di UI).
+`displayName` di-store tetap tanpa prefix.
+
+```
+WiFi Direct name: "CRK:Budi Santoso"    ← visible ke device lain di scan
+CARAKA display name: "Budi Santoso"     ← yang tampil di UI CARAKA
+```
+
+Saat LAN HANDSHAKE, `senderName` yang dikirim tetap `"Budi Santoso"` (tanpa CRK:).
+
+---
+
+## Verification Plan
+
+### Manual Testing
+1. Buka CARAKA di 1 device → pastikan device name di WiFi Direct settings menjadi `"CRK:<nama>"`
+2. Taruh di dekat Smart TV / device non-CARAKA → pastikan **tidak ada invitation** ke TV
+3. Buka CARAKA di device ke-2 → keduanya harus auto-connect satu sama lain
+4. Cek logcat: `"No CARAKA peers found"` saat hanya ada TV, `"Auto-connecting"` saat ada CARAKA peer
+
+### Logcat filter
+```bash
+adb logcat -s WifiDirect | grep -E "CRK|CARAKA peer|auto-connect|isCarakaDevice"
+```
+
+---
+
+> [!IMPORTANT]
+> Setelah fix ini, semua user CARAKA lama harus **reset + re-setup identity** agar device name
+> di-update ke format `CRK:<nama>`. Atau bisa dihandle via migration di `setupIdentity()`.

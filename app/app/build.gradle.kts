@@ -71,6 +71,14 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // SQLCipher — encrypt Room database at rest
+    implementation(libs.sqlcipher)
+    implementation(libs.sqlite.ktx)
+
+    // ZXing — QR code generation (identity sharing) + scanning (peer verification)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.embedded) { isTransitive = false }
+
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 

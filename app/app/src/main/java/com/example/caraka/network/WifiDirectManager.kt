@@ -134,9 +134,22 @@ class WifiDirectManager(
     // Auto-connect cooldown tracker
     @Volatile private var lastConnectAttemptMs = 0L
 
+    // Cached authority flag — read once from IdentityManager on first connect
+    @Volatile private var cachedIsAuthority = false
+
+    /** Current battery level (0-100). Updated on each connect attempt. */
+    private val _batteryLevel = MutableStateFlow(100)
+    val batteryLevel: StateFlow<Int> = _batteryLevel
+
     // ========== LIFECYCLE ==========
 
     fun startListening() {
+        // Cache authority flag for GO election (avoids suspend call in hot path)
+        scope.launch {
+            cachedIsAuthority = identityManager.isAuthority()
+            Log.d(TAG, "GO election: authority=$cachedIsAuthority")
+        }
+
         if (receiver != null) {
             clearGroupThenDiscover()
             startLanDiscovery()
@@ -351,12 +364,21 @@ class WifiDirectManager(
         _connectionState.value = "CONNECTING"
         pendingWifiDirectMac = device.deviceAddress
 
-        // Legacy config + groupOwnerIntent=15 → we prefer becoming GO so we pick the channel.
-        // Stale 5GHz persistent groups are cleared in deletePersistentGroups(), which is what
-        // actually prevents NO_COMMON_CHANNEL.
+        // Smart GO election — compute intent based on battery, role, and relay load
+        // instead of hardcoded 15 (always-GO) which causes group collapse when
+        // a low-battery device wins the GO role and later drops out.
+        val batteryPct = GoIntentCalculator.getBatteryLevel(context)
+        _batteryLevel.value = batteryPct
+        val goIntent = GoIntentCalculator.calculate(
+            context = context,
+            isAuthority = cachedIsAuthority,
+            currentRelayLoad = _relayedMessageCount.value
+        )
+        Log.d(TAG, "Connecting to ${device.deviceName} — GO intent=$goIntent (battery=$batteryPct%, authority=$cachedIsAuthority)")
+
         val config = WifiP2pConfig().apply {
             deviceAddress = device.deviceAddress
-            groupOwnerIntent = 15
+            groupOwnerIntent = goIntent
         }
 
         manager.connect(channel, config, object : WifiP2pManager.ActionListener {

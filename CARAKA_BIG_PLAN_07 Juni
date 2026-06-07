@@ -1,0 +1,741 @@
+# 🛡️ CARAKA — Big Development Plan (Revised)
+> *"When The Grid Falls, We Rise"*  
+> Versi 2.0 — Diperkaya dengan riset mendalam via You.com + web research  
+> Last Updated: 7 Juni 2026
+
+---
+
+## 📊 Status Saat Ini (Baseline)
+
+```
+WiFi Direct P2P      ████████████████████ 100% ✅
+Multi-hop Relay      ████████████████████ 100% ✅ (flooding + gossip)
+E2E Encryption       ████████████████████ 100% ✅ (X25519 + XChaCha20-Poly1305)
+Anti-replay          ████████████████████ 100% ✅ (LRU seenIds + timestamp drift)
+SOS Broadcast        ████████████████████ 100% ✅ (hold-to-confirm, 4 kategori)
+Network Visualization ████████████████████ 100% ✅ (force-directed graph, 30fps)
+HCI / Accessibility  ████████████████████ 100% ✅ (WCAG AAA, i18n ID+EN)
+Verified Identity    ████████████░░░░░░░░  60% ⚠️  (DEMO passwords, hardcoded!)
+Message Flagging     ████████████████████ 100% ✅ (consensus ≥3 flags)
+Hybrid Mode          ████████████████████ 100% ✅
+SQLCipher            ░░░░░░░░░░░░░░░░░░░░   0% ❌ Room tanpa enkripsi
+QR Code Identity     ░░░░░░░░░░░░░░░░░░░░   0% ❌
+BLE Fallback         ░░░░░░░░░░░░░░░░░░░░   0% ❌ Single transport risk
+WiFi Aware (NAN)     ░░░░░░░░░░░░░░░░░░░░   0% ❌ Belum dievaluasi
+Demo Video           ░░░░░░░░░░░░░░░░░░░░   0% 🔴 DEADLINE!
+```
+
+---
+
+## 🌏 Konteks: Mengapa CARAKA Sangat Relevan Sekarang
+
+### Data Ancaman Siber Indonesia (2024–2026)
+Berdasarkan data terbaru BSSN dan laporan cyber security:
+
+| Tahun | Jumlah Serangan | Insiden Kritis |
+|-------|----------------|----------------|
+| 2023 | ~2.2 miliar | - |
+| 2024 | ~3.9 miliar | **Ransomware PDNS** (Juni 2024) → 200+ lembaga pemerintah lumpuh |
+| 2025 | **5.5 miliar** | Telecom, fintech, transportasi negara |
+| 2026 (Jan-Apr) | >1.5 miliar | Tren terus naik |
+
+> **Insiden PDNS Juni 2024** adalah "proof of concept" nyata dari skenario CARAKA:  
+> Brain Cipher ransomware melumpuhkan layanan imigrasi, pendidikan, dan 200+ instansi pemerintah.  
+> Tidak ada mekanisme komunikasi darurat yang bekerja offline.
+
+### Gap Kritis InaRISK (Validasi Riset)
+Riset memvalidasi bahwa **InaRISK (BNPB) 100% bergantung pada internet**:
+- Field responders sering mengalami "connection timeout" di area bencana
+- Tidak ada offline sync untuk first responder
+- Backup communication BPBD saat ini: **radio HT** dan **kentongan** (drum tradisional)
+- CARAKA dapat mengisi gap ini sebagai **digital layer antara radio HT dan internet**
+
+### Konteks Regulasi (Peluang B2G)
+- **RUU KKS (Keamanan dan Ketahanan Siber)** sedang diproses DPR 2026
+- Fokus: organisasi kritis harus punya **sistem backup komunikasi**
+- CARAKA dapat dipitch sebagai solusi untuk memenuhi compliance RUU KKS
+
+---
+
+## 🔍 Analisis Kompetitor (Diperbarui)
+
+### Landscape Produk Sejenis 2026
+
+| Fitur | **CARAKA** | **Berty/Wesh** | **Bridgefy** | **Briar** | **Meshtastic** | **Bitchat** |
+|-------|-----------|----------------|--------------|-----------|----------------|-------------|
+| Transport | WiFi Direct | BLE + mDNS | BLE | BLE+WiFi+Tor | LoRa (HW) | BT Mesh |
+| E2E Encryption | ✅ XChaCha20 | ✅ Perfect FWD | ❌ **Lemah** | ✅ | ⚠️ AES-256 | ✅ |
+| No Internet Setup | ✅ | ✅ | ❌ **Fatal!** | ✅ | ✅ | ✅ |
+| Authority System | ✅ **UNIK** | ❌ | ❌ | ❌ | ❌ | ❌ |
+| SOS Broadcast | ✅ **UNIK** | ❌ | ❌ | ❌ | ⚠️ Basic | ❌ |
+| Anti-Disinfo | ✅ **UNIK** | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Network Map | ✅ **UNIK** | ❌ | ❌ | ❌ | ⚠️ Basic | ❌ |
+| HCI / A11y | ✅ WCAG AAA | ❌ | ⚠️ | ❌ | ❌ | ❌ |
+| Status 2026 | 🚀 Active | 🔧 Quiet dev | ⚠️ Issues | 🔧 iOS exp | ✅ Growing | 🆕 New |
+| Open Source | ❌ Belum | ✅ | ❌ | ✅ | ✅ | ✅ |
+
+### Temuan Baru dari Riset
+
+**Berty/Wesh 2026**: Masih dalam "quiet development" — fokus pada stability bukan fitur baru. **Tidak ada emergency features** yang direncanakan. Mereka tetap di space privacy-first, bukan emergency-first.
+
+**Bitchat (Baru!)**: Open-source BT Mesh messaging yang muncul 2025. Bisa jadi **referensi arsitektur** untuk BLE transport layer CARAKA. Fokus pada decentralized P2P tanpa emergency features.
+
+**Bridgefy**: Tetap bermasalah — kelemahan keamanan yang didokumentasikan (Royal Holloway) belum fix fundamental, dan requirement internet untuk aktivasi tetap menjadi hambatan.
+
+---
+
+## 🕳️ Gap Analysis — Celah Yang Harus Dimaksimalkan (Diperbarui)
+
+### GAP TEKNIS KRITIS (Ditemukan dari Riset Mendalam)
+
+#### ❗ GAP #1: WiFi Direct Star Topology Problem (RISIKO TEKNIS TERSEMBUNYI)
+
+**Temuan Riset**: WiFi Direct secara fundamental adalah **hub-and-spoke** (bukan mesh sejati):
+- Hanya satu **Group Owner (GO)** per grup yang mengontrol semua traffic
+- Clients tidak bisa komunikasi langsung satu sama lain tanpa melalui GO
+- GO election berdasarkan "intent value" statis → **tidak mempertimbangkan battery, signal strength, atau load**
+- Jika GO keluar dari grup → **seluruh grup hancur** (network partition)
+- IP conflict: GO selalu mendapat `192.168.49.1` → masalah saat bridging multi-grup
+
+**Implikasi untuk CARAKA**:
+- Multi-hop relay saat ini berjalan di atas abstraksi TCP socket, bukan WiFi Direct layer
+- Ini berarti CARAKA sudah benar secara desain, tapi **GO failure = single point of failure**
+- Perlu strategi GO election yang cerdas (battery-aware, load-aware)
+
+**Solusi yang Direkomendasikan**:
+```kotlin
+// Smart GO election berdasarkan device metrics
+data class GoMetrics(
+  val batteryLevel: Int,      // 0-100%
+  val relayLoad: Int,         // pesan relay per menit
+  val signalQuality: Int,     // RSSI dBm
+  val isAuthority: Boolean    // authority device prioritas jadi GO
+)
+
+// GO score = (battery * 0.4) + (1/relayLoad * 0.3) + (signal * 0.3) 
+// + (isAuthority * bonus 20)
+```
+
+#### ❗ GAP #2: Transport Monoculture (RISIKO AVAILABILITY)
+
+**Temuan Riset**: Best practice 2025-2026 adalah **dual-transport hybrid**:
+- **WiFi Aware (NAN)**: Background discovery, low-power, decentralized cluster architecture → lebih baik untuk peer discovery
+- **WiFi Direct**: High-bandwidth data transfer setelah peer ditemukan
+- **BLE**: Fallback discovery + small message delivery (heartbeat, SOS signal)
+- Battery drain active relayer: **~15-20% per jam** → perlu optimasi agresif
+
+**Rekomendasi Transport Stack untuk CARAKA**:
+```
+Discovery: BLE (background, low-power) + WiFi Aware (jika API tersedia, API 26+)
+Data:      WiFi Direct (primary, high bandwidth, TCP socket existing)
+Fallback:  BLE GATT (small messages saat WiFi Direct unavailable)
+Battery:   Adaptive beacon intervals, sleep mode saat idle
+```
+
+> **Catatan penting**: WiFi Aware memerlukan cek `isAvailable()` karena pada beberapa device,
+> WiFi Aware tidak bisa aktif bersamaan dengan WiFi Direct atau SoftAP.
+> Strategi: gunakan WiFi Aware ATAU WiFi Direct (auto-detect support).
+
+#### ❗ GAP #3: Data-at-Rest Security (KEPATUHAN KEAMANAN)
+
+**Status**: Room DB tanpa SQLCipher. Jika device disita/dijailbreak → semua pesan terbaca.
+
+**Solusi** (sudah direncanakan, tinggal implementasi):
+```kotlin
+// SQLCipher integration
+val db = Room.databaseBuilder(context, AppDatabase::class.java, "caraka.db")
+    .openHelperFactory(SupportFactory(SQLiteDatabase.getBytes(passphrase.toCharArray())))
+    .build()
+
+// Key derivation dari biometric/PIN user menggunakan PBKDF2
+val key = KeyDerivation.pbkdf2(userPin, salt, iterations = 100_000)
+```
+
+#### ❗ GAP #4: Authority Identity (DEMO vs PRODUCTION)
+
+**Status kritis**: Hardcoded demo passwords untuk BPBD/Polri/PMI = **tidak bisa dipresentasikan sebagai solusi nyata ke pemerintah**.
+
+**Solusi Real PKI**:
+```
+1. Authority keypair di-generate saat registrasi
+2. Disimpan di Android Keystore (hardware-backed TEE)
+3. Verifikasi via QR code in-person (sudah direncanakan via ZXing)
+4. Credential tidak bisa ditransfer antar device (bound to hardware)
+5. Revocation: credential expired setelah N hari (auto-renewal via re-verification)
+```
+
+#### 🔵 GAP #5: Voice Communication (BLUE OCEAN OPPORTUNITY)
+
+**Status Pasar**: **TIDAK ADA satupun kompetitor** yang punya voice messaging + mesh.  
+Meshtastic: terlalu low-bandwidth (LoRa). Berty: hanya text. Briar: hanya text. Bridgefy: hanya text.
+
+**Why Critical**: Penelitian UX menunjukkan bahwa saat darurat:
+- Mengetik = 4-6 detik per kata saat panik/gelap/bergerak
+- Voice = 3x lebih cepat untuk menyampaikan informasi darurat
+- First responder (BPBD/Polri/PMI) sudah terbiasa dengan **walkie-talkie PTT model**
+
+**Spesifikasi teknis**:
+```
+Codec: Opus @ 8kbps (voice quality, minimal bandwidth)
+Max PTT: 30 detik = ~30KB compressed = feasible via WiFi Direct
+Latency target: <500ms end-to-end di 1-hop
+Mode: Push-to-Talk (hold button) → async voice note
+Relay: Voice messages chunked + relayed sama seperti text
+Priority: Emergency voice = relay priority highest
+```
+
+#### 🔵 GAP #6: Offline Resource Mapping (BLUE OCEAN)
+
+**Validasi**: InaRISK **100% online-only**. First responder saat ini pakai peta kertas.  
+CARAKA + offline map = pengganti InaRISK yang fully offline.
+
+**Spesifikasi**:
+```kotlin
+data class ResourcePin(
+  val id: String,
+  val type: ResourceType,  // SHELTER, WATER, FOOD, MEDICAL, HOSPITAL, DANGER_ZONE
+  val location: LatLng,
+  val capacity: Int?,       // null = unknown
+  val addedBy: String,      // peerId
+  val isVerified: Boolean,  // apakah ditambahkan oleh authority
+  val timestamp: Long,
+  val ttl: Int              // data expired setelah N jam (stale data prevention)
+)
+
+// Propagasi via mesh broadcast (MessageType.RESOURCE_UPDATE)
+// Conflict resolution: last-write-wins dengan verified authority override
+```
+
+**Tech stack**: MapLibre GL Android (open source, fully offline capable) + OSM vector tiles
+
+#### 🔵 GAP #7: Intelligent Routing — Ganti Flooding
+
+**Masalah Flooding**: Meshtastic sendiri mengakui bahwa flooding menyebabkan **congestion di dense mesh**. CARAKA juga menggunakan flooding.
+
+**Solusi AODV-Lite**:
+```
+ROUTE DISCOVERY: Saat pertama kali kirim ke destination unknown
+  → Broadcast RREQ (Route Request) dengan sequence number
+  → Intermediate nodes forward RREQ, catat reverse path
+  → Destination reply dengan RREP (Route Reply) unicast
+  → Source menyimpan route untuk session berikutnya
+
+ROUTE MAINTENANCE:
+  → Kirim HELLO packet setiap 5 detik ke direct neighbors
+  → Jika neighbor tidak reply 3x → mark link as broken
+  → Broadcast RERR (Route Error) → trigger re-discovery
+
+NODE SCORING (untuk route selection):
+  score = (battery% * 0.35) + (signalRSSI_normalized * 0.35) 
+        + (1/relayLoad * 0.20) + (isAuthority * 0.10)
+```
+
+**Target improvement**: 40% pengurangan relay overhead vs pure flooding.
+
+#### 🔵 GAP #8: Crisis Analytics untuk Command Level
+
+**Validasi**: BNPB membutuhkan "command center terintegrasi" (rekomendasi riset kebijakan 2025).  
+Tidak ada satupun aplikasi mesh yang punya analytics untuk decision maker.
+
+```kotlin
+data class CrisisSessionStats(
+  val sessionId: String,
+  val startTime: Long,
+  val peakNodeCount: Int,
+  val totalMessagesRelayed: Int,
+  val totalSosSent: Int,
+  val totalSosResponded: Int,     // SOS yang mendapat reply
+  val totalHops: Long,
+  val avgMessageLatencyMs: Long,
+  val maxCoverageEstimateMeters: Float,
+  val topRelayNodes: List<String> // node yang paling aktif relay
+)
+// Export: JSON + shareable PNG summary card
+// Basis pitch ke BNPB: "47 pesan terkirim, 3 SOS ditangani, 0 server"
+```
+
+---
+
+## 🗺️ Roadmap Pengembangan — 4 Phase (Revised)
+
+---
+
+### ⚡ PHASE 0: HACKATHON COMPLETION (Sekarang → 14 Juni 2026)
+**Target**: Submission + Demo Day preparation.
+
+#### 🔴 Wajib (Deadline 14 Juni):
+```
+[ ] Isi nama tim → proposal_garuda_mesh.html → regenerate PDF
+[ ] Isi nama tim → demo/title_cards.html line 324 → regenerate PNG card_08
+[ ] Submit Proposal PDF ke portal WRECK-IT 7.0
+```
+
+#### 🟡 Opsional High-Value (Sebelum Finals 8 Juli):
+| Task | Est. | Impact |
+|------|------|--------|
+| **SQLCipher** | ~3 jam | 🔒 Security story naik drastis |
+| **QR Code Identity** via ZXing | ~4 jam | 📲 Demo lebih mulus + pro |
+| **Smart GO Election** (battery-aware) | ~2 jam | 🔧 Fix hidden technical risk |
+| **README** + arsitektur diagram | ~2 jam | ⭐ GitHub impression |
+| **Best Write-up** dokumen teknis | ~5 jam | 💰 Prize Rp 1.000.000 terpisah |
+
+#### 🎬 Demo Day (8 Juli):
+```
+[ ] Full E2E test 3-4 device fisik (verifikasi 3-device bug fix)
+[ ] Rekam demo video 4 menit sesuai DEMO_VIDEO_SCRIPT.md
+[ ] Latihan demo minimal 3x
+[ ] Siapkan backup video jika live demo gagal
+[ ] Siapkan slide deck untuk Q&A (arsitektur, security, roadmap)
+```
+
+---
+
+### 🔨 PHASE 1: HARDENING (Post-Hackathon, Bulan 1-2)
+**Target**: Dari hackathon demo → production-grade MVP yang bisa dipitch ke pemerintah.
+
+#### 1.1 Transport Layer Upgrade
+
+```
+STRATEGI TRANSPORT STACK (berdasarkan riset 2025):
+
+Priority 1: WiFi Aware (NAN) untuk discovery — jika hardware support
+  → API Level 26+, decentralized cluster, low-power background
+  → Check: WifiAwareManager.isAvailable()
+  → Fallback: tetap WiFi Direct discovery
+
+Priority 2: WiFi Direct untuk data — existing implementation (pertahankan)
+  → TCP socket, existing MeshSocketManager ✅
+
+Priority 3: BLE untuk fallback + discovery
+  → Bluetooth LE GATT server untuk small messages (<512 bytes)
+  → BLE advertisement sebagai presence beacon
+  → Gunakan Nordic Semiconductor Android Mesh Library sebagai referensi
+
+AUTO-FAILOVER:
+  TransportBridge.kt:
+    fun sendMessage(msg: Message) {
+      when {
+        wifiDirectConnected -> wifiDirectTransport.send(msg)
+        bleConnected -> bleTransport.send(msg.truncateIfNeeded())
+        else -> queueForLater(msg)
+      }
+    }
+```
+
+#### 1.2 Real PKI (Ganti Hardcoded Demo Passwords)
+
+```
+PHASE 1.2 IMPLEMENTASI:
+
+1. AuthorityCredentialManager.kt
+   - Generate Ed25519 keypair saat pertama kali pilih role Authority
+   - Simpan private key di Android Keystore (TEE-backed hardware security)
+   - Public key = identity di mesh network
+
+2. QR Code Exchange (ZXing)
+   - Generate QR berisi: { publicKey, role, deviceId, signature }
+   - Scan QR dari authority device → verify signature → store sebagai trusted
+   - In-person verification = face-to-face trust establishment
+
+3. Credential Expiry
+   - Authority credential valid 30 hari
+   - Warning 3 hari sebelum expired
+   - Re-verification via QR dari device lain yang already trusted
+
+4. Revocation (sederhana)
+   - REVOKE packet broadcast via mesh
+   - Semua node yang menerima = blacklist credentialId tersebut
+```
+
+#### 1.3 SQLCipher + Secure Wipe
+
+```kotlin
+// SQLCipher integration
+val passphrase = KeyDerivation.pbkdf2(
+    password = userPin,
+    salt = deviceId.toByteArray(),
+    iterations = 100_000
+)
+val db = Room.databaseBuilder(ctx, AppDatabase::class.java, "caraka_secure.db")
+    .openHelperFactory(SupportFactory(SQLiteDatabase.getBytes(passphrase)))
+    .build()
+
+// Secure Wipe (panic mode)
+fun wipeAllData() {
+    db.clearAllTables()
+    DataStore.clearAll()
+    SQLiteDatabase.deleteDatabase(File(dbPath))
+    // Trigger re-onboarding
+}
+```
+
+#### 1.4 Reliability Improvements
+
+```
+ACK + Retry Mechanism:
+  - Message.requiresAck: Boolean (untuk DM, bukan broadcast)
+  - Sender timeout: 10 detik tanpa ACK → retry max 3x
+  - Expo backoff: 10s, 30s, 90s
+
+Message Queue Persistence:
+  - Pending messages disimpan ke Room DB
+  - Survive app restart
+  - Auto-resend saat koneksi pulih
+
+Background Service:
+  - ForegroundService dengan persistent notification
+  - Wakelock management untuk keep mesh alive
+  - Handle Android Doze mode + battery optimization exceptions
+```
+
+---
+
+### 🚀 PHASE 2: FEATURE EXPANSION (Bulan 3-6)
+**Target**: Diferensiasi maksimal — fitur yang tidak ada di satupun kompetitor.
+
+#### 2.1 Voice PTT — Killer Feature
+
+```
+ARSITEKTUR:
+
+Sender:
+  [Mic] → [AudioRecord, 16kHz, mono]
+       → [Opus Encoder, 8kbps]
+       → [Encrypt: XChaCha20-Poly1305]
+       → [Chunk: 512 bytes per chunk]
+       → [Mesh Send dengan priority EMERGENCY/HIGH]
+
+Receiver:
+  [Receive chunks] → [Reassemble buffer]
+                  → [Decrypt]
+                  → [Opus Decoder]
+                  → [AudioTrack playback]
+
+UI:
+  - PTT button di ChatScreen (hold-to-speak)
+  - Progress arc saat recording (max 30 detik)
+  - Waveform visualisasi
+  - "Received voice from [Name]" notification dengan auto-play option
+  - SOS voice = full-screen alert + auto-play
+
+SPESIFIKASI:
+  Max duration: 30 detik
+  Compressed size: ~30KB (feasible untuk mesh)
+  Latency target: <500ms (1-hop)
+  Priority queue: voice > text (routing weight)
+```
+
+#### 2.2 Offline Resource Map
+
+```
+TECH STACK:
+  - MapLibre GL Android (open source, offline, MIT license)
+  - OpenStreetMap vector tiles (pre-bundled per kota: Jakarta, Surabaya, Medan)
+  - Custom overlay: node positions, SOS markers, resource pins
+
+RESOURCE PIN PROTOCOL:
+  Broadcast via mesh → MessageType.RESOURCE_UPDATE:
+  {
+    "type": "RESOURCE_UPDATE",
+    "resourceId": "uuid",
+    "resourceType": "SHELTER|WATER|FOOD|MEDICAL|HOSPITAL|DANGER_ZONE",
+    "lat": -6.2088,
+    "lng": 106.8456,
+    "capacity": 200,
+    "description": "Gedung SMA 5, lantai 2, kapasitas 200 orang",
+    "addedBy": "peerPublicKeyFingerprint",
+    "isVerified": true,
+    "timestamp": 1749250000,
+    "ttl": 86400  // 24 jam
+  }
+
+VALIDASI:
+  - Resource dari authority: langsung trusted, tampil dengan pin berbeda
+  - Resource dari civilian: ditampilkan dengan flag "unverified"
+  - Authority bisa override/delete resource yang salah
+  - TTL expired = resource auto-hilang dari map
+
+POSITIONING CARAKA:
+  "InaRISK yang bisa bekerja saat internet mati"
+```
+
+#### 2.3 Smart Routing (AODV-Lite)
+
+```kotlin
+// Ganti pure flooding dengan AODV-lite
+class MeshRouterAodv {
+    private val routeTable = ConcurrentHashMap<String, RouteEntry>()
+    private val helloInterval = 5_000L // ms
+
+    data class RouteEntry(
+        val destination: String,
+        val nextHop: String,
+        val hopCount: Int,
+        val nodeScore: Float,  // battery+signal+load composite
+        val sequenceNumber: Int,
+        val expiryTime: Long
+    )
+
+    fun selectRoute(destinationId: String): RouteEntry? {
+        return routeTable[destinationId]
+            ?.takeIf { it.expiryTime > System.currentTimeMillis() }
+    }
+
+    fun updateNodeScore(peerId: String, battery: Int, rssi: Int, relayLoad: Int) {
+        val score = (battery * 0.35f) + 
+                    (normalizeRSSI(rssi) * 0.35f) + 
+                    ((1f / maxOf(relayLoad, 1)) * 0.30f)
+        // Update routing table weight
+    }
+}
+```
+
+#### 2.4 Multi-Channel Mesh
+
+```
+CHANNEL ARCHITECTURE:
+
+Channel 0: EMERGENCY BROADCAST (semua node, read-only untuk civilian)
+  → SOS messages, authority warnings
+  → Tidak ada enkripsi → semua bisa baca
+  → Relay priority: HIGHEST
+
+Channel 1: AUTHORITY_BPBD (hanya BPBD-verified nodes)
+  → Enkripsi dengan shared key yang hanya dipegang BPBD nodes
+  → Key exchange via QR code in-person
+
+Channel 2: AUTHORITY_POLRI (hanya Polri-verified nodes)
+Channel 3: AUTHORITY_PMI (hanya PMI-verified nodes)
+
+Channel 4: CIVILIAN (semua orang, encrypted broadcast)
+  → Ephemeral session key
+  → Semua bisa baca + tulis
+
+Channel 5: DM (direct message, existing)
+  → E2E antara 2 peer, existing X25519 implementation ✅
+
+BENEFIT:
+  - Authority bisa koordinasi tanpa civilian melihat taktis detail
+  - Civilian tetap menerima emergency broadcasts
+  - Meniru struktur radio komunikasi militer/BPBD yang sudah familiar
+```
+
+#### 2.5 Crisis Analytics (Command Dashboard)
+
+```
+COMMAND VIEW (khusus Authority role):
+
+📊 Session Dashboard:
+  ┌─────────────────────────────────┐
+  │ CARAKA Command View             │
+  │ Session: 2h 34m                 │
+  │                                 │
+  │ 🌐 Network: 23 nodes, ~1.8km   │
+  │ 📨 Messages: 247 relayed        │
+  │ 🆘 SOS: 3 sent / 3 responded   │
+  │ 🔀 Hops: 1.247 total            │
+  │ ⚡ Avg latency: 340ms           │
+  │                                 │
+  │ [SOS Heatmap] [Node Map]        │
+  │ [Export Report] [Share]         │
+  └─────────────────────────────────┘
+
+EXPORT FORMAT:
+  - JSON: machine-readable, untuk integrasi InaRISK/BNPB saat online
+  - PNG summary card: shareable di sosmed/laporan
+
+PITCH VALUE:
+  Data ini yang bisa ditunjukkan ke BNPB/BSSN sebagai bukti efektivitas
+```
+
+---
+
+### 🌐 PHASE 3: SCALE & INTEGRATION (Bulan 6-12)
+**Target**: Dari aplikasi individu → platform ekosistem nasional.
+
+#### 3.1 Gateway Node Architecture
+
+```
+KONSEP:
+  Device dengan koneksi internet parsial (misal: Starlink) bertindak sebagai Gateway.
+
+  [CARAKA Mesh] ←WiFi Direct→ [Gateway Node] ←Internet→ [BNPB Command Center]
+                                                     ↕
+                                              [MQTT Broker]
+                                                     ↕
+                                           [Web Dashboard]
+
+GATEWAY FEATURES:
+  - Auto-detect koneksi internet (existing ConnectivityMonitor ✅)
+  - Sync offline messages → cloud saat koneksi pulih
+  - Inject InaRISK alerts → mesh sebagai MessageType.AUTHORITY_BROADCAST
+  - Priority: SOS messages di-push ke cloud first (emergency escalation)
+  - Relay statistics → BNPB dashboard
+
+PROTOKOL: MQTT over TLS (ringan, cocok untuk low-bandwidth)
+```
+
+#### 3.2 Web Command Center (untuk BNPB/Basarnas)
+
+```
+STACK: Next.js + MapLibre GL JS + WebSocket
+
+FITUR:
+  - Real-time mesh topology viewer (jika ada gateway online)
+  - SOS heatmap + timeline
+  - Resource allocation board (koordinasi shelter, logistik)
+  - Multi-region view (bisa monitor beberapa incident sekaligus)
+  - Historical analytics (post-incident review)
+  - Alert injection (kirim informasi resmi ke mesh)
+
+PITCH: "Command Center untuk BPBD saat PDNS lumpuh lagi"
+```
+
+#### 3.3 LoRa Bridge (Hardware Extension)
+
+```
+KONSEP:
+  Satu device dengan LoRa module (USB OTG atau BT dongle)
+  menjadi bridge antara CARAKA WiFi Direct mesh dan jaringan LoRa/Meshtastic.
+
+  [CARAKA Mesh ~100m hop] ←→ [Bridge Device] ←→ [Meshtastic LoRa ~5km hop]
+  
+DAMPAK:
+  - CARAKA coverage: ~100m per hop × 5 hops = ~500m radius
+  - Dengan LoRa Bridge: coverage bisa puluhan kilometer
+  - Tidak perlu internet, tidak perlu tower
+  - Hardware LoRa: ~$30-50 (RAK Wireless / Heltec)
+
+TARGET PENGGUNA: Search and Rescue tim di hutan/gunung,
+                  Naval rescue, daerah terpencil
+```
+
+#### 3.4 iOS Port Strategy
+
+```
+HAMBATAN:
+  - WiFi Direct tidak tersedia di iOS
+  - Apple hanya expose Multipeer Connectivity (BLE + WiFi Peer)
+
+STRATEGI:
+  1. Kotlin Multiplatform Mobile (KMM) untuk business logic
+     → Domain layer (MeshRouter, CryptoMgr, IdentityMgr) = shared
+     → Platform-specific: transport layer (Android vs iOS)
+  
+  2. iOS transport: Multipeer Connectivity Framework
+     → Berbasis BLE + WiFi Ad-Hoc (mirip BLE+WiFi Aware di Android)
+     → Range ~70-100m (sedikit lebih pendek dari WiFi Direct)
+  
+  3. Cross-platform mesh compatibility:
+     → Sama protocol JSON layer → iOS dan Android bisa chat satu sama lain
+     → Timeline: 6 bulan setelah Android stable
+```
+
+---
+
+## 🎯 Prioritas Eksekusi — Impact vs Effort Matrix
+
+| Priority | Item | Impact | Effort | Kapan |
+|----------|------|--------|--------|-------|
+| **🔴 P0** | Submit proposal + nama tim | KRITIS | 30 menit | HARI INI |
+| **🔴 P0** | SQLCipher | Sangat Tinggi | 3 jam | Sebelum finals |
+| **🔴 P0** | QR Code identity (ZXing) | Tinggi | 4 jam | Sebelum finals |
+| **🔴 P0** | Demo video rekam | KRITIS | 4 jam | Sebelum 8 Juli |
+| **🟡 P1** | Smart GO election | Tinggi | 2 jam | Sebelum finals |
+| **🟡 P1** | BLE fallback transport | Sangat Tinggi | 2-3 minggu | Phase 1 |
+| **🟡 P1** | WiFi Aware (NAN) evaluation | Tinggi | 1 minggu | Phase 1 |
+| **🟡 P1** | Real PKI (ganti hardcoded) | Sangat Tinggi | 1 minggu | Phase 1 |
+| **🟡 P1** | ACK/retry reliability | Tinggi | 1 minggu | Phase 1 |
+| **🟡 P1** | Background foreground service | Tinggi | 3 hari | Phase 1 |
+| **🟢 P2** | Voice PTT | Sangat Tinggi (differentiator) | 3-4 minggu | Phase 2 |
+| **🟢 P2** | Offline resource map | Sangat Tinggi (differentiator) | 3-4 minggu | Phase 2 |
+| **🟢 P2** | AODV-lite routing | Tinggi | 2-3 minggu | Phase 2 |
+| **🟢 P2** | Multi-channel mesh | Tinggi | 3-4 minggu | Phase 2 |
+| **🟢 P2** | Crisis analytics dashboard | Tinggi (B2G pitch) | 2 minggu | Phase 2 |
+| **🔵 P3** | Gateway node + MQTT | Sangat Tinggi (ekosistem) | 2 bulan | Phase 3 |
+| **🔵 P3** | Web command center | Tinggi (B2G) | 2 bulan | Phase 3 |
+| **🔵 P3** | LoRa Bridge | Tinggi | 1 bulan | Phase 3 |
+| **🔵 P3** | iOS port (KMM) | Tinggi | 3 bulan | Phase 3 |
+
+---
+
+## 🏆 Unique Value Proposition CARAKA (Diperbarui)
+
+> **CARAKA adalah satu-satunya solusi mesh communication di dunia yang didesain dari awal untuk hierarki komando darurat pemerintah Indonesia — dengan Zero Trust security, tanpa internet, tanpa hardware tambahan, dan dengan anti-disinformasi baked-in.**
+
+### 5 Pilar Keunggulan vs Semua Kompetitor:
+
+| Pilar | CARAKA | Kompetitor Terbaik |
+|-------|--------|-------------------|
+| **Authority-Native** | ✅ BPBD/Polri/PMI baked-in | ❌ Tidak ada yang punya |
+| **Truly Offline** | ✅ Zero internet dari install | ⚠️ Bridgefy perlu internet aktivasi |
+| **Anti-Disinformation** | ✅ Community flagging + verified badges | ❌ Tidak ada yang punya |
+| **Emergency UX** | ✅ SOS, WCAG AAA, haptic, i18n | ❌ Kompetitor adalah privacy tools |
+| **Indonesia-Context** | ✅ BPBD/PMI/Polri scenario | ❌ Semua kompetitor Western-centric |
+
+---
+
+## 📐 Arsitektur Target Phase 2 (Revised)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    CARAKA v2.0                           │
+├────────────────┬─────────────────┬───────────────────────┤
+│  Presentation  │     Domain      │        Data           │
+│  ─────────────  │  ─────────────  │  ─────────────────── │
+│  Compose UI    │  MeshRouter     │  Room+SQLCipher       │
+│  ViewModels    │  (AODV-lite)    │  Android Keystore     │
+│  Navigation    │  CryptoMgr      │  DataStore            │
+│  Canvas Graph  │  IdentityMgr    │  Offline Map Tiles    │
+│  Map (MapLibre)│  (Real PKI)     │  Crisis Stats Store   │
+│  Command View  │  VoiceProcessor │                       │
+│                │  ResourceMgr    │                       │
+│                │  ChannelMgr     │                       │
+│                │  AnalyticsMgr   │                       │
+├──────────────────────────────────────────────────────────┤
+│              Transport Layer (Dual Radio)                │
+│  ─────────────────────────────────────────────────────── │
+│  WiFi Direct Manager    BLE Transport Manager            │
+│  WiFi Aware Manager     TransportBridge (auto-failover)  │
+│  Gateway Bridge (saat internet available, Phase 3)       │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🇮🇩 Narasi Strategis: CARAKA sebagai Aset Ketahanan Nasional
+
+### Proof Points yang Bisa Dipakai untuk Pitch ke Pemerintah:
+
+1. **Insiden PDNS Juni 2024** → 200+ instansi pemerintah lumpuh, CARAKA bisa jadi backup communication yang bekerja offline
+2. **5.5 miliar serangan siber di Indonesia 2025** → trend terus naik, backup offline communication adalah keharusan
+3. **RUU KKS 2026** → regulasi yang mewajibkan backup system → CARAKA = compliance tool
+4. **InaRISK gap** → aplikasi BNPB sendiri tidak bisa bekerja offline → CARAKA mengisi gap ini
+5. **ASEAN Vision 2025 on Disaster Management** → regional push untuk resilient emergency telecom → CARAKA align dengan kebijakan regional
+
+### Model Bisnis Jangka Panjang:
+```
+Tier 1: Open Source (core app) → community adoption, traction
+Tier 2: Enterprise Support → BPBD/Polri/PMI deployment support
+Tier 3: Government Procurement → kustomisasi + integrasi InaRISK + training
+Tier 4: SaaS (Gateway + Web Dashboard) → subscription BNPB/Basarnas
+```
+
+---
+
+## 🔗 Referensi Riset
+
+| Sumber | Relevansi |
+|--------|-----------|
+| BSSN via ANTARA News | 5.5 miliar serangan 2025, PDNS incident |
+| Royal Holloway University | Kelemahan keamanan Bridgefy |
+| WiFi Direct IEEE 802.11p2p spec | Star topology, GO election limitations |
+| Android WiFi Aware API docs | NAN cluster architecture, isAvailable() |
+| Nordic Semiconductor Android Mesh Library | BLE Mesh reference implementation |
+| Bitchat (open source) | BT Mesh messaging reference architecture |
+| InaRISK Google Play reviews 2025 | Validasi offline limitation |
+| RUU KKS Indonesia 2026 | Konteks regulasi B2G opportunity |
+| ASEAN Vision 2025 Disaster Management | Regional policy alignment |
+| Berty/Wesh GitHub 2026 | Status competitor, quiet development |
+
+*Dibuat berdasarkan analisis PRD.md, PROGRESS.md, README.md, Garuda-Mesh.md, dan riset mendalam via web search + competitor intelligence.*

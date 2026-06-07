@@ -1,10 +1,17 @@
 # CARAKA — Progress Tracker
 > WRECK-IT 7.0 · Track: IoT Resilience · Theme: Cyber Warfare: Silent War on The Fifth Domain  
-> Deadline Proposal: **14 Juni 2026** · Last updated: 1 Juni 2026
+> Deadline Proposal: **14 Juni 2026** · Last updated: **7 Juni 2026**
 
 ---
 
 ## ✅ Completed
+
+### 🔒 Phase 0 — Security Hardening & Demo Polish (7 Juni 2026)
+- [x] **SQLCipher — Database Encryption at Rest** — Room database dimigrasi dari plain SQLite ke SQLCipher `SupportFactory`. Passphrase 32-byte random di-generate sekali, di-encrypt dengan AES-256-GCM key yang disimpan di Android Keystore (TEE hardware). `DatabasePassphraseManager.kt` baru. `CarakaDatabase.secureWipe()` untuk panic wipe. Build: `✅ libsqlcipher.so` masuk APK.
+- [x] **QR Code Identity (ZXing)** — `QrIdentityManager.kt` baru untuk build/parse JSON payload QR (`peerId`, `name`, `role`, `encPub`, `signPub`). `QrIdentityScreen.kt` dua panel: tampil QR identitas sendiri (navy+amber tactical colors) + scan QR peer → simpan sebagai `isVerified = true` di Room. Navigasi dari Settings → "Lihat / Scan QR Identitas". `CAMERA` permission ditambah di Manifest.
+- [x] **Smart GO Election (Battery-Aware)** — `GoIntentCalculator.kt` baru menghitung `groupOwnerIntent` (0–15) berdasarkan battery level, authority role, dan relay load. Menggantikan hardcoded `intent = 15`. Logic: kritis (≤10%) → intent=0, authority + OK battery → intent 13+, civilian normal → intent 6-10. `batteryLevel: StateFlow<Int>` di-expose ke Settings UI via ViewModel.
+- [x] **README Rewrite** — README lengkap dengan ASCII arsitektur diagram, security layer diagram, mesh protocol flow diagram, tabel fitur update, security architecture section, Indonesia threat context table, dan getting started guide.
+
 
 ### 🔧 Core Code Upgrades
 - [x] **Multi-hop Relay** — TTL-based message forwarding (TEXT + SOS) di `WifiDirectManager`; node relay pesan yang bukan miliknya, TTL decremented tiap hop

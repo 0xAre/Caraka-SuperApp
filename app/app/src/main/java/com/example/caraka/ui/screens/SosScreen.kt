@@ -76,10 +76,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
     val lat = location?.latitude ?: -6.2115
     val lng = location?.longitude ?: 106.8456
 
-    // After SOS is sent, briefly show confirmation then go back.
+    val meshBannerMsg = stringResource(R.string.sos_mesh_sent_banner)
+    val calmingMsg = stringResource(R.string.sos_calming_message)
+
     LaunchedEffect(sosSent) {
         if (sosSent) {
-            kotlinx.coroutines.delay(1800L)
+            snackbar.tryEmit(meshBannerMsg)
+            kotlinx.coroutines.delay(3000L)
             onBack()
         }
     }
@@ -164,6 +167,10 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         Spacer(Modifier.height(8.dp))
                         Text(stringResource(R.string.sos_sent_title), color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(stringResource(R.string.sos_sent_subtitle), color = TextSecondary, fontSize = 14.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Text(meshBannerMsg, color = NeonMint.copy(alpha = 0.9f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(calmingMsg, color = TextSecondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -231,7 +238,33 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
+            if (location == null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                PillShapeChip(
+                    text = stringResource(R.string.sos_estimated_location),
+                    isSelected = true,
+                    onClick = {},
+                    selectedColor = WarningYellow
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
+
+            if (location == null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(WarningYellow.copy(alpha = 0.1f))
+                        .border(1.dp, WarningYellow.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Map, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.sos_location_estimated), color = WarningYellow, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             Row(
                 modifier = Modifier

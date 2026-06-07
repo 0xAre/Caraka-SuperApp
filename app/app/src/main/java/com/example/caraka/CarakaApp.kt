@@ -7,6 +7,7 @@ import com.example.caraka.data.local.CarakaDatabase
 import com.example.caraka.network.ConnectivityMonitor
 import com.example.caraka.network.WifiDirectManager
 import com.example.caraka.repository.MeshRepository
+import net.sqlcipher.database.SQLiteDatabase
 
 /**
  * Custom Application class for manual Dependency Injection.
@@ -23,6 +24,9 @@ class CarakaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Load SQLCipher native libraries — MUST be called before any DB access
+        SQLiteDatabase.loadLibs(this)
 
         // Initialize dependencies
         database = CarakaDatabase.getDatabase(this)

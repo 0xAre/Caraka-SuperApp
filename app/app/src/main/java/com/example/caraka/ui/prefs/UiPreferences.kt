@@ -3,6 +3,7 @@ package com.example.caraka.ui.prefs
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -39,4 +40,25 @@ class UiPreferences(private val context: Context) {
     suspend fun setHighContrast(value: Boolean){ context.uiPrefsDataStore.edit { it[Keys.highContrast] = value } }
     suspend fun setHaptics(value: Boolean)     { context.uiPrefsDataStore.edit { it[Keys.haptics] = value } }
     suspend fun setOnboardingDone(value: Boolean) { context.uiPrefsDataStore.edit { it[Keys.onboardingDone] = value } }
+
+    // ── Per-peer last-read timestamps (UI-only unread tracking) ──────────────
+
+    private fun lastReadKey(peerId: String) = longPreferencesKey("last_read_$peerId")
+
+    fun getLastRead(peerId: String): Flow<Long> =
+        context.uiPrefsDataStore.data.map { it[lastReadKey(peerId)] ?: 0L }
+
+    suspend fun setLastRead(peerId: String, timestamp: Long = System.currentTimeMillis()) {
+        context.uiPrefsDataStore.edit { it[lastReadKey(peerId)] = timestamp }
+    }
+
+    /** Map of peerId → last-read timestamp for all stored keys. */
+    fun observeLastReadMap(): Flow<Map<String, Long>> =
+        context.uiPrefsDataStore.data.map { prefs ->
+            prefs.asMap().mapNotNull { (key, value) ->
+                if (key.name.startsWith("last_read_") && value is Long) {
+                    key.name.removePrefix("last_read_") to value
+                } else null
+            }.toMap()
+        }
 }

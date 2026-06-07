@@ -11,15 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,27 +24,37 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
+import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.ui.components.LocalSnackbar
+import com.example.caraka.ui.components.MessageStatusIcon
+import com.example.caraka.ui.components.StickyComposer
+import com.example.caraka.ui.components.VerifiedBadge
+import com.example.caraka.ui.components.deriveMessageDeliveryStatus
+import com.example.caraka.ui.prefs.UiPreferences
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
-import com.example.caraka.ui.components.ChatInputBar
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> Unit) {
+fun ChatScreen(
+    viewModel: MainViewModel? = null,
+    peerId: String,
+    uiPrefs: UiPreferences? = null,
+    onBack: () -> Unit
+) {
     var messageText by remember { mutableStateOf("") }
     val chatFlow = remember(peerId) { viewModel?.getChatMessages(peerId) }
     val messages by chatFlow?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList()) }
     val connectedPeers by viewModel?.connectedPeers?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList()) }
-
-    // Flag context menu state
     var flagTargetId by remember { mutableStateOf<String?>(null) }
     var showFlagDialog by remember { mutableStateOf(false) }
 
@@ -58,15 +62,23 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
     val snackbar = LocalSnackbar.current
     val sentMsg = stringResource(R.string.snack_message_sent)
     val flaggedMsg = stringResource(R.string.snack_flagged)
-
     val listState = rememberLazyListState()
 
-    // Auto-scroll only when a NEW message arrives, not on every recomposition
+    LaunchedEffect(peerId, uiPrefs) {
+        uiPrefs?.setLastRead(peerId)
+    }
+
     val messageCount = messages.size
     LaunchedEffect(messageCount) {
         if (messageCount > 0) {
             listState.animateScrollToItem(messageCount - 1)
         }
+    }
+
+    val meshSubtitle = when {
+        peer == null -> stringResource(R.string.chat_disconnected)
+        peer.hopCount > 0 -> stringResource(R.string.chat_via_relay)
+        else -> stringResource(R.string.chat_direct_peer)
     }
 
     Scaffold(
@@ -75,36 +87,54 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(peer?.displayName ?: "Unknown Peer", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                peer?.displayName ?: stringResource(R.string.chat_unknown_peer),
+                                color = TextPrimary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             if (peer?.isAuthority == true) {
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.Verified,
-                                    contentDescription = stringResource(R.string.cd_verified),
-                                    tint = NeonMint, modifier = Modifier.size(16.dp))
+                                VerifiedBadge(size = 16.dp)
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (peer != null) NeonMint else TextSecondary))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                if (peer != null) stringResource(R.string.chat_connected_mesh) else stringResource(R.string.chat_disconnected),
-                                color = TextSecondary, fontSize = 12.sp
+                            if (peer?.role != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (peer.isAuthority) NeonMint.copy(alpha = 0.12f) else SurfaceDark)
+                                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                                ) {
+                                    Text(peer.role, color = if (peer.isAuthority) NeonMint else TextSecondary, fontSize = 10.sp)
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (peer != null) NeonMint else TextSecondary)
                             )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(meshSubtitle, color = TextSecondary, fontSize = 12.sp)
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_back_btn),
-                            tint = TextPrimary)
+                            tint = TextPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
             )
         },
         bottomBar = {
-            ChatInputBar(
+            StickyComposer(
                 value = messageText,
                 onValueChange = { messageText = it },
                 onSend = {
@@ -113,8 +143,7 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                         snackbar.tryEmit(sentMsg)
                         messageText = ""
                     }
-                },
-                modifier = Modifier.padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+                }
             )
         },
         containerColor = NavyBackground
@@ -124,7 +153,6 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // E2E Encryption Banner
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -144,13 +172,20 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(
                     count = messages.size,
                     key = { index -> messages[index].id }
                 ) { index ->
                     val msg = messages[index]
+                    val prevMsg = messages.getOrNull(index - 1)
+                    val showDateSep = shouldShowDateSeparator(msg, prevMsg)
+
+                    if (showDateSep) {
+                        DateSeparator(timestamp = msg.timestamp)
+                    }
+
                     val timeFormatted = remember(msg.timestamp) {
                         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp))
                     }
@@ -170,7 +205,8 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
                     } else {
                         OutgoingMessageBubble(
                             message = msg.content,
-                            time = timeFormatted
+                            time = timeFormatted,
+                            deliveryStatus = deriveMessageDeliveryStatus(msg.isRelayed, msg.isIncoming)
                         )
                     }
                 }
@@ -178,7 +214,6 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
         }
     }
 
-    // ── Flag confirmation dialog ───────────────────────────────────────────
     if (showFlagDialog && flagTargetId != null) {
         AlertDialog(
             onDismissRequest = { showFlagDialog = false },
@@ -206,6 +241,45 @@ fun ChatScreen(viewModel: MainViewModel? = null, peerId: String, onBack: () -> U
     }
 }
 
+@Composable
+private fun DateSeparator(timestamp: Long) {
+    val label = remember(timestamp) {
+        val cal = Calendar.getInstance()
+        val today = cal.get(Calendar.DAY_OF_YEAR)
+        cal.timeInMillis = timestamp
+        val msgDay = cal.get(Calendar.DAY_OF_YEAR)
+        when {
+            today == msgDay -> "Today"
+            today - msgDay == 1 -> "Yesterday"
+            else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = TextSecondary,
+            fontSize = 11.sp,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(SurfaceDark.copy(alpha = 0.6f))
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        )
+    }
+}
+
+private fun shouldShowDateSeparator(current: MessageEntity, previous: MessageEntity?): Boolean {
+    if (previous == null) return true
+    val cal1 = Calendar.getInstance().apply { timeInMillis = previous.timestamp }
+    val cal2 = Calendar.getInstance().apply { timeInMillis = current.timestamp }
+    return cal1.get(Calendar.DAY_OF_YEAR) != cal2.get(Calendar.DAY_OF_YEAR) ||
+        cal1.get(Calendar.YEAR) != cal2.get(Calendar.YEAR)
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun IncomingMessageBubble(
@@ -218,17 +292,16 @@ fun IncomingMessageBubble(
     onLongPress: (() -> Unit)? = null
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        // Avatar
         Box(
             modifier = Modifier.size(40.dp).clip(CircleShape)
                 .background(if (isAuthority) NeonMint.copy(alpha = 0.2f) else SurfaceDark),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                if (isAuthority) Icons.Default.Verified else Icons.Default.Person,
-                contentDescription = null,
-                tint = if (isAuthority) NeonMint else AmberAccent
-            )
+            if (isAuthority) {
+                VerifiedBadge(size = 20.dp)
+            } else {
+                Icon(Icons.Default.Person, contentDescription = null, tint = AmberAccent)
+            }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
@@ -248,46 +321,54 @@ fun IncomingMessageBubble(
                         Text(sender, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         if (isAuthority) {
                             Spacer(modifier = Modifier.width(4.dp))
-                            Icon(Icons.Default.Verified, contentDescription = "Verified", tint = NeonMint, modifier = Modifier.size(14.dp))
+                            VerifiedBadge(size = 14.dp)
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(message, color = TextPrimary, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                    if (!isAuthority) {
-                        Icon(Icons.Default.Flag,
-                            contentDescription = stringResource(R.string.chat_hold_to_flag),
-                            tint = TextSecondary.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
+                        Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        if (!isAuthority) {
+                            Icon(
+                                Icons.Default.Flag,
+                                contentDescription = stringResource(R.string.chat_hold_to_flag),
+                                tint = TextSecondary.copy(alpha = 0.4f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
-        // Warning badge when flagged by 3+ users
-        if (isFlagged) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(WarningYellow.copy(alpha = 0.2f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    String.format(stringResource(R.string.chat_flagged_by), flagCount),
-                    color = WarningYellow, fontSize = 12.sp
-                )
+            if (isFlagged) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(WarningYellow.copy(alpha = 0.2f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        String.format(stringResource(R.string.chat_flagged_by), flagCount),
+                        color = WarningYellow,
+                        fontSize = 12.sp
+                    )
+                }
             }
-        }
         }
     }
 }
 
 @Composable
-fun OutgoingMessageBubble(message: String, time: String) {
+fun OutgoingMessageBubble(
+    message: String,
+    time: String,
+    deliveryStatus: com.example.caraka.ui.components.MessageDeliveryUiStatus =
+        com.example.caraka.ui.components.MessageDeliveryUiStatus.SENT
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Box(
             modifier = Modifier
@@ -302,20 +383,8 @@ fun OutgoingMessageBubble(message: String, time: String) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.End)) {
                     Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 12.sp)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.DoneAll,
-                        contentDescription = stringResource(R.string.chat_sent_via_mesh),
-                        tint = NeonMint.copy(alpha = 0.9f),
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        stringResource(R.string.chat_mesh_label),
-                        color = NeonMint.copy(alpha = 0.9f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    MessageStatusIcon(status = deliveryStatus)
                 }
             }
         }

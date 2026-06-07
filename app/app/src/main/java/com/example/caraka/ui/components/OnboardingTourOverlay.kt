@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -160,7 +160,7 @@ fun OnboardingTourOverlay(
                         )
                         Spacer(Modifier.width(6.dp))
                         Icon(
-                            Icons.Default.ArrowForward,
+                            Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = NavyBackground,
                             modifier = Modifier.size(16.dp)

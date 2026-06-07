@@ -22,6 +22,10 @@ datastorePreferences = "1.1.1"
 googleFonts = "1.7.5"
 # Gson for JSON
 gson = "2.11.0"
+# SQLCipher (encrypted SQLite)
+sqlcipher = "4.5.4"
+# ZXing Android Embedded (QR code generate + scan)
+zxing = "4.3.0"
 
 [libraries]
 # AndroidX Core
@@ -64,6 +68,14 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # Gson
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+# SQLCipher (encrypted local database)
+sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
+sqlite-ktx = { group = "androidx.sqlite", name = "sqlite-ktx", version = "2.4.0" }
+
+# ZXing — QR code generation + scanning
+zxing-core = { group = "com.google.zxing", name = "core", version = "3.5.3" }
+zxing-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing" }
 
 # Lazysodium (libsodium for encryption)
 lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version = "5.1.0" }

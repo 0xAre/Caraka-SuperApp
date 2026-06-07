@@ -6,7 +6,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,8 +69,17 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0)
         ?: remember { mutableStateOf(0) }
 
+    var selectedNode by remember { mutableStateOf<MeshNodeUi?>(null) }
+
     LaunchedEffect(viewModel) {
         viewModel?.discoverPeers()
+    }
+
+    selectedNode?.let { node ->
+        NodeDetailBottomSheet(
+            node = node,
+            onDismiss = { selectedNode = null }
+        )
     }
 
     Scaffold(
@@ -94,10 +106,16 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
                 MeshNetworkGraph(
                     peers = meshNodes,
                     hasSosActive = activeAlerts.isNotEmpty(),
+                    onNodeTap = { node -> selectedNode = node },
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Bottom stats strip (Floating Glassmorphism)
+                NetworkLegendOverlay(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                )
+
                 NetworkStatsPanel(
                     nodeCount = meshNodeCount,
                     connectionState = connectionState,
@@ -115,9 +133,79 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
 // ─── Force-Directed Graph Canvas ─────────────────────────────────────────────
 
 @Composable
+private fun NetworkLegendOverlay(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .shadow(6.dp, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(GlassSurface)
+            .border(1.dp, SurfaceDark, RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        LegendItem(AmberAccent, stringResource(R.string.network_legend_self))
+        LegendItem(NeonMint, stringResource(R.string.network_legend_authority))
+        LegendItem(AmberAccent.copy(alpha = 0.7f), stringResource(R.string.network_legend_direct))
+        LegendItem(DisasterBlue, stringResource(R.string.network_legend_relay))
+        LegendItem(DangerRed, stringResource(R.string.network_legend_sos))
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = TextSecondary, fontSize = 10.sp)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NodeDetailBottomSheet(node: MeshNodeUi, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = NavyBackground
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            Text(node.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.network_node_role, node.role), color = TextSecondary, fontSize = 13.sp)
+            Text(
+                stringResource(
+                    if (node.isConnected) R.string.network_node_connected else R.string.network_node_discovered
+                ),
+                color = if (node.isConnected) NeonMint else TextSecondary,
+                fontSize = 13.sp
+            )
+            if (node.hopCount > 0) {
+                Text(stringResource(R.string.network_node_hops, node.hopCount), color = TextSecondary, fontSize = 12.sp)
+            }
+            if (node.isAuthority) {
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.network_node_authority), color = NeonMint, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+@Composable
 private fun MeshNetworkGraph(
     peers: List<MeshNodeUi>,
     hasSosActive: Boolean,
+    onNodeTap: (MeshNodeUi) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Continuous animations
@@ -221,7 +309,27 @@ private fun MeshNetworkGraph(
         }
     }
 
-    Canvas(modifier = modifier) {
+    val peerById = remember(peers) { peers.associateBy { it.id } }
+
+    Canvas(
+        modifier = modifier.pointerInput(peers, nodes.size) {
+            detectTapGestures { offset ->
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val scale = minOf(size.width, size.height) / 2f
+                val hitRadius = 40.dp.toPx()
+                nodes.filter { it.id != "SELF" }.forEach { node ->
+                    val px = cx + node.x * scale
+                    val py = cy + node.y * scale
+                    val dx = offset.x - px
+                    val dy = offset.y - py
+                    if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+                        peerById[node.id]?.let { onNodeTap(it) }
+                    }
+                }
+            }
+        }
+    ) {
         val cx = size.width / 2f
         val cy = size.height / 2f
         val scale = minOf(size.width, size.height) / 2f

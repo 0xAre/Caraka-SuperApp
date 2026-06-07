@@ -19,3 +19,21 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ─── SQLCipher ───────────────────────────────────────────────────────────────
+# Keep SQLCipher classes so reflection-based native bindings work in release
+-keep class net.sqlcipher.** { *; }
+-keep class net.sqlcipher.database.** { *; }
+-dontwarn net.sqlcipher.**
+
+# ─── Lazysodium / JNA ────────────────────────────────────────────────────────
+-keep class com.goterl.lazysodium.** { *; }
+-keep class com.sun.jna.** { *; }
+-keep class net.java.dev.jna.** { *; }
+-dontwarn com.sun.jna.**
+-dontwarn net.java.dev.jna.**
+
+# ─── Room ────────────────────────────────────────────────────────────────────
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }

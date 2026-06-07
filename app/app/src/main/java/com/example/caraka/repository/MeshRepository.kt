@@ -44,6 +44,43 @@ class MeshRepository(
         peerDao.disconnectAll()
     }
 
+    /**
+     * Save a peer that was verified via QR code scan (in-person).
+     * If the peer already exists in the DB, updates their keys and marks isVerified = true.
+     * If not, creates a new record.
+     */
+    suspend fun saveVerifiedPeer(
+        peerId: String,
+        displayName: String,
+        role: String,
+        encPubKey: String,
+        signPubKey: String
+    ) {
+        val existing = peerDao.getPeerById(peerId)
+        val peer = existing?.copy(
+            displayName = displayName,
+            role = role,
+            publicKey = encPubKey,
+            signingKey = signPubKey,
+            isVerified = true,
+            isAuthority = role in listOf("BPBD", "POLRI", "PMI"),
+            lastSeen = System.currentTimeMillis()
+        ) ?: PeerEntity(
+            id = peerId,
+            deviceName = displayName,
+            displayName = displayName,
+            role = role,
+            publicKey = encPubKey,
+            signingKey = signPubKey,
+            isVerified = true,
+            isAuthority = role in listOf("BPBD", "POLRI", "PMI"),
+            macAddress = null,
+            lastSeen = System.currentTimeMillis(),
+            isConnected = false
+        )
+        peerDao.insertPeer(peer)
+    }
+
     /** Wipe all local data — called on identity reset/logout so nothing leaks across accounts. */
     suspend fun clearAllData() {
         messageDao.deleteAllMessages()

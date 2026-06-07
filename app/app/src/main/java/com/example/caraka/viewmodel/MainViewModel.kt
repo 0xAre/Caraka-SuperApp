@@ -113,6 +113,9 @@ class MainViewModel(
     /** Messages relayed for other nodes (multi-hop stat). */
     val relayedMessageCount: StateFlow<Int> = wifiDirectManager.relayedMessageCount
 
+    /** Current device battery level (0-100). Updated on each connect attempt. */
+    val batteryLevel: StateFlow<Int> = wifiDirectManager.batteryLevel
+
     /** Fires when a direct chat arrives — drives the floating in-app alert. */
     val incomingChatAlert = wifiDirectManager.incomingChatAlert
 
@@ -226,6 +229,32 @@ class MainViewModel(
         viewModelScope.launch {
             repository.sendDirectMessage(recipientId, content)
         }
+    }
+
+    // ========== QR IDENTITY METHODS ==========
+
+    /**
+     * Returns the X25519 encryption public key as Base64 (for QR generation).
+     */
+    suspend fun getEncPubBase64(): String = identityManager.getEncryptionPublicKeyBase64()
+
+    /**
+     * Returns the Ed25519 signing public key as Base64 (for QR generation).
+     */
+    suspend fun getSignPubBase64(): String = identityManager.getSigningPublicKeyBase64()
+
+    /**
+     * Saves a peer scanned via QR as a verified contact in the local database.
+     * Marks the peer as verified = true and stores their public keys.
+     */
+    suspend fun saveVerifiedPeer(payload: com.example.caraka.crypto.QrIdentityManager.QrIdentityPayload) {
+        repository.saveVerifiedPeer(
+            peerId = payload.peerId,
+            displayName = payload.name,
+            role = payload.role,
+            encPubKey = payload.encPub,
+            signPubKey = payload.signPub
+        )
     }
 
     override fun onCleared() {

@@ -120,6 +120,11 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
             item { QaCard(R.string.help_q_sos, R.string.help_a_sos) }
             item { QaCard(R.string.help_q_flag, R.string.help_a_flag) }
 
+            item { SectionHeader(R.string.help_section_offline) }
+            item { QaCard(R.string.help_section_offline, R.string.help_offline_sos) }
+            item { QaCard(R.string.help_q_offline_flag, R.string.help_offline_flag) }
+            item { QaCard(R.string.help_q_offline_qr, R.string.help_offline_qr) }
+
             // ── HCI Heuristics ────────────────────────────────────────────
             item { SectionHeader(R.string.help_section_hci) }
             item {

@@ -52,6 +52,29 @@
     <string name="home_active_alerts">Alarm Aktif</string>
     <string name="home_no_alerts">Tidak ada alarm aktif di sekitar.</string>
     <string name="home_alerts_notif">Notifikasi alarm</string>
+    <string name="home_sos_hold_label">Tahan untuk darurat</string>
+
+    <!-- ───── Mesh Status Banner ───── -->
+    <string name="mesh_status_connected">Terhubung · %1$d node</string>
+    <string name="mesh_status_connecting">Menghubungkan…</string>
+    <string name="mesh_status_reconnecting">Menyambung ulang…</string>
+    <string name="mesh_status_searching">Mencari peer…</string>
+    <string name="mesh_status_cd">Status jaringan: %1$d node. %2$s</string>
+
+    <!-- ───── Alerts Sheet / Screen ───── -->
+    <string name="alerts_sheet_title">Alarm Darurat</string>
+    <string name="alerts_sheet_subtitle">%1$d alarm aktif di mesh</string>
+    <string name="alerts_view_all">Lihat semua alarm</string>
+    <string name="alerts_screen_title">LOG DARURAT</string>
+    <string name="alerts_screen_subtitle">Riwayat sinyal SOS aktif di jaringan mesh</string>
+    <string name="alerts_empty">Tidak ada alarm darurat saat ini.</string>
+    <string name="alerts_empty_title">Belum ada alarm</string>
+    <string name="alerts_empty_subtitle">SOS dan siaran otoritas akan muncul di sini.</string>
+    <string name="alerts_filter_all">Semua</string>
+    <string name="alerts_filter_medical">Medis</string>
+    <string name="alerts_filter_fire">Kebakaran</string>
+    <string name="alerts_filter_security">Keamanan</string>
+    <string name="alerts_filter_disaster">Bencana</string>
 
     <!-- ───── SOS Screen ───── -->
     <string name="sos_title">SOS DARURAT</string>
@@ -74,6 +97,10 @@
     <string name="sos_sent_subtitle">Bantuan menuju Anda. Tetap tenang.</string>
     <string name="sos_select_category_first">Pilih kategori darurat terlebih dahulu</string>
     <string name="sos_back">Kembali</string>
+    <string name="sos_mesh_sent_banner">SOS terkirim ke jaringan mesh</string>
+    <string name="sos_calming_message">Tim koordinasi akan menerima sinyal Anda. Tetap tenang.</string>
+    <string name="sos_location_estimated">Lokasi estimasi — GPS tidak tersedia</string>
+    <string name="sos_estimated_location">⚠ Lokasi estimasi</string>
 
     <!-- ───── Messages / Chat ───── -->
     <string name="messages_title">PESAN</string>
@@ -84,6 +111,16 @@
     <string name="messages_you_prefix">Anda: </string>
     <string name="messages_just_now">Baru saja</string>
     <string name="messages_min_ago">m lalu</string>
+    <string name="messages_search_hint">Cari peer atau pesan…</string>
+    <string name="messages_search_cd">Cari pesan</string>
+    <string name="messages_no_results">Tidak ada hasil</string>
+    <string name="messages_no_results_hint">Coba kata kunci lain</string>
+    <string name="messages_empty_offline_hint">Buka Peta Jaringan untuk menemukan peer di sekitar — bekerja tanpa internet.</string>
+    <string name="messages_open_network">Buka Peta Jaringan</string>
+    <string name="messages_search_empty">Tidak ada hasil untuk pencarian ini</string>
+    <string name="messages_empty_title">Belum ada percakapan</string>
+    <string name="messages_empty_action">Buka Peta Jaringan</string>
+    <string name="peer_list_item_cd">Chat dengan %1$s. %2$d belum dibaca</string>
     <string name="alert_new_message">pesan baru</string>
     <string name="alert_tap_to_open">Buka</string>
     <string name="home_stat_range_unit">m</string>
@@ -95,6 +132,12 @@
     <string name="chat_sent_via_mesh">Terkirim via mesh</string>
     <string name="chat_mesh_label">Mesh</string>
     <string name="chat_disconnected">Terputus</string>
+    <string name="chat_direct_peer">Peer langsung</string>
+    <string name="chat_via_relay">Via relay mesh</string>
+    <string name="chat_unknown_peer">Peer tidak dikenal</string>
+    <string name="msg_status_queued">Antri</string>
+    <string name="msg_status_sent">Terkirim</string>
+    <string name="msg_status_relayed">Diteruskan</string>
     <string name="chat_hold_to_flag">Tahan untuk menandai</string>
     <string name="chat_flag_title">Tandai sebagai Mencurigakan?</string>
     <string name="chat_flag_desc">Pesan ini akan ditandai sebagai potensial hoaks. Jika 3+ pengguna menandai, label ⚠️ peringatan akan muncul untuk semua orang di mesh.</string>
@@ -111,10 +154,44 @@
     <string name="network_legend_relay">Relay (Multi-hop)</string>
     <string name="network_stat_range">Jangkauan</string>
     <string name="network_stat_sos">SOS</string>
+    <string name="network_legend_sos">SOS aktif</string>
+    <string name="network_node_role">Peran: %1$s</string>
+    <string name="network_node_connected">Status: Terhubung</string>
+    <string name="network_node_discovered">Status: Terdeteksi</string>
+    <string name="network_node_hops">Hop relay: %1$d</string>
+    <string name="network_node_authority">✓ Akun otoritas terverifikasi</string>
 
     <!-- ───── Settings ───── -->
     <string name="settings_title">PENGATURAN</string>
     <string name="settings_peer_id">ID Peer</string>
+    <string name="settings_qr_btn">Lihat / Scan QR Identitas</string>
+    <string name="identity_copied">ID peer disalin</string>
+    <string name="identity_copy">Salin ID peer</string>
+    <string name="identity_qr_shortcut">Buka QR identitas</string>
+    <string name="identity_fingerprint">Sidik jari: %1$s</string>
+    <string name="identity_row_cd">ID peer, sidik jari %1$s</string>
+    <string name="identity_copy_cd">Salin ID peer</string>
+    <string name="identity_qr_cd">Buka QR identitas</string>
+    <string name="settings_go_intent">GO Intent</string>
+
+    <!-- ───── QR Identity ───── -->
+    <string name="qr_screen_title">Identitas QR</string>
+    <string name="qr_my_identity_title">QR IDENTITAS SAYA</string>
+    <string name="qr_show_hint">Tunjukkan QR ini kepada peer untuk verifikasi identitas tatap muka</string>
+    <string name="qr_trust_warning">Scan hanya dari perangkat yang Anda percaya</string>
+    <string name="qr_cd_identity">QR Identitas %1$s</string>
+    <string name="qr_image_cd">QR identitas %1$s</string>
+    <string name="qr_verbal_fingerprint">Verifikasi verbal: %1$s</string>
+    <string name="trust_sheet_title">Konfirmasi Kepercayaan</string>
+    <string name="trust_sheet_warning">Pastikan Anda mengenal orang ini secara langsung sebelum menyimpan sebagai kontak terverifikasi.</string>
+    <string name="trust_label_name">Nama</string>
+    <string name="trust_label_role">Peran</string>
+    <string name="trust_label_peer_id">Peer ID</string>
+    <string name="trust_label_fingerprint">Sidik jari</string>
+    <string name="trust_confirm_save">Simpan sebagai Verified Peer</string>
+    <string name="trust_confirm_btn">Simpan sebagai Verified Peer</string>
+    <string name="trust_cancel">Batal</string>
+    <string name="trust_cancel_btn">Batal</string>
     <string name="settings_network_stats">Statistik Jaringan</string>
     <string name="settings_stat_nodes">Node</string>
     <string name="settings_stat_peers">Peer</string>
@@ -178,6 +255,12 @@
     <string name="help_section_a11y">Aksesibilitas</string>
     <string name="help_a11y_a">CARAKA mendukung TalkBack (pembaca layar), penskalaan teks sistem hingga 200%, kontras AAA opsional, getaran haptik, target sentuh ≥48dp, dan navigasi keyboard.</string>
     <string name="help_back">Kembali</string>
+    <string name="help_section_offline">Bekerja Offline</string>
+    <string name="help_offline_sos">SOS tetap berfungsi tanpa internet — sinyal disiarkan ke semua node mesh terdekat.</string>
+    <string name="help_q_offline_flag">Bisakah melaporkan hoaks saat offline?</string>
+    <string name="help_offline_flag">Laporkan hoaks dengan long-press pesan, bahkan saat offline.</string>
+    <string name="help_q_offline_qr">Bagaimana verifikasi identitas tanpa server?</string>
+    <string name="help_offline_qr">Verifikasi identitas peer secara tatap muka dengan scan QR — tidak perlu server pusat.</string>
 
     <!-- ───── Onboarding Tour ───── -->
     <string name="tour_skip">Lewati</string>
@@ -212,4 +295,5 @@
     <string name="cd_scan_btn">Pindai peer terdekat</string>
     <string name="cd_settings_btn">Buka pengaturan</string>
     <string name="cd_info_tooltip">Info tambahan</string>
+    <string name="cd_sos_hold_emergency">Tombol SOS darurat. Tahan untuk darurat.</string>
 </resources>

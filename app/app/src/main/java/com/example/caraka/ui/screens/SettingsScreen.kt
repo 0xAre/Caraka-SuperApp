@@ -23,12 +23,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
+import com.example.caraka.ui.components.IdentityDisplayRow
+import com.example.caraka.ui.components.LocalSnackbar
+import com.example.caraka.ui.components.VerifiedBadge
 import com.example.caraka.ui.prefs.LocalUiPrefs
 import com.example.caraka.ui.theme.*
 import com.example.caraka.ui.util.rememberHaptics
@@ -38,7 +40,8 @@ import com.example.caraka.viewmodel.MainViewModel
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel? = null,
-    onOpenHelp: () -> Unit = {}
+    onOpenHelp: () -> Unit = {},
+    onOpenQr: () -> Unit = {}
 ) {
     val displayName by viewModel?.displayName?.collectAsStateWithLifecycle(initialValue = "") ?: remember { mutableStateOf("") }
     val myRole by viewModel?.myRole?.collectAsStateWithLifecycle(initialValue = "") ?: remember { mutableStateOf("") }
@@ -46,12 +49,16 @@ fun SettingsScreen(
     val meshNodeCount by viewModel?.meshNodeCount?.collectAsStateWithLifecycle(initialValue = 1) ?: remember { mutableStateOf(1) }
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0) ?: remember { mutableStateOf(0) }
     val connectedPeerCount by viewModel?.connectedPeerCount?.collectAsStateWithLifecycle(initialValue = 0) ?: remember { mutableStateOf(0) }
+    val batteryLevel by viewModel?.batteryLevel?.collectAsStateWithLifecycle(initialValue = 100) ?: remember { mutableStateOf(100) }
 
     val prefs = LocalUiPrefs.current
     val haptics = rememberHaptics()
+    val snackbar = LocalSnackbar.current
+    val copiedMsg = stringResource(R.string.identity_copied)
 
     var showResetDialog by remember { mutableStateOf(false) }
 
+    val helpCd = stringResource(R.string.settings_help)
     val isAuthority = myRole in listOf("BPBD", "POLRI", "PMI")
     val roleColor = when (myRole) {
         "BPBD" -> DisasterBlue
@@ -79,7 +86,6 @@ fun SettingsScreen(
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // ── Identity Card ────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,7 +130,7 @@ fun SettingsScreen(
                             }
                             if (isAuthority) {
                                 Spacer(Modifier.width(6.dp))
-                                Icon(Icons.Default.Verified, contentDescription = stringResource(R.string.cd_verified), tint = roleColor, modifier = Modifier.size(14.dp))
+                                VerifiedBadge(tint = roleColor, size = 14.dp)
                             }
                         }
                     }
@@ -134,29 +140,53 @@ fun SettingsScreen(
                     Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = SurfaceDark)
                     Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.settings_peer_id), color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = myPeerId.take(32) + if (myPeerId.length > 32) "…" else "",
-                        color = TextPrimary.copy(alpha = 0.85f),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace
+                    IdentityDisplayRow(
+                        peerId = myPeerId,
+                        onQrClick = { haptics.tick(); onOpenQr() },
+                        onCopied = { snackbar.tryEmit(copiedMsg) }
                     )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { haptics.tick(); onOpenQr() },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AmberAccent.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AmberAccent.copy(alpha = 0.5f))
+                    ) {
+                        Icon(Icons.Default.QrCode2, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.settings_qr_btn), color = AmberAccent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
                 }
             }
 
-            // ── Network Stats ────────────────────────────────────────────
             Text(stringResource(R.string.settings_network_stats), color = AmberAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsStatChip(stringResource(R.string.settings_stat_nodes), "$meshNodeCount", Icons.Default.Hub, AmberAccent, Modifier.weight(1f))
                 SettingsStatChip(stringResource(R.string.settings_stat_peers), "$connectedPeerCount", Icons.Default.People, NeonMint, Modifier.weight(1f))
                 SettingsStatChip(stringResource(R.string.settings_stat_relayed), "$relayed", Icons.Default.SwapHoriz, DisasterBlue, Modifier.weight(1f))
             }
+            val batteryColor = when {
+                batteryLevel <= 10 -> DangerRed
+                batteryLevel <= 20 -> WarningYellow
+                else -> NeonMint
+            }
+            val batteryIcon = when {
+                batteryLevel <= 10 -> Icons.Default.Battery0Bar
+                batteryLevel <= 20 -> Icons.Default.Battery1Bar
+                batteryLevel <= 40 -> Icons.Default.Battery3Bar
+                else -> Icons.Default.BatteryFull
+            }
+            SettingsStatChip(
+                label = stringResource(R.string.settings_go_intent),
+                value = "$batteryLevel%",
+                icon = batteryIcon,
+                color = batteryColor,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            // ── Accessibility / Preferences ──────────────────────────────
             Text(stringResource(R.string.settings_accessibility), color = AmberAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
 
-            // Language toggle (segmented)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -193,7 +223,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Big-text toggle
             ToggleRow(
                 icon = Icons.Default.TextFields,
                 title = stringResource(R.string.settings_big_text),
@@ -201,7 +230,6 @@ fun SettingsScreen(
                 checked = prefs.bigText,
                 onToggle = { haptics.tick(); prefs.toggleBigText() }
             )
-            // High-contrast toggle
             ToggleRow(
                 icon = Icons.Default.Contrast,
                 title = stringResource(R.string.settings_high_contrast),
@@ -209,7 +237,6 @@ fun SettingsScreen(
                 checked = prefs.highContrast,
                 onToggle = { haptics.tick(); prefs.toggleHighContrast() }
             )
-            // Haptics toggle
             ToggleRow(
                 icon = Icons.Default.Vibration,
                 title = stringResource(R.string.settings_haptics),
@@ -218,7 +245,6 @@ fun SettingsScreen(
                 onToggle = { prefs.toggleHaptics(); if (prefs.haptics) haptics.tick() }
             )
 
-            // Help & HCI Info entry
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -228,7 +254,7 @@ fun SettingsScreen(
                     .border(1.dp, AmberAccent.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                     .clickable { haptics.tick(); onOpenHelp() }
                     .padding(14.dp)
-                    .semantics { contentDescription = "Open help and HCI info" },
+                    .semantics { contentDescription = helpCd },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(22.dp))
@@ -237,7 +263,6 @@ fun SettingsScreen(
                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
             }
 
-            // ── About ────────────────────────────────────────────────────
             Text(stringResource(R.string.settings_about), color = AmberAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Column(
                 modifier = Modifier
@@ -254,7 +279,6 @@ fun SettingsScreen(
                 SettingsInfoRow(Icons.Default.Router, stringResource(R.string.settings_label_relay), stringResource(R.string.settings_relay))
             }
 
-            // ── Danger Zone ──────────────────────────────────────────────
             Text(stringResource(R.string.settings_danger_zone), color = DangerRed, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Button(
                 onClick = { showResetDialog = true },
