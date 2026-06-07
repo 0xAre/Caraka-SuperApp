@@ -96,6 +96,7 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
 
                 while (isActive) {
                     val clientSocket = serverSocket!!.accept()
+                    clientSocket.keepAlive = true
                     val address = clientSocket.inetAddress.hostAddress ?: "unknown"
                     val connId = generateConnectionId()
                     Log.d(TAG, "Client connected: $address (connId=$connId)")
@@ -126,6 +127,7 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
             try {
                 val socket = Socket()
                 socket.bind(null)
+                socket.keepAlive = true
                 val connId = generateConnectionId()
                 Log.d(TAG, "Connecting to GO at $hostAddress:$PORT (connId=$connId)...")
                 socket.connect(InetSocketAddress(hostAddress, PORT), TIMEOUT)

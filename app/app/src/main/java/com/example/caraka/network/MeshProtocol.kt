@@ -54,6 +54,8 @@ data class MeshProtocol(
     val signingKey: String? = null,     // Ed25519 base64
     // Connection request fields
     val autoAccept: Boolean = false,    // For QR: auto-accept without dialog
+    val targetId: String? = null,       // Specific recipient peerId (for unicast routing)
+    val lanIp: String? = null,          // Sender's LAN IP (helps receiver build peerIpRegistry faster)
     val seenBy: List<String> = emptyList(),  // Peers that already relayed this message
     // PEER_LIST gossip payload
     val peers: List<PeerShare>? = null
