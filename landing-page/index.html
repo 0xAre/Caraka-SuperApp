@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARAKA - Cakra Mesh | Offline Mesh Communication</title>
+    <meta name="description" content="Fully-offline, encrypted mesh communication platform for Android — built for crisis coordination when internet, cellular, and power infrastructure fail.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <span class="brand-name">CARAKA</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#security">Security</a>
+                <a href="https://github.com/Fatihmaull/cakra-mesh" target="_blank" class="nav-btn">View on GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <!-- Glowing Radar Animation -->
+        <div class="radar-container" aria-hidden="true">
+            <div class="radar-pulse ring-1"></div>
+            <div class="radar-pulse ring-2"></div>
+            <div class="radar-pulse ring-3"></div>
+            <div class="radar-core"></div>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-eyebrow">
+                <span class="dot"></span>
+                WRECK-IT 7.0 · Cyber Warfare
+            </div>
+            
+            <h1 class="hero-title">
+                When The Grid Falls,<br>
+                <span class="accent-amber">We Rise.</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                A fully-offline, encrypted mesh communication platform for Android. Built for first responders and disaster survivors when internet and cellular infrastructure fail.
+            </p>
+            
+            <div class="hero-ctas">
+                <a href="https://github.com/Fatihmaull/cakra-mesh" class="btn btn-primary" target="_blank">
+                    Explore Codebase
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"></path>
+                        <path d="m12 5 7 7-7 7"></path>
+                    </svg>
+                </a>
+                <a href="#features" class="btn btn-secondary">See Features</a>
+            </div>
+        </div>
+
+        <!-- Marquee -->
+        <div class="marquee-wrapper">
+            <div class="marquee-track">
+                <span>WiFi Direct P2P</span><span class="dot"></span>
+                <span>E2E Encryption</span><span class="dot"></span>
+                <span>Multi-hop Relay</span><span class="dot"></span>
+                <span>SOS Broadcast</span><span class="dot"></span>
+                <span>Network Map</span><span class="dot"></span>
+                <span>Hybrid Mode</span><span class="dot"></span>
+                <span>Smart GO Election</span><span class="dot"></span>
+                <!-- Duplicate for seamless loop -->
+                <span>WiFi Direct P2P</span><span class="dot"></span>
+                <span>E2E Encryption</span><span class="dot"></span>
+                <span>Multi-hop Relay</span><span class="dot"></span>
+                <span>SOS Broadcast</span><span class="dot"></span>
+                <span>Network Map</span><span class="dot"></span>
+                <span>Hybrid Mode</span><span class="dot"></span>
+                <span>Smart GO Election</span><span class="dot"></span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <h2 class="section-title">Zero-Infrastructure Comms</h2>
+            <p class="section-desc">Designed to work when nothing else does, bypassing completely the need for cell towers or internet.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                </div>
+                <h3>WiFi Direct P2P</h3>
+                <p>Device mesh up to ~100m per hop without needing any infrastructure. Multi-hop relay with TTL-based gossip flooding extends range.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h3>E2E Encryption</h3>
+                <p>X25519 (ECDH) + XChaCha20-Poly1305 via libsodium. Plus Ed25519 signatures for anti-impersonation.</p>
+            </div>
+            
+            <div class="feature-card amber-border">
+                <div class="feature-icon amber-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <h3>SOS Broadcast</h3>
+                <p>Hold-to-confirm 2s arc prevents accidental triggers. Multi-hop priority relay for Medical, Fire, Security, and Disaster.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </div>
+                <h3>Network Map</h3>
+                <p>Real-time force-directed mesh topology at 30fps. Visualize nodes, relays, and active paths dynamically.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <h3>QR Identity</h3>
+                <p>Share and scan identity QR codes for in-person peer verification using ZXing. No central server needed.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <h3>SQLCipher Encryption</h3>
+                <p>All messages and peers encrypted at rest using AES-256-GCM. DB key stored securely in Android Keystore TEE.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span>CARAKA — Cakra Mesh</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/Fatihmaull/cakra-mesh" target="_blank">GitHub Repository</a>
+                <a href="#home">Back to Top</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Built for WRECK-IT 7.0 · Theme: Cyber Warfare — Silent War on The Fifth Domain</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
