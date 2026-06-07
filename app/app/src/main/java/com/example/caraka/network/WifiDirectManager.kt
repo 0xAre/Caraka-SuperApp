@@ -475,29 +475,40 @@ class WifiDirectManager(
 
         Log.d(TAG, "Peers available: ${peers.size} — ${peers.map { it.deviceName }}")
 
-        // Auto-connect only to verified CARAKA peers (3-tier filter)
+        // Auto-connect strategy: prefer LAN-verified CARAKA peers, fall back to any
+        // AVAILABLE device. Post-connect CARAKA validation (10s timeout) will kick
+        // non-CARAKA devices automatically. This is needed because setDeviceName via
+        // reflection fails on Android 10+ (hidden API restriction), so we cannot rely
+        // on the CRK: name prefix filter alone.
         if (peers.isNotEmpty() && prevState !in busyStates) {
             val now = System.currentTimeMillis()
             if (now - lastConnectAttemptMs > AUTO_CONNECT_COOLDOWN_MS) {
-                // Tier 1: LAN-verified CARAKA peers (MAC learned via LAN or prior handshake)
+                // Tier 1: LAN-verified CARAKA peers (highest confidence)
                 val lanVerified = peers.firstOrNull {
                     it.deviceAddress in carakaLanPeerMacs && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 2: name-prefix filter — device with CRK: or CARAKA prefix
+                // Tier 2: CRK:/CARAKA name prefix (works if setDeviceName succeeded)
                 val carakaByName = peers.firstOrNull {
                     it.isCarakaDevice() && it.status == WifiP2pDevice.AVAILABLE
                 } ?: peers.firstOrNull {
                     it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
                 }
-                // Tier 3: no fallback to unknown devices
-                val candidate = lanVerified ?: carakaByName
+                // Tier 3: Any AVAILABLE device — validated post-connect via CARAKA HANDSHAKE
+                // Non-CARAKA devices will be kicked automatically after 10s validation timeout
+                val anyAvailable = peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
+                    ?: peers.firstOrNull { it.status == WifiP2pDevice.FAILED }
+
+                val candidate = lanVerified ?: carakaByName ?: anyAvailable
                 if (candidate != null) {
-                    // Both sides keep discovering AND initiating — WiFi Direct requires both peers
-                    // to be discoverable for GO negotiation, so a "wait for the other" scheme breaks
-                    // it. The connectInFlight guard + cooldown stop a single device from storming.
                     lastConnectAttemptMs = now
-                    Log.d(TAG, "Auto-connecting to CARAKA peer ${candidate.deviceName} (${candidate.deviceAddress})")
+                    val tier = when {
+                        candidate == lanVerified -> "LAN-verified"
+                        candidate == carakaByName -> "CRK:-name"
+                        else -> "probe+validate"
+                    }
+                    Log.d(TAG, "Connecting to ${candidate.deviceName} [$tier] (${candidate.deviceAddress})")
                     connectToPeer(candidate)
+
                 } else {
                     Log.d(TAG, "No CARAKA peers found (${peers.size} non-CARAKA devices nearby, skipping)")
                 }
