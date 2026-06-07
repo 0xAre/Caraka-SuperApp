@@ -145,6 +145,13 @@ class WifiDirectManager(
     /** WiFi Direct MACs of peers verified after a successful CARAKA HANDSHAKE. */
     private val carakaHandshakedMacs = mutableSetOf<String>()
 
+    /**
+     * WiFi Direct MACs of peers discovered via DNS-SD (Bonjour) service advertisement.
+     * Only devices actively advertising "_caraka._tcp" are added here.
+     * Used in onPeersAvailable() as Tier 1 (highest priority) for auto-connect.
+     */
+    private val carakaServicePeerMacs = mutableSetOf<String>()
+
     private var carakaValidationJob: Job? = null
     @Volatile private var carakaHandshakeValidated = false
 
