@@ -11,6 +11,8 @@ import com.example.caraka.data.local.dao.RelayDao
 import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.data.local.entity.RelayedMessageEntity
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
@@ -36,7 +38,7 @@ import net.sqlcipher.database.SupportFactory
         PeerEntity::class,
         RelayedMessageEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class CarakaDatabase : RoomDatabase() {
@@ -51,6 +53,18 @@ abstract class CarakaDatabase : RoomDatabase() {
 
         private const val DB_NAME = "caraka_secure.db"
 
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE peers ADD COLUMN connectionId TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE peers ADD COLUMN status TEXT NOT NULL DEFAULT 'DISCOVERED'")
+                database.execSQL("ALTER TABLE peers ADD COLUMN direction TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE peers ADD COLUMN lastAttempt INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE peers ADD COLUMN rejectionCount INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE peers ADD COLUMN hopCount INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE peers ADD COLUMN createdAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): CarakaDatabase {
             return INSTANCE ?: synchronized(this) {
                 android.util.Log.d("CarakaDB", "Initializing encrypted database with SQLCipher…")
@@ -64,7 +78,7 @@ abstract class CarakaDatabase : RoomDatabase() {
                     DB_NAME
                 )
                     .openHelperFactory(factory)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
 
                 INSTANCE = instance

@@ -82,59 +82,297 @@ Riset memvalidasi bahwa **InaRISK (BNPB) 100% bergantung pada internet**:
 
 **Bridgefy**: Tetap bermasalah — kelemahan keamanan yang didokumentasikan (Royal Holloway) belum fix fundamental, dan requirement internet untuk aktivasi tetap menjadi hambatan.
 
+**Bitchat (Jack Dorsey, 2025)**: BLE GATT-only mesh, TTL=7 hops, Noise Protocol crypto, flooding + store-and-forward. Efektif ~300m radius (30m/hop × 7 hops). Tidak ada WiFi transport, tidak ada authority system, tidak ada SOS.
+
+---
+
+## 🔬 Transport Deep Dive — Riset Mendalam 2026
+
+> Berdasarkan penelitian web exhaustive terhadap semua transport radio yang tersedia di smartphone Android modern dan bagaimana kompetitor mengimplementasikannya.
+
+### 📡 Matrix Semua Transport Alternatif
+
+| Transport | Range/hop | Bandwidth | Battery/jam | Max Koneksi Bersamaan | Multi-hop | API Level | Dukungan Device |
+|-----------|-----------|-----------|-------------|----------------------|-----------|-----------|-----------------|
+| **WiFi Direct (P2P)** | 50–200m | 67–220 Mbps | ~15-20% | Star (1 GO + N client) | Via relay app | API 14+ | Universal |
+| **Local Only Hotspot** | 50–200m | 300+ Mbps | ~15-20% | ~10 client/hotspot | ✅ TRUE mesh | API 26+ | Android 8+ |
+| **WiFi Aware (NAN)** | 50–200m | ~100 Mbps | ~8-12% | ~5 data paths | ❌ hanya 1:1 | API 26+ | Sebagian besar |
+| **BLE GATT Mesh** | 10–30m | 100–300 kbps | ~3-5% | 6–7 GATT | ✅ TTL flood | API 21+ | Universal |
+| **Bluetooth Classic** | 10–30m | ~2 Mbps | ~8-10% | ~7 (ACL links) | Via relay | API 1+ | Universal |
+| **UWB** | <30m | N/A (ranging only!) | ~2-3% | 1:1 session | ❌ tidak ada | API 31+ (Jetpack) | Flagship only |
+| **NFC** | <10cm | ~400 kbps | <1% | 1:1 | ❌ tidak ada | API 9+ | Universal |
+| **Google Nearby Connections** | 50–200m | Adaptif | ~15-20% | N peers | Via relay | API 16+ | Universal (proprietary) |
+
+#### Penjelasan Penting:
+
+**🔑 Local Only Hotspot (SoftAP) — Temuan Kritis!**
+- Android 8+ mendukung device menjadi hotspot sekaligus WiFi client **secara bersamaan** (STA+AP concurrency)
+- Library open-source **[Meshrabiya](https://github.com/UstadMobile/Meshrabiya)** (UstadMobile) membuktikan ini:
+  - Setiap node buat hotspot **DAN** konek ke hotspot node lain sebagai client
+  - **BATMAN-style originator messages** untuk routing multi-hop
+  - Hasil test: **300Mbps+** antar node, **130-150Mbps** multi-hop
+  - Bekerja **tanpa WiFi router** (fully offline)
+  - Tidak ada star topology limit — TRUE mesh!
+- Ini adalah solusi untuk GAP #1 yang jauh lebih elegan dari GO election
+
+**📶 WiFi Aware (NAN) — Discovery Champion, Bukan Transport**
+- Kuat untuk: proximity discovery, service advertisement, short control messages (<255 bytes)
+- Lemah untuk: multi-hop routing (hanya 1:1 links), max ~5 concurrent data paths
+- Pixel 2: hanya 2 concurrent Aware data paths (hardware limit)
+- **Recommendation CARAKA**: gunakan HANYA untuk discovery, bukan sebagai transport utama
+
+**📱 BLE GATT Mesh — Fallback Champion**
+- Cara kerja Bitchat: BLE advertising/scan → GATT connect → TTL-bounded flooding → store-and-forward
+- Android hard-limit: 7 concurrent GATT connections (Bluedroid stack `BTA_GATTC_CONN_MAX`)
+- Beberapa OEM menaikkan limit: Samsung Galaxy Tab bisa 15 koneksi
+- Power: **WiFi menggunakan 10-40x lebih banyak daya dibanding BLE** untuk transfer data setara
+- Tradeoff vs WiFi Direct: bandwidth 100-1000x lebih rendah, tapi battery 5-10x lebih efisien
+
+**🚫 UWB — BUKAN untuk Mesh Communication**
+- Android UWB API (Jetpack) = **ranging/positioning only**, bukan data transport
+- Hanya flagship (Samsung Galaxy S22+, Pixel 6 Pro+, dll)
+- Use case CARAKA yang mungkin: node positioning untuk smart routing (Phase 3+)
+- **JANGAN gunakan sebagai transport alternatif**
+
+**🔗 NFC — Hanya untuk Identity Exchange**
+- Range <10cm → tidak cocok untuk mesh
+- Use case: alternatif QR code scan untuk identity verification (lebih secure dari QR)
+
+### 🏗️ Arsitektur Transport Kompetitor (Hasil Riset)
+
+#### Berty/Wesh Transport Stack:
+```
+Layer 1 (Data):   libp2p (TCP, QUIC, /p2p-circuit relays, Tor)
+Layer 2 (Offline): BLE transport (custom go-libp2p transport)
+                   Android Nearby Connections (wraps WiFi Direct + BLE)
+                   Apple Multipeer Connectivity (iOS: WiFi P2P + BLE)
+Layer 3 (Discovery): mDNS (LAN), BLE advertising, RDVP rendezvous
+Multi-hop model: libp2p DHT + relay nodes (tidak true mesh di offline mode)
+```
+
+#### Briar Transport Stack:
+```
+Online: TCP over Tor + Briar Mailbox (user-hosted relay)
+Offline: Bluetooth Classic + BLE (sync antar kontak)
+         WiFi LAN / WiFi Direct (direct sync)
+         USB/removable storage (sneakernet!)
+Multi-hop: TIDAK ada untuk DM! Hanya gossip/social-graph untuk forum/grup
+Catatan: Professional security audit 2024 → recommended for production
+```
+
+#### Bridgefy Transport Stack:
+```
+Primary: BLE GATT + Bluetooth Classic (fallback)
+Multi-hop: TTL-based flooding, arbitrary strangers
+Security: Signal protocol (tapi implementasi bermasalah per audit 2022-2023)
+Kelemahan fatal: license check internet tiap 4 minggu → FAILS dalam blackout panjang!
+```
+
+#### Bitchat Transport Stack:
+```
+Offline:  BLE advertising + GATT connections
+Routing:  TTL-based flooding, max TTL=7 hops
+Crypto:   Noise Protocol Framework (Curve25519/X25519) + AES-256-GCM
+Range:    ~30m/hop, efektif ~300m dengan 7 hops
+Online:   Nostr relay over TCP/TLS (fallback)
+Battery:  Continuous BLE scan → "adaptive battery modes" diperlukan
+Planned:  WiFi Direct untuk extend range per hop ke 100-200m
+```
+
+### 💡 Rekomendasi Transport Stack Baru untuk CARAKA (Revised)
+
+```
+TIER 1 — PRIMARY (High Bandwidth, Offline):
+  WiFi Direct (existing) + Local Only Hotspot hybrid
+  → Pendekatan Meshrabiya: setiap node = hotspot + client bersamaan
+  → BATMAN originator messages untuk true multi-hop routing
+  → 300Mbps+ throughput, 50-200m/hop range
+  → Solusi PERMANEN untuk star topology problem
+
+TIER 2 — DISCOVERY (Low Power, Always-On):
+  WiFi Aware (NAN) untuk proximity detection
+  → Broadcast service presence (<255 bytes control msg)
+  → Trigger WiFi Direct connection establishment
+  → API 26+, check isAvailable() terlebih dahulu
+
+TIER 3 — FALLBACK (Low Power, Long Range via Hops):
+  BLE GATT Mesh (pendekatan Bitchat)
+  → 6-7 concurrent GATT connections
+  → TTL=10 flooding (lebih dari Bitchat's 7)
+  → Store-and-forward untuk delay-tolerant delivery
+  → Prioritas SOS messages
+  → ~30m/hop, ~100-300kbps
+
+TIER 4 — IDENTITY (Contact, tidak untuk mesh):
+  NFC (alternatif QR scan)
+  → Lebih secure dari QR (requires physical proximity)
+  → Fallback: QR tetap primary (lebih kompatibel)
+
+TIDAK DIGUNAKAN:
+  UWB → ranging only, bukan transport
+  Bluetooth Classic → replaced oleh BLE GATT + WiFi
+  Google Nearby → proprietary, no multi-hop
+```
+
 ---
 
 ## 🕳️ Gap Analysis — Celah Yang Harus Dimaksimalkan (Diperbarui)
 
 ### GAP TEKNIS KRITIS (Ditemukan dari Riset Mendalam)
 
-#### ❗ GAP #1: WiFi Direct Star Topology Problem (RISIKO TEKNIS TERSEMBUNYI)
+#### ❗ GAP #1: WiFi Direct Star Topology Problem — SOLUSI DITEMUKAN!
 
 **Temuan Riset**: WiFi Direct secara fundamental adalah **hub-and-spoke** (bukan mesh sejati):
 - Hanya satu **Group Owner (GO)** per grup yang mengontrol semua traffic
 - Clients tidak bisa komunikasi langsung satu sama lain tanpa melalui GO
-- GO election berdasarkan "intent value" statis → **tidak mempertimbangkan battery, signal strength, atau load**
+- GO election berdasarkan "intent value" statis → tidak adaptif
 - Jika GO keluar dari grup → **seluruh grup hancur** (network partition)
 - IP conflict: GO selalu mendapat `192.168.49.1` → masalah saat bridging multi-grup
 
-**Implikasi untuk CARAKA**:
-- Multi-hop relay saat ini berjalan di atas abstraksi TCP socket, bukan WiFi Direct layer
-- Ini berarti CARAKA sudah benar secara desain, tapi **GO failure = single point of failure**
-- Perlu strategi GO election yang cerdas (battery-aware, load-aware)
+**Solusi Baru — Local Only Hotspot (SoftAP) Hybrid**:
 
-**Solusi yang Direkomendasikan**:
+Riset 2026 menemukan bahwa library **[Meshrabiya](https://github.com/UstadMobile/Meshrabiya)** oleh UstadMobile membuktikan pendekatan yang jauh lebih baik:
+
+```
+Setiap node Android secara bersamaan:
+  [Hotspot Creator]  → device lain bisa connect sebagai WiFi client
+  [WiFi Client]      → connect ke hotspot node lain
+
+Routing: BATMAN originator messages (broadcast IP/path antar node)
+Result:  TRUE multi-hop mesh, bukan star topology!
+Speed:   300Mbps+ antar neighbor, 130-150Mbps multi-hop
+
+Syarat: Android 8+ dengan STA+AP concurrency support
+        (Android 10+ lebih reliable untuk concurrent mode)
+```
+
+**Implementasi CARAKA — Pendekatan Hybrid**:
 ```kotlin
-// Smart GO election berdasarkan device metrics
+// Strategy: WiFi Direct untuk initial connection + LAN UDP untuk mesh communication
+// Ini yang sudah CARAKA lakukan — sudah benar!
+// Tambahan: Local Only Hotspot sebagai alternatif untuk device yang support STA+AP
+
+class TransportStrategy(val context: Context) {
+    fun getBestStrategy(): MeshStrategy {
+        return when {
+            supportsStaApConcurrency() -> MeshStrategy.LOCAL_HOTSPOT_MESH
+            hasWifiDirect() -> MeshStrategy.WIFI_DIRECT_STAR
+            else -> MeshStrategy.BLE_ONLY
+        }
+    }
+
+    private fun supportsStaApConcurrency(): Boolean {
+        val wifiManager = context.getSystemService(WifiManager::class.java)
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+               wifiManager.isWifiApEnabled.not() // check hardware capability
+    }
+}
+```
+
+**Smart GO election** (tetap diperlukan sebagai fallback untuk device lama):
+```kotlin
 data class GoMetrics(
   val batteryLevel: Int,      // 0-100%
   val relayLoad: Int,         // pesan relay per menit
   val signalQuality: Int,     // RSSI dBm
   val isAuthority: Boolean    // authority device prioritas jadi GO
 )
-
-// GO score = (battery * 0.4) + (1/relayLoad * 0.3) + (signal * 0.3) 
-// + (isAuthority * bonus 20)
+// GO score = (battery * 0.4) + (1/relayLoad * 0.3) + (signal * 0.3) + (isAuthority * bonus 20)
 ```
 
-#### ❗ GAP #2: Transport Monoculture (RISIKO AVAILABILITY)
+#### ❗ GAP #2: Transport Monoculture — DIPERLUAS DENGAN DATA RISET
 
-**Temuan Riset**: Best practice 2025-2026 adalah **dual-transport hybrid**:
-- **WiFi Aware (NAN)**: Background discovery, low-power, decentralized cluster architecture → lebih baik untuk peer discovery
-- **WiFi Direct**: High-bandwidth data transfer setelah peer ditemukan
-- **BLE**: Fallback discovery + small message delivery (heartbeat, SOS signal)
-- Battery drain active relayer: **~15-20% per jam** → perlu optimasi agresif
+**Data Riset 2026** (berdasarkan analisis Bitchat, Meshrabiya, Berty, Briar):
 
-**Rekomendasi Transport Stack untuk CARAKA**:
+| Transport | Range | Bandwidth | Battery/jam | Max Peers | Status CARAKA |
+|-----------|-------|-----------|-------------|-----------|---------------|
+| WiFi Direct | 50-200m | 67-220 Mbps | ~15-20% | Star (N clients) | ✅ Ada |
+| Local Only Hotspot | 50-200m | 300+ Mbps | ~15-20% | ~10/node | ❌ Belum ada |
+| WiFi Aware (NAN) | 50-200m | ~100 Mbps | ~8-12% | ~5 | ❌ Evaluasi |
+| BLE GATT Mesh | 10-30m | 100-300 kbps | ~3-5% | 6-7 | ❌ Belum ada |
+
+**Temuan Kritis tentang BLE (dari analisis Bitchat)**:
+- Android Bluedroid stack: `BTA_GATTC_CONN_MAX = 7` (hard-coded di sebagian besar device)
+- BLE 10-40x lebih hemat baterai vs WiFi Direct untuk data setara
+- Bitchat membuktikan BLE cukup untuk text messaging mesh (30m/hop, TTL=7)
+- Store-and-forward via BLE = solusi untuk delay-tolerant emergency messages
+
+**Temuan Kritis tentang WiFi Aware**:
+- Pixel 2: hanya **2 concurrent NAN data paths** (hardware limitation!)
+- Lebih cocok sebagai **discovery layer** daripada data transport
+- `WifiAwareManager.isAvailable()` WAJIB dicek sebelum gunakan
+
+**Rekomendasi Transport Stack CARAKA (Revised)**:
 ```
-Discovery: BLE (background, low-power) + WiFi Aware (jika API tersedia, API 26+)
-Data:      WiFi Direct (primary, high bandwidth, TCP socket existing)
-Fallback:  BLE GATT (small messages saat WiFi Direct unavailable)
-Battery:   Adaptive beacon intervals, sleep mode saat idle
+PRIMARY (ada internet/WiFi router):
+  LAN UDP (port 8890) → sudah ada ✅
+  → Any-to-any, bypass star topology, low latency
+
+OFFLINE PRIMARY (tidak ada router):
+  WiFi Direct (existing) + Local Only Hotspot (new)
+  → Hybrid: device bisa jadi hotspot DAN client bersamaan
+  → BATMAN originator messages untuk routing
+
+DISCOVERY (background, low power):
+  WiFi Aware (NAN) jika API 26+ dan hardware support
+  → Fallback: DNS-SD WiFi Direct (existing)
+  → Fallback 2: BLE advertising
+
+OFFLINE FALLBACK (WiFi tidak tersedia):
+  BLE GATT Mesh (Bitchat-style)
+  → TTL-based flooding, max 7 hops
+  → ~100-300kbps, cukup untuk text + SOS
+  → 6-7 concurrent peers
+
+Battery optimization:
+  - Active relay: WiFi Direct (~15-20%/hr) vs BLE (~3-5%/hr)
+  - Otomatis turun ke BLE saat battery < 20%
+  - Adaptive beacon intervals
 ```
 
-> **Catatan penting**: WiFi Aware memerlukan cek `isAvailable()` karena pada beberapa device,
-> WiFi Aware tidak bisa aktif bersamaan dengan WiFi Direct atau SoftAP.
-> Strategi: gunakan WiFi Aware ATAU WiFi Direct (auto-detect support).
+> **Catatan**: WiFi Aware TIDAK bisa selalu berjalan bersamaan dengan WiFi Direct pada
+> beberapa device karena radio sharing. Gunakan feature detection dan auto-fallback.
+
+#### ❗ GAP #2b: Tidak Ada Local Only Hotspot Mode (TRUE MESH ENABLER)
+
+**Masalah**: CARAKA saat ini 100% bergantung pada WiFi Direct P2P dengan star topology. Tanpa WiFi router, device B dan C harus relay via A (GO).
+
+**Solusi**: Implementasi Local Only Hotspot mode (dari pelajaran Meshrabiya):
+
+```kotlin
+// LocalHotspotManager.kt — NEW component for Phase 1
+class LocalHotspotManager(private val context: Context) {
+
+    private var hotspotReservation: WifiManager.LocalOnlyHotspotReservation? = null
+
+    fun startLocalHotspot(onStarted: (String, String) -> Unit) {
+        // Requires ACCESS_FINE_LOCATION + CHANGE_NETWORK_STATE
+        val wifiManager = context.getSystemService(WifiManager::class.java)
+        wifiManager.startLocalOnlyHotspot(object : WifiManager.LocalOnlyHotspotCallback() {
+            override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation) {
+                hotspotReservation = reservation
+                val ssid = reservation.wifiConfiguration?.SSID ?: "CARAKA-${UUID.randomUUID().toString().take(6)}"
+                val password = reservation.wifiConfiguration?.preSharedKey ?: ""
+                onStarted(ssid, password)
+                // Share SSID+password via BLE advertising or existing LAN beacon
+                // so other CARAKA nodes can auto-connect
+            }
+        }, null)
+    }
+
+    // BATMAN-style: broadcast originator message via UDP multicast
+    // so connected nodes know this device's virtual mesh IP
+    fun broadcastOriginatorMessage(myMeshIp: String, hopCount: Int = 0) {
+        val msg = """{"type":"ORIGINATOR","meshIp":"$myMeshIp","hops":$hopCount}"""
+        // Send to 255.255.255.255 UDP broadcast on LAN
+    }
+}
+```
+
+**Android Compatibility**:
+- `startLocalOnlyHotspot()`: API 26+ (Android 8+)
+- STA+AP concurrency: kebanyakan Android 10+ devices
+- Meshrabiya test: Nothing Phone, Nokia 5.4 butuh fallback (gunakan WiFi Direct group sebagai hotspot)
 
 #### ❗ GAP #3: Data-at-Rest Security (KEPATUHAN KEAMANAN)
 
@@ -293,34 +531,93 @@ data class CrisisSessionStats(
 ### 🔨 PHASE 1: HARDENING (Post-Hackathon, Bulan 1-2)
 **Target**: Dari hackathon demo → production-grade MVP yang bisa dipitch ke pemerintah.
 
-#### 1.1 Transport Layer Upgrade
+#### 1.1 Transport Layer Upgrade (Revised berdasarkan Riset 2026)
+
+**Referensi Implementasi**: Meshrabiya (GitHub: UstadMobile/Meshrabiya), Bitchat Android
 
 ```
-STRATEGI TRANSPORT STACK (berdasarkan riset 2025):
+STRATEGI TRANSPORT STACK (berdasarkan riset mendalam 2026):
 
-Priority 1: WiFi Aware (NAN) untuk discovery — jika hardware support
-  → API Level 26+, decentralized cluster, low-power background
-  → Check: WifiAwareManager.isAvailable()
-  → Fallback: tetap WiFi Direct discovery
+── LAYER 1: DATA TRANSPORT ─────────────────────────────────────────
 
-Priority 2: WiFi Direct untuk data — existing implementation (pertahankan)
+Priority 1A: LAN UDP (existing) — jika ada WiFi router ✅
+  → Sudah berjalan di Phase 0: LAN UDP port 8890
+  → Any-to-any communication, tidak ada star topology
+  → Bandwidth: theoretically 50-200Mbps
+
+Priority 1B: Local Only Hotspot + BATMAN routing (NEW — Phase 1)
+  → Setiap device buat hotspot DAN connect ke hotspot lain secara bersamaan
+  → BATMAN originator messages: broadcast IP + routing info
+  → Referensi: UstadMobile/Meshrabiya (open source, Apache 2.0)
+  → Throughput: 300Mbps+/hop, 130-150Mbps multi-hop
+  → API 26+, STA+AP concurrency required (most Android 10+)
+  → SOLUSI PERMANEN untuk star topology problem
+
+Priority 2: WiFi Direct (existing) — offline fallback saat tidak ada hotspot support
   → TCP socket, existing MeshSocketManager ✅
+  → Tetap primary untuk device Android < 10 atau yang tidak support STA+AP
 
-Priority 3: BLE untuk fallback + discovery
-  → Bluetooth LE GATT server untuk small messages (<512 bytes)
-  → BLE advertisement sebagai presence beacon
-  → Gunakan Nordic Semiconductor Android Mesh Library sebagai referensi
+── LAYER 2: DISCOVERY ──────────────────────────────────────────────
 
-AUTO-FAILOVER:
-  TransportBridge.kt:
-    fun sendMessage(msg: Message) {
-      when {
-        wifiDirectConnected -> wifiDirectTransport.send(msg)
-        bleConnected -> bleTransport.send(msg.truncateIfNeeded())
-        else -> queueForLater(msg)
-      }
+Discovery A: WiFi Aware (NAN) — low-power proximity discovery
+  → Check: WifiAwareManager.isAvailable() WAJIB sebelum gunakan
+  → HANYA untuk discovery + control messages (<255 bytes)
+  → Max ~5 concurrent data paths (Pixel hardware limit)
+  → JANGAN gunakan sebagai primary data transport!
+  → Trigger WiFi Direct / hotspot connection dari sini
+
+Discovery B: BLE advertising — universal fallback discovery
+  → Beacon interval: 250ms saat aktif, 1000ms saat idle
+  → Payload: peerId, displayName, role (truncated)
+  → Existing DNS-SD sebagai backup untuk WiFi Direct pairing
+
+── LAYER 3: FALLBACK TRANSPORT ─────────────────────────────────────
+
+BLE GATT Mesh — jika WiFi tidak tersedia (pendekatan Bitchat)
+  → Max 6-7 concurrent GATT connections (Bluedroid hard limit)
+  → MTU: 512 bytes, throughput: ~100-300kbps per koneksi
+  → TTL-based flooding: TTL=10 (sedikit lebih dari Bitchat TTL=7)
+  → Store-and-forward: simpan pesan untuk offline peers
+  → Priority: SOS messages relay tanpa delay
+  → Battery: ~3-5%/jam (vs WiFi Direct ~15-20%/jam)
+  → TIDAK menggunakan Nordic nRF Mesh Library (itu untuk IoT nodes)
+  → Implementasi custom BLE GATT server/client seperti Bitchat
+
+── AUTO-FAILOVER ────────────────────────────────────────────────────
+
+class TransportBridge(private val context: Context) {
+    fun sendMessage(msg: CarakaMessage) {
+        when {
+            lanConnected           -> lanUdpTransport.send(msg)
+            localHotspotActive     -> hotspotMeshTransport.send(msg)
+            wifiDirectConnected    -> wifiDirectTransport.send(msg)
+            bleConnected           -> bleGattTransport.send(msg.truncate(512))
+            else                   -> messageQueue.enqueue(msg)
+        }
     }
+
+    fun selectTransportForMessage(msg: CarakaMessage): Transport {
+        return when {
+            msg.type == "SOS"      -> priorityTransport()  // semua transport, broadcast
+            msg.size > 10_000      -> highBandwidthOnly()  // WiFi only, untuk voice
+            batteryLevel < 20      -> bleTransportOnly()    // hemat baterai
+            else                   -> defaultTransport()
+        }
+    }
+}
+
+── BATTERY OPTIMIZATION ─────────────────────────────────────────────
+  Battery < 50%: turunkan beacon interval ke 1000ms
+  Battery < 20%: switch ke BLE-only mode, suspend WiFi Direct
+  Battery < 10%: passive-only (hanya terima, tidak relay)
+  Authority device: TIDAK ada battery-based degradation (prioritas jaringan)
 ```
+
+**Mengapa TIDAK menggunakan Google Nearby Connections API**:
+- Proprietary, tidak open-source, bisa deprecated
+- Tidak support multi-hop mesh
+- Tidak bisa customize routing/encryption
+- Privacy concern: Google bisa akses metadata
 
 #### 1.2 Real PKI (Ganti Hardcoded Demo Passwords)
 
@@ -642,8 +939,9 @@ STRATEGI:
 | **🔴 P0** | QR Code identity (ZXing) | Tinggi | 4 jam | Sebelum finals |
 | **🔴 P0** | Demo video rekam | KRITIS | 4 jam | Sebelum 8 Juli |
 | **🟡 P1** | Smart GO election | Tinggi | 2 jam | Sebelum finals |
-| **🟡 P1** | BLE fallback transport | Sangat Tinggi | 2-3 minggu | Phase 1 |
-| **🟡 P1** | WiFi Aware (NAN) evaluation | Tinggi | 1 minggu | Phase 1 |
+| **🟡 P1** | Local Only Hotspot + BATMAN mesh | Sangat Tinggi | 2-3 minggu | Phase 1 |
+| **🟡 P1** | BLE GATT fallback (Bitchat-style) | Sangat Tinggi | 2-3 minggu | Phase 1 |
+| **🟡 P1** | WiFi Aware (NAN) untuk discovery | Tinggi | 1 minggu | Phase 1 |
 | **🟡 P1** | Real PKI (ganti hardcoded) | Sangat Tinggi | 1 minggu | Phase 1 |
 | **🟡 P1** | ACK/retry reliability | Tinggi | 1 minggu | Phase 1 |
 | **🟡 P1** | Background foreground service | Tinggi | 3 hari | Phase 1 |
@@ -693,11 +991,15 @@ STRATEGI:
 │                │  ChannelMgr     │                       │
 │                │  AnalyticsMgr   │                       │
 ├──────────────────────────────────────────────────────────┤
-│              Transport Layer (Dual Radio)                │
+│         Transport Layer (Multi-Radio, Tiered)           │
 │  ─────────────────────────────────────────────────────── │
-│  WiFi Direct Manager    BLE Transport Manager            │
-│  WiFi Aware Manager     TransportBridge (auto-failover)  │
-│  Gateway Bridge (saat internet available, Phase 3)       │
+│  LAN UDP Manager (primary, with router)      ✅ Phase 0  │
+│  WiFi Direct Manager (offline primary)       ✅ Phase 0  │
+│  Local Hotspot Mesh (BATMAN, true mesh)      🔨 Phase 1  │
+│  WiFi Aware Manager (discovery only)         🔨 Phase 1  │
+│  BLE GATT Transport (fallback, low power)    🔨 Phase 1  │
+│  TransportBridge (auto-failover, battery-aware)          │
+│  Gateway Bridge (internet sync, Phase 3)     🔵 Phase 3  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -728,14 +1030,21 @@ Tier 4: SaaS (Gateway + Web Dashboard) → subscription BNPB/Basarnas
 | Sumber | Relevansi |
 |--------|-----------|
 | BSSN via ANTARA News | 5.5 miliar serangan 2025, PDNS incident |
-| Royal Holloway University | Kelemahan keamanan Bridgefy |
+| Royal Holloway University | Kelemahan keamanan Bridgefy (2020, 2022) |
 | WiFi Direct IEEE 802.11p2p spec | Star topology, GO election limitations |
-| Android WiFi Aware API docs | NAN cluster architecture, isAvailable() |
-| Nordic Semiconductor Android Mesh Library | BLE Mesh reference implementation |
-| Bitchat (open source) | BT Mesh messaging reference architecture |
+| Android WiFi Aware API docs (developer.android.com) | NAN cluster architecture, isAvailable(), max 5 data paths |
+| Android AOSP WiFi stack docs (source.android.com) | STA+AP concurrency, HAL interfaces, WiFi Aware AIDL |
+| **UstadMobile/Meshrabiya (GitHub)** | **Local Only Hotspot + BATMAN = TRUE Android mesh, 300Mbps+** |
+| **permissionlesstech/bitchat (GitHub)** | **BLE GATT mesh, TTL=7, Noise Protocol, store-and-forward** |
+| **Berty/Weshnet GitHub 2026** | libp2p transport, BLE + Android Nearby + mDNS offline |
+| Briar Project (briarproject.org) | Bluetooth + WiFi Direct offline sync, Bramble protocol |
+| Nordic nRF Mesh Android Library | BLE Mesh Profile (IoT, bukan phone-to-phone) |
+| Stack Overflow: WiFi Direct throughput | 220Mbps solo, 67Mbps dengan STA concurrent |
+| Stack Overflow: WiFi Aware data paths | Pixel 2: max 2 concurrent NAN data paths |
+| Bluedroid source (BTA_GATTC_CONN_MAX) | Android BLE max 7 concurrent GATT connections |
 | InaRISK Google Play reviews 2025 | Validasi offline limitation |
 | RUU KKS Indonesia 2026 | Konteks regulasi B2G opportunity |
 | ASEAN Vision 2025 Disaster Management | Regional policy alignment |
-| Berty/Wesh GitHub 2026 | Status competitor, quiet development |
+| Ditto.com blog: AWDL vs WiFi Aware | iOS WiFi Aware 4.0 (iOS 19), cross-platform compatibility |
 
 *Dibuat berdasarkan analisis PRD.md, PROGRESS.md, README.md, Garuda-Mesh.md, dan riset mendalam via web search + competitor intelligence.*

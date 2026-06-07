@@ -41,6 +41,7 @@ import com.example.caraka.ui.components.FloatingChatAlert
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.components.OnboardingTourOverlay
 import com.example.caraka.ui.components.Screen
+import com.example.caraka.ui.dialogs.ConnectionRequestDialog
 import com.example.caraka.ui.prefs.LocalUiPrefs
 import com.example.caraka.ui.prefs.ProvideLocalizedContext
 import com.example.caraka.ui.prefs.UiPreferences
@@ -189,6 +190,9 @@ private fun CarakaNav(
     val lastMessagesPerPeer by viewModel.lastMessagesPerPeer.collectAsStateWithLifecycle(initialValue = emptyMap())
     val lastReadMap by uiPrefs.observeLastReadMap().collectAsStateWithLifecycle(initialValue = emptyMap())
 
+    val incomingConnectionRequest by viewModel.incomingConnectionRequest.collectAsStateWithLifecycle()
+    val allPeers by viewModel.allPeers.collectAsStateWithLifecycle()
+
     val messagesUnreadCount = remember(lastMessagesPerPeer, lastReadMap) {
         lastMessagesPerPeer.count { (peerId, msg) ->
             msg.isIncoming && msg.timestamp > (lastReadMap[peerId] ?: 0L)
@@ -292,5 +296,18 @@ private fun CarakaNav(
                 onOnboardingDismissed()
             }
         )
+
+        val requestPeerId = incomingConnectionRequest
+        if (requestPeerId != null) {
+            val requestingPeer = allPeers.find { it.id == requestPeerId }
+            ConnectionRequestDialog(
+                peerId = requestPeerId,
+                peerName = requestingPeer?.displayName ?: "Perangkat Tidak Dikenal",
+                peerRole = requestingPeer?.role ?: "CIVILIAN",
+                onAccept = { viewModel.acceptConnectionRequest(it) },
+                onReject = { viewModel.rejectConnectionRequest(it) },
+                onDismiss = { viewModel.dismissConnectionRequestDialog() }
+            )
+        }
     }
 }

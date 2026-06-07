@@ -10,17 +10,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.caraka.ui.theme.DangerRed
+import com.example.caraka.ui.theme.DisasterBlue
+import com.example.caraka.ui.theme.GlassSurface
+import com.example.caraka.ui.theme.NavyBackground
+import com.example.caraka.ui.theme.TextPrimary
+import com.example.caraka.ui.theme.TextSecondary
 
-/**
- * Dialog shown when receiving an incoming CONNECTION_REQUEST from a peer.
- * User can accept or reject the connection request.
- */
 @Composable
 fun ConnectionRequestDialog(
     peerId: String,
@@ -39,146 +40,121 @@ fun ConnectionRequestDialog(
         )
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .background(Color.White, RoundedCornerShape(16.dp))
-                .padding(24.dp),
+            modifier = Modifier.fillMaxWidth(0.9f),
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
                 Text(
-                    text = "Incoming Connection Request",
+                    text = "Permintaan Koneksi Masuk",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = TextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Peer icon
                 Surface(
-                    modifier = Modifier
-                        .size(64.dp),
+                    modifier = Modifier.size(64.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE8F5FF)
+                    color = GlassSurface
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Peer",
+                        contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(12.dp),
-                        tint = Color(0xFF0066CC)
+                        tint = DisasterBlue
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Peer name
                 Text(
                     text = peerName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A1A)
+                    color = TextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Peer role with icon
                 Row(
                     modifier = Modifier
-                        .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                        .background(NavyBackground, RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.NetworkWifi,
-                        contentDescription = "Role",
+                        contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF666666)
+                        tint = TextSecondary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = peerRole,
                         fontSize = 13.sp,
-                        color = Color(0xFF666666)
+                        color = TextSecondary
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Divider
-                Divider(
-                    color = Color(0xFFEEEEEE),
-                    thickness = 1.dp,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surface)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Info text
                 Text(
-                    text = "Do you want to accept this connection request?",
+                    text = "Terima permintaan koneksi dari perangkat ini?",
                     fontSize = 14.sp,
-                    color = Color(0xFF666666),
+                    color = TextSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Reject button
                     OutlinedButton(
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(48.dp),
                         onClick = {
                             onReject(peerId)
                             onDismiss()
                         },
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFCC0000)
+                            contentColor = DangerRed
                         )
                     ) {
-                        Text(
-                            "REJECT",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
+                        Text("TOLAK", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
 
-                    // Accept button
                     Button(
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(48.dp),
                         onClick = {
                             onAccept(peerId)
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0066CC),
-                            contentColor = Color.White
+                            containerColor = DisasterBlue,
+                            contentColor = TextPrimary
                         )
                     ) {
-                        Text(
-                            "ACCEPT",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
+                        Text("TERIMA", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
                 }
             }

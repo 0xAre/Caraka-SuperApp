@@ -561,11 +561,52 @@ Hari 2 (~3-4 jam):
 2. Di mana tepatnya `onMessageReceived()` di `WifiDirectManager.kt`? → Untuk WG2d
 3. Apakah sudah ada `_incomingConnectionRequest` SharedFlow? → Untuk WG4a
 
-### Phase 1 (Setelah Phase 0 Selesai)
-- BLE Transport Manager (solusi permanent full mesh offline)
-- Real PKI (ganti hardcoded demo passwords)
-- Voice PTT (Opus codec)
-- Offline resource map (MapLibre + OSM)
+### Phase 1 (Setelah Phase 0 Selesai) — Updated berdasarkan Riset Transport 2026
+
+#### 🔬 Temuan Kritis dari Riset Transport (harus diketahui sebelum Phase 1)
+
+**Local Only Hotspot (SoftAP) + BATMAN — TRUE Mesh tanpa Star Topology**
+```
+Referensi: UstadMobile/Meshrabiya (open-source, Apache 2.0)
+Pendekatan: setiap node = hotspot + WiFi client bersamaan (STA+AP concurrency)
+Throughput: 300Mbps+/hop, 130-150Mbps multi-hop
+API: startLocalOnlyHotspot() → API 26+ (Android 8+)
+Catatan: STA+AP concurrency reliable di Android 10+
+         Nothing Phone & Nokia 5.4 butuh fallback ke WiFi Direct Group sebagai hotspot
+```
+
+**BLE GATT Mesh — Fallback dengan Data Real**
+```
+Max concurrent GATT connections: 6-7 (Bluedroid hard limit BTA_GATTC_CONN_MAX)
+Throughput: 100-300kbps per koneksi
+Range: 10-30m/hop (Bitchat: 7 hops → ~300m efektif)
+Battery: ~3-5%/jam (vs WiFi Direct ~15-20%/jam)
+Referensi implementasi: permissionlesstech/bitchat-android (open-source)
+Protocol: BLE advertising → GATT connect → TTL flooding → store-and-forward
+PENTING: Jangan gunakan Nordic nRF Mesh Library (itu untuk IoT, bukan phone mesh)
+```
+
+**WiFi Aware (NAN) — Discovery ONLY**
+```
+JANGAN gunakan sebagai data transport utama!
+Pixel 2 max: hanya 2 concurrent NAN data paths (hardware limit)
+Gunakan untuk: proximity detection → trigger WiFi Direct/hotspot connection
+Check wajib: WifiAwareManager.isAvailable() sebelum gunakan
+```
+
+**UWB — TIDAK untuk mesh**
+```
+Android UWB API = ranging/positioning ONLY (bukan data transport)
+Hanya flagship devices (Samsung S22+, Pixel 6 Pro+)
+Tidak ada di kebanyakan mid-range → tidak viable untuk CARAKA
+```
+
+#### Prioritas Phase 1 (Revised):
+1. **Local Only Hotspot + BATMAN** → ganti/perkuat WiFi Direct star topology
+2. **BLE GATT Mesh** (Bitchat-style) → offline fallback, TTL=10 flooding
+3. **Real PKI** (ganti hardcoded demo passwords)
+4. **Voice PTT** (Opus codec) → blue ocean differentiator
+5. **Offline resource map** (MapLibre + OSM)
 
 ---
 
@@ -614,20 +655,102 @@ Dampak: device tidak terlihat satu sama lain
 
 ---
 
+## 🔬 WG8: Transport Research Integration (Siap Eksekusi di Phase 0/1)
+**Severity**: INFORMATIONAL untuk Phase 0, HIGH untuk Phase 1
+**Estimasi**: 0 jam coding untuk Phase 0 (research done), 3-4 minggu untuk Phase 1
+
+> Hasil riset mendalam (7 Juni 2026) mengidentifikasi pendekatan transport yang lebih baik.
+> Tidak ada perubahan kode untuk Phase 0, tapi architecture decision harus dibuat SEBELUM Phase 1.
+
+### Decision Matrix: Transport Architecture untuk Phase 1
+
+#### Option A: Meshrabiya-Inspired Local Hotspot Mesh (REKOMENDASI)
+```
+Pro: TRUE multi-hop mesh, tidak ada star topology, 300Mbps+
+Pro: Existing WiFi Direct code tetap berjalan sebagai fallback
+Con: Perlu STA+AP concurrency (Android 10+ reliable)
+Con: Perlu BATMAN routing implementation
+Effort: 3-4 minggu
+Referensi: github.com/UstadMobile/Meshrabiya
+```
+
+#### Option B: BLE GATT Mesh sebagai Primary Fallback (WAJIB)
+```
+Pro: Universal (semua Android), 3-5%/jam battery, cocok untuk disaster
+Pro: Referensi implementasi: github.com/permissionlesstech/bitchat-android
+Con: 100-300kbps (cukup untuk text, tidak cukup untuk voice/map)
+Con: Max 7 concurrent peers per device (Bluedroid BTA_GATTC_CONN_MAX)
+Effort: 2-3 minggu
+Protocol: BLE advertising → GATT connect → TTL=10 flooding → store-and-forward
+```
+
+#### Option C: WiFi Aware (NAN) untuk Discovery (TAMBAHAN)
+```
+Pro: Low power, background discovery
+Con: BUKAN data transport (max 5 data paths, 1:1 only, Pixel 2: hanya 2!)
+Con: Tidak semua device support
+Effort: 1 minggu
+Use case: trigger WiFi Direct/hotspot connection saja
+```
+
+#### Option D: UWB (JANGAN gunakan untuk mesh)
+```
+Verdict: TIDAK VIABLE
+UWB Android API = ranging/positioning ONLY, bukan data transport
+Hanya flagship (Samsung S22+, Pixel 6 Pro+)
+Tidak ada di mid-range → bukan solusi untuk CARAKA
+```
+
+### Checklist Pre-Phase 1 (Bisa dilakukan saat Phase 0):
+```
+□ Baca Meshrabiya source code: github.com/UstadMobile/Meshrabiya
+□ Baca bitchat-android source code: github.com/permissionlesstech/bitchat-android
+□ Cek device test: apakah mendukung STA+AP concurrency?
+  Command: adb shell cmd wifi status
+□ Cek device test: apakah mendukung WiFi Aware?
+  Command: adb shell cmd wifi aware status  
+□ Tentukan architecture: TransportBridge auto-failover pattern
+□ Tulis ADR (Architecture Decision Record) sebelum mulai Phase 1 coding
+```
+
+### Transport Comparison (Data Real, bukan estimasi):
+
+| Transport | Range/hop | Throughput | Battery/jam | Max Peers | Status |
+|-----------|-----------|-----------|-------------|-----------|--------|
+| LAN UDP | N/A (router) | 50-200 Mbps | ~15% | Unlimited | ✅ Phase 0 |
+| WiFi Direct P2P | 50-200m | 67-220 Mbps | ~15-20% | Star | ✅ Phase 0 |
+| Local Hotspot+BATMAN | 50-200m | 300+ Mbps | ~15-20% | ~10/node | 🔨 Phase 1 |
+| WiFi Aware (NAN) | 50-200m | ~100 Mbps | ~8-12% | ~5 (1:1) | 🔨 Phase 1 |
+| BLE GATT Mesh | 10-30m | 100-300 kbps | ~3-5% | 6-7 | 🔨 Phase 1 |
+| UWB | <30m | N/A (ranging) | ~2-3% | 1:1 | ❌ Tidak cocok |
+| NFC | <10cm | ~400 kbps | <1% | 1:1 | 🔵 Identity only |
+
+---
+
 ## Arsitektur Solusi
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│               TRANSPORT HIERARCHY                   │
+│               TRANSPORT HIERARCHY (Updated)         │
 │                                                     │
-│  Primary:  LAN UDP (port 8890)                      │
-│            → All Android versions, all OEMs         │
-│            → Any-to-any, no star topology limit     │
-│            → Works when on same WiFi network        │
+│  Tier 1 (with router): LAN UDP (port 8890)          │
+│    → All Android, all OEMs, any-to-any ✅ Phase 0   │
 │                                                     │
-│  Fallback: WiFi Direct TCP Socket (port 8888)       │
-│            → Offline/disaster (no WiFi router)      │
-│            → Star via relay (A relays B→C)          │
+│  Tier 2 (offline, high-BW): WiFi Direct TCP         │
+│    → Port 8888, existing code ✅ Phase 0             │
+│    → Star topology limitation (B relays B→C)        │
+│                                                     │
+│  Tier 3 (offline, TRUE mesh): Local Only Hotspot    │
+│    → Each device = hotspot + client concurrently    │
+│    → BATMAN originator messages for routing         │
+│    → 300Mbps+, no star topology! 🔨 Phase 1         │
+│                                                     │
+│  Tier 4 (fallback, low-power): BLE GATT Mesh        │
+│    → Bitchat-style: TTL=10, store-and-forward       │
+│    → 10-30m/hop, 6-7 peers, 3-5%/jam 🔨 Phase 1    │
+│                                                     │
+│  Discovery: WiFi Aware (NAN) → trigger Tier 2/3     │
+│             BLE advertising → universal fallback    │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐

@@ -20,6 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.data.local.entity.ConnectionStatus
 import com.example.caraka.data.local.entity.PeerEntity
+import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.DangerRed
+import com.example.caraka.ui.theme.DisasterBlue
+import com.example.caraka.ui.theme.NeonMint
+import com.example.caraka.ui.theme.NavyBackground
+import com.example.caraka.ui.theme.TextPrimary
+import com.example.caraka.ui.theme.TextSecondary
 
 /**
  * Displays list of peers with their connection status and action buttons.
@@ -41,7 +48,7 @@ fun PeerListView(
         ) {
             Text(
                 "No peers discovered yet",
-                color = Color(0xFF999999),
+                color = TextSecondary,
                 fontSize = 13.sp
             )
         }
@@ -72,11 +79,9 @@ private fun PeerItemCard(
     onRejectClick: (String) -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF8F8F8), RoundedCornerShape(8.dp)),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp
     ) {
         Column(
@@ -94,12 +99,12 @@ private fun PeerItemCard(
                         text = peer.displayName,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
-                        color = Color(0xFF1A1A1A)
+                        color = TextPrimary
                     )
                     Text(
                         text = peer.role,
                         fontSize = 12.sp,
-                        color = Color(0xFF666666)
+                        color = TextSecondary
                     )
                 }
                 StatusBadge(peer.status)
@@ -112,13 +117,12 @@ private fun PeerItemCard(
                         onClick = { onConnectClick(peer.id) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp),
+                            .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0066CC)
-                        ),
-                        contentPadding = PaddingValues(0.dp)
+                            containerColor = DisasterBlue
+                        )
                     ) {
-                        Text("CONNECT", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("CONNECT", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -127,22 +131,22 @@ private fun PeerItemCard(
                         onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp),
+                            .height(48.dp),
                         enabled = false,
                         colors = ButtonDefaults.buttonColors(
-                            disabledContainerColor = Color(0xFFE0E0E0)
-                        ),
-                        contentPadding = PaddingValues(0.dp)
+                            disabledContainerColor = MaterialTheme.colorScheme.surface,
+                            disabledContentColor = TextSecondary
+                        )
                     ) {
-                        Text("Requesting...", fontSize = 12.sp)
+                        Text("Menunggu...", fontSize = 13.sp)
                     }
                 }
 
                 ConnectionStatus.CONNECTED, ConnectionStatus.ACTIVE_MESH -> {
                     Text(
-                        text = "✓ Connected",
-                        fontSize = 12.sp,
-                        color = Color(0xFF00AA00),
+                        text = "✓ Terhubung",
+                        fontSize = 13.sp,
+                        color = NeonMint,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -181,10 +185,10 @@ private fun StatusBadge(status: ConnectionStatus) {
 }
 
 private fun statusColor(status: ConnectionStatus): Color = when (status) {
-    ConnectionStatus.DISCOVERED -> Color(0xFF0066CC)
-    ConnectionStatus.PENDING_REQUEST -> Color(0xFFFF9900)
-    ConnectionStatus.CONNECTED -> Color(0xFF00AA00)
-    ConnectionStatus.ACTIVE_MESH -> Color(0xFF00AA00)
+    ConnectionStatus.DISCOVERED -> DisasterBlue
+    ConnectionStatus.PENDING_REQUEST -> AmberAccent
+    ConnectionStatus.CONNECTED -> NeonMint
+    ConnectionStatus.ACTIVE_MESH -> NeonMint
 }
 
 private fun statusLabel(status: ConnectionStatus): String = when (status) {
