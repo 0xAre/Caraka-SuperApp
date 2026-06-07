@@ -10,7 +10,7 @@ import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.network.ConnectivityMonitor
 import com.example.caraka.network.ConnectivityStatus
-import com.example.caraka.network.WifiDirectManager
+import com.example.caraka.network.MeshTransport
 import com.example.caraka.repository.MeshRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,7 +32,7 @@ data class MeshNodeUi(
 class MainViewModel(
     private val repository: MeshRepository,
     private val identityManager: IdentityManager,
-    private val wifiDirectManager: WifiDirectManager,
+    private val transport: MeshTransport,
     private val connectivityMonitor: ConnectivityMonitor
 ) : ViewModel() {
 
@@ -66,11 +66,11 @@ class MainViewModel(
 
     // ========== STATE FLOWS (WiFi Direct) ==========
 
-    val isWifiP2pEnabled: StateFlow<Boolean> = wifiDirectManager.isWifiP2pEnabled
+    val isWifiP2pEnabled: StateFlow<Boolean> = transport.isWifiP2pEnabled
 
-    val availablePeers: StateFlow<List<WifiP2pDevice>> = wifiDirectManager.availablePeers
+    val availablePeers: StateFlow<List<WifiP2pDevice>> = transport.availablePeers
 
-    val connectionState: StateFlow<String> = wifiDirectManager.connectionState
+    val connectionState: StateFlow<String> = transport.connectionState
 
     // NEW: Connection request dialog state
     private val _incomingConnectionRequest = MutableStateFlow<String?>(null)
@@ -123,13 +123,13 @@ class MainViewModel(
     // ========== STATE FLOWS (Stats) ==========
 
     /** Messages relayed for other nodes (multi-hop stat). */
-    val relayedMessageCount: StateFlow<Int> = wifiDirectManager.relayedMessageCount
+    val relayedMessageCount: StateFlow<Int> = transport.relayedMessageCount
 
     /** Current device battery level (0-100). Updated on each connect attempt. */
-    val batteryLevel: StateFlow<Int> = wifiDirectManager.batteryLevel
+    val batteryLevel: StateFlow<Int> = transport.batteryLevel
 
     /** Fires when a direct chat arrives — drives the floating in-app alert. */
-    val incomingChatAlert = wifiDirectManager.incomingChatAlert
+    val incomingChatAlert = transport.incomingChatAlert
 
     /** Last direct message per peer ID — used for Messages screen preview. */
     val lastMessagesPerPeer: StateFlow<Map<String, com.example.caraka.data.local.entity.MessageEntity>> =
@@ -156,8 +156,8 @@ class MainViewModel(
                 _displayName.value = identityManager.getDisplayName()
                 _myRole.value = identityManager.getRole()
                 _myPeerId.value = identityManager.getPeerId()
-                wifiDirectManager.updateDeviceName(_displayName.value)
-                wifiDirectManager.startFallbackDiscovery()
+                transport.updateDeviceName(_displayName.value)
+                transport.startFallbackDiscovery()
             }
         }
 
@@ -181,15 +181,15 @@ class MainViewModel(
             _displayName.value = identityManager.getDisplayName()
             _myRole.value = identityManager.getRole()
             _myPeerId.value = identityManager.getPeerId()
-            wifiDirectManager.updateDeviceName(_displayName.value)
-            wifiDirectManager.startFallbackDiscovery()
+            transport.updateDeviceName(_displayName.value)
+            transport.startFallbackDiscovery()
             _hasIdentity.value = true
         }
     }
 
     fun clearIdentity() {
         viewModelScope.launch {
-            wifiDirectManager.stopListening()
+            transport.stopListening()
             repository.clearAllData()
             identityManager.clearIdentity()
             chatFlowCache.clear()
@@ -201,19 +201,19 @@ class MainViewModel(
     }
 
     fun startWifiDirect() {
-        wifiDirectManager.startListening()
+        transport.startListening()
     }
 
     fun stopWifiDirect() {
-        wifiDirectManager.stopListening()
+        transport.stopListening()
     }
 
     fun discoverPeers() {
-        wifiDirectManager.discoverPeers()
+        transport.discoverPeers()
     }
 
     fun connectToPeer(device: WifiP2pDevice) {
-        wifiDirectManager.connectToPeer(device)
+        transport.connectToPeer(device)
     }
 
     fun broadcastSos(category: String, description: String, lat: Double?, lng: Double?) {
@@ -279,7 +279,7 @@ class MainViewModel(
      * cycle so the app connects as soon as the peer is discovered.
      */
     fun triggerPriorityConnect(peerId: String) {
-        wifiDirectManager.setPriorityPeerId(peerId)
+        transport.setPriorityPeerId(peerId)
         Log.d("MainViewModel", "Priority connect triggered for peerId: $peerId")
     }
 
@@ -313,7 +313,7 @@ class MainViewModel(
             )
             // Send accept message via mesh
             val peer = repository.getPeerById(peerId) ?: return@launch
-            wifiDirectManager.sendConnectionAcceptMessage(peerId, peer.displayName, peer.role)
+            transport.sendConnectionAcceptMessage(peerId, peer.displayName, peer.role)
         }
         _incomingConnectionRequest.value = null
     }
@@ -339,7 +339,7 @@ class MainViewModel(
      * Sends CONNECTION_REQUEST message and marks peer as PENDING_REQUEST.
      */
     fun requestConnectionToPeer(peerId: String, autoAccept: Boolean = false) {
-        wifiDirectManager.requestConnectionToPeer(peerId, autoAccept)
+        transport.requestConnectionToPeer(peerId, autoAccept)
     }
 
     /**
@@ -349,9 +349,9 @@ class MainViewModel(
      */
     fun connectToNode(node: MeshNodeUi) {
         if (node.id.startsWith("wifi:")) {
-            wifiDirectManager.connectToWifiDeviceByMac(node.id.removePrefix("wifi:"))
+            transport.connectToWifiDeviceByMac(node.id.removePrefix("wifi:"))
         } else {
-            wifiDirectManager.requestConnectionToPeer(node.id)
+            transport.requestConnectionToPeer(node.id)
         }
     }
 
@@ -364,13 +364,13 @@ class MainViewModel(
 class MainViewModelFactory(
     private val repository: MeshRepository,
     private val identityManager: IdentityManager,
-    private val wifiDirectManager: WifiDirectManager,
+    private val transport: MeshTransport,
     private val connectivityMonitor: ConnectivityMonitor
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(repository, identityManager, wifiDirectManager, connectivityMonitor) as T
+            return MainViewModel(repository, identityManager, transport, connectivityMonitor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

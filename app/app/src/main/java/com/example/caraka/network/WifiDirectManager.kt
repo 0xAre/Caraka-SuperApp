@@ -58,7 +58,7 @@ class WifiDirectManager(
     private val repository: MeshRepository,
     private val identityManager: IdentityManager,
     private val cryptoManager: CryptoManager
-) : MeshMessageListener {
+) : MeshMessageListener, MeshTransport {
 
     companion object {
         private const val TAG = "WifiDirect"
@@ -121,23 +121,40 @@ class WifiDirectManager(
     // ========== STATE FLOWS ==========
 
     private val _isWifiP2pEnabled = MutableStateFlow(false)
-    val isWifiP2pEnabled: StateFlow<Boolean> = _isWifiP2pEnabled
+    override val isWifiP2pEnabled: StateFlow<Boolean> = _isWifiP2pEnabled
 
     private val _availablePeers = MutableStateFlow<List<WifiP2pDevice>>(emptyList())
-    val availablePeers: StateFlow<List<WifiP2pDevice>> = _availablePeers
+    override val availablePeers: StateFlow<List<WifiP2pDevice>> = _availablePeers
 
     private val _connectionState = MutableStateFlow("IDLE")
-    val connectionState: StateFlow<String> = _connectionState
+    override val connectionState: StateFlow<String> = _connectionState
 
     private val socketManager = MeshSocketManager(this)
     private var pendingWifiDirectMac: String? = null
 
     private val _relayedMessageCount = MutableStateFlow(0)
-    val relayedMessageCount: StateFlow<Int> = _relayedMessageCount
+    override val relayedMessageCount: StateFlow<Int> = _relayedMessageCount
+
+    // When used standalone (no Wi-Fi Aware hardware) this stays false. MeshManager flips its own
+    // copy; WifiDirectManager itself never drives an Aware data path.
+    private val _isAwareActive = MutableStateFlow(false)
+    override val isAwareActive: StateFlow<Boolean> = _isAwareActive
+
+    /**
+     * Outbound seams for layered overlay transports (Wi-Fi Aware, Nearby Connections, …). [MeshManager]
+     * registers a sink per active overlay so EVERY send — including internal relays, handshakes and
+     * gossip that call [sendMessage]/[sendToPeer] directly — also fans out across every overlay. Empty
+     * in the plain-fallback case, making them zero-cost.
+     */
+    private val overlayBroadcastSinks = java.util.concurrent.CopyOnWriteArrayList<(String) -> Unit>()
+    private val overlayUnicastSinks = java.util.concurrent.CopyOnWriteArrayList<(String, String) -> Unit>()
+
+    fun addOverlayBroadcastSink(sink: (String) -> Unit) { overlayBroadcastSinks.add(sink) }
+    fun addOverlayUnicastSink(sink: (String, String) -> Unit) { overlayUnicastSinks.add(sink) }
 
     // Emits when a direct chat message arrives — used to show an in-app floating alert.
     private val _incomingChatAlert = MutableSharedFlow<ChatAlert>(extraBufferCapacity = 8)
-    val incomingChatAlert: SharedFlow<ChatAlert> = _incomingChatAlert
+    override val incomingChatAlert: SharedFlow<ChatAlert> = _incomingChatAlert
 
     // Auto-connect cooldown tracker
     @Volatile private var lastConnectAttemptMs = 0L
@@ -187,7 +204,7 @@ class WifiDirectManager(
      */
     @Volatile private var priorityPeerId: String? = null
 
-    fun setPriorityPeerId(peerId: String) {
+    override fun setPriorityPeerId(peerId: String) {
         priorityPeerId = peerId
         lastConnectAttemptMs = 0L
         Log.d(TAG, "Priority peer set: $peerId — cooldown reset, connecting on next scan")
@@ -196,11 +213,11 @@ class WifiDirectManager(
 
     /** Current battery level (0-100). Updated on each connect attempt. */
     private val _batteryLevel = MutableStateFlow(100)
-    val batteryLevel: StateFlow<Int> = _batteryLevel
+    override val batteryLevel: StateFlow<Int> = _batteryLevel
 
     // ========== LIFECYCLE ==========
 
-    fun startListening() {
+    override fun startListening() {
         // Cache authority flag for GO election (avoids suspend call in hot path)
         scope.launch {
             cachedIsAuthority = identityManager.isAuthority()
@@ -430,7 +447,7 @@ class WifiDirectManager(
         }
     }
 
-    fun stopListening() {
+    override fun stopListening() {
         receiver?.let {
             try { context.unregisterReceiver(it) } catch (_: Exception) {}
         }
@@ -446,7 +463,7 @@ class WifiDirectManager(
         socketManager.stopAll()
     }
 
-    fun startFallbackDiscovery() {
+    override fun startFallbackDiscovery() {
         startLanDiscovery()
     }
 
@@ -513,7 +530,7 @@ class WifiDirectManager(
     @Volatile private var retryScheduled = false
 
     @SuppressLint("MissingPermission")
-    fun discoverPeers() {
+    override fun discoverPeers() {
         // Don't kick off discovery while a connection is forming/active, or while one is already running.
         if (_connectionState.value in busyStates) return
         if (discoveryInFlight) return
@@ -571,7 +588,7 @@ class WifiDirectManager(
     /** Last device name requested — retried when WiFi P2P becomes enabled. */
     @Volatile private var pendingDeviceName: String? = null
 
-    fun updateDeviceName(name: String) {
+    override fun updateDeviceName(name: String) {
         val carakaName = if (name.startsWith("CRK:", ignoreCase = true)) name else "CRK:$name"
         pendingDeviceName = carakaName
         applyDeviceName(carakaName)
@@ -602,7 +619,7 @@ class WifiDirectManager(
     @Volatile private var connectInFlight = false
 
     @SuppressLint("MissingPermission")
-    fun connectToPeer(device: WifiP2pDevice) {
+    override fun connectToPeer(device: WifiP2pDevice) {
         if (connectInFlight) return
         connectInFlight = true
         _connectionState.value = "CONNECTING"
@@ -669,7 +686,7 @@ class WifiDirectManager(
      * If the peer is NOT yet on the LAN, we broadcast a CONNECTION_REQUEST; the peer answers as
      * soon as its beacon/registry entry appears.
      */
-    fun requestConnectionToPeer(peerId: String, autoAccept: Boolean = false) {
+    override fun requestConnectionToPeer(peerId: String, autoAccept: Boolean) {
         scope.launch {
             val peer = repository.getPeerById(peerId) ?: run {
                 Log.w(TAG, "Peer not found: $peerId")
@@ -718,7 +735,7 @@ class WifiDirectManager(
      * in the discovered list. Used by the network map's "Hubungkan" button and the offline
      * fallback in requestConnectionToPeer.
      */
-    fun connectToWifiDeviceByMac(mac: String) {
+    override fun connectToWifiDeviceByMac(mac: String) {
         val device = _availablePeers.value.firstOrNull { it.deviceAddress == mac }
         if (device != null) {
             Log.d(TAG, "Manual WiFi-Direct connect to ${device.deviceName} ($mac)")
@@ -734,9 +751,10 @@ class WifiDirectManager(
      * LAN UDP is tried first (more reliable, no star-topology limit, works across all Android
      * versions). WiFi Direct socket is also used so that offline (no-WiFi) scenarios work.
      */
-    fun sendMessage(json: String) {
+    override fun sendMessage(json: String) {
         sendLanPayload(json)       // LAN first — reliable, any-to-any
         socketManager.sendPayload(json) // WiFi Direct socket — offline fallback
+        overlayBroadcastSinks.forEach { it(json) } // Aware / Nearby overlays (when active)
     }
 
     /**
@@ -744,8 +762,9 @@ class WifiDirectManager(
      * known IP (true B↔C delivery, no Group-Owner relay), falling back to broadcast and the
      * WiFi-Direct socket when the IP isn't known.
      */
-    fun sendToPeer(peerId: String, json: String) {
+    override fun sendToPeer(peerId: String, json: String) {
         sendDirectedMessage(peerId, json)
+        overlayUnicastSinks.forEach { it(peerId, json) } // route via Aware next-hop / Nearby when active
     }
 
     // ========== CALLBACKS FROM BROADCAST RECEIVER ==========
@@ -1310,6 +1329,8 @@ class WifiDirectManager(
                 "CONNECTION_REQUEST" -> handleConnectionRequest(protocol, fromAddress)
                 "CONNECTION_ACCEPT"  -> handleConnectionAccept(protocol, fromAddress)
                 "CONNECTION_REJECT"  -> handleConnectionReject(protocol, fromAddress)
+                "PEER_LIST"          -> handlePeerList(protocol) // gossip arriving over a socket/Aware relay (offline path)
+                "ROUTING_HEARTBEAT"  -> { /* handled by MeshRouter on the Aware transport; ignore here */ }
                 else -> Log.w(TAG, "Unknown type: ${protocol.type}")
             }
         }
@@ -1558,7 +1579,7 @@ class WifiDirectManager(
     /**
      * PUBLIC: Send CONNECTION_ACCEPT message (called from ViewModel after user accepts).
      */
-    fun sendConnectionAcceptMessage(peerId: String, peerName: String, peerRole: String) {
+    override fun sendConnectionAcceptMessage(peerId: String, peerName: String, peerRole: String) {
         scope.launch {
             sendConnectionAccept(peerId, peerName, peerRole)
         }

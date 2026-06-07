@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels {
         val app = application as CarakaApp
-        MainViewModelFactory(app.repository, app.identityManager, app.wifiDirectManager, app.connectivityMonitor)
+        MainViewModelFactory(app.repository, app.identityManager, app.transport, app.connectivityMonitor)
     }
 
     private lateinit var uiPrefs: UiPreferences
@@ -163,6 +163,12 @@ private fun CarakaNav(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        // Bluetooth runtime permissions (Android 12+) — required by Nearby Connections.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
         }
         val notGranted = permissions.filter {
             ContextCompat.checkSelfPermission(ctx, it) != PackageManager.PERMISSION_GRANTED

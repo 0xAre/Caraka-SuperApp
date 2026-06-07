@@ -8,7 +8,7 @@ import com.example.caraka.data.local.dao.RelayDao
 import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.network.MeshProtocol
-import com.example.caraka.network.WifiDirectManager
+import com.example.caraka.network.MeshTransport
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -24,7 +24,7 @@ class MeshRepository(
     private val identityManager: IdentityManager
 ) {
 
-    var wifiDirectManager: WifiDirectManager? = null
+    var transport: MeshTransport? = null
 
     // ========== PEER MANAGEMENT ==========
 
@@ -156,11 +156,11 @@ class MeshRepository(
             ttl = 5,
             priority = "NORMAL"
         )
-        wifiDirectManager?.sendMessage(flagPacket.toJson())
+        transport?.sendMessage(flagPacket.toJson())
     }
 
     fun getTotalRelayedCount(): kotlinx.coroutines.flow.StateFlow<Int>? =
-        wifiDirectManager?.relayedMessageCount
+        transport?.relayedMessageCount
 
     /**
      * Send a direct text message to a specific peer.
@@ -230,7 +230,7 @@ class MeshRepository(
             signature = signature
         )
         // Directed message → LAN unicast straight to the recipient (true B↔C delivery)
-        wifiDirectManager?.sendToPeer(recipientId, protocol.toJson())
+        transport?.sendToPeer(recipientId, protocol.toJson())
     }
 
     /**
@@ -289,6 +289,6 @@ class MeshRepository(
             latitude = lat,
             longitude = lng
         )
-        wifiDirectManager?.sendMessage(protocol.toJson())
+        transport?.sendMessage(protocol.toJson())
     }
 }

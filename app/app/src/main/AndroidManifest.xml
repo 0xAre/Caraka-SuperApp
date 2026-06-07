@@ -19,6 +19,15 @@
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="tiramisu" />
 
+    <!-- Bluetooth — required by Google Nearby Connections (offline P2P mesh overlay) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"
+        android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+
     <!-- Foreground Service (keep mesh alive in background) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
@@ -30,6 +39,10 @@
     <!-- Camera (for QR code scanning / peer identity verification) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Wi-Fi Aware (NAN) — primary mesh transport when available; app still installs
+         and falls back to Wi-Fi Direct on devices without NAN hardware. -->
+    <uses-feature android:name="android.hardware.wifi.aware" android:required="false" />
 
     <application
         android:name=".CarakaApp"

@@ -1,8 +1,10 @@
 package com.example.caraka.network
 
+import android.net.Network
 import android.util.Log
 import kotlinx.coroutines.*
 import java.io.*
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -87,12 +89,19 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
         return !seenIds.add(id) // add returns false if already present
     }
 
-    fun startServer() {
+    fun startServer() = startServer(PORT)
+
+    /**
+     * Open a TCP server socket on [port]. The default [PORT] is used by the Wi-Fi Direct group
+     * owner; the Wi-Fi Aware publisher uses its own port (see [MeshManager]) on a separate
+     * [MeshSocketManager] instance so the two server sockets never collide.
+     */
+    fun startServer(port: Int) {
         if (serverJob?.isActive == true) return
         serverJob = scope.launch {
             try {
-                serverSocket = ServerSocket(PORT)
-                Log.d(TAG, "Server socket opened on port $PORT")
+                serverSocket = ServerSocket(port)
+                Log.d(TAG, "Server socket opened on port $port")
 
                 while (isActive) {
                     val clientSocket = serverSocket!!.accept()
@@ -148,6 +157,47 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
                 }
             }
         }
+    }
+
+    /**
+     * Connect to a peer over a specific [network] — used for Wi-Fi Aware Out-of-Band data paths.
+     * The socket is bound to the Aware [Network] via [Network.bindSocket] BEFORE connect so traffic
+     * leaves over the NAN interface (link-local IPv6) rather than the default route.
+     *
+     * Each call spawns its own reader coroutine and registers its stream, so a node can hold many
+     * concurrent Aware connections (one per neighbour) for multi-hop forwarding. Returns the
+     * generated connection id so the caller can map peerId -> connId once the HANDSHAKE arrives.
+     */
+    fun connectOverNetwork(network: Network, peerAddress: InetAddress, port: Int): String {
+        val connId = generateConnectionId()
+        val host = peerAddress.hostAddress ?: peerAddress.toString()
+        scope.launch {
+            try {
+                val socket = Socket()
+                // Bind to the Aware data-path network so the TCP connection uses that interface.
+                network.bindSocket(socket)
+                socket.keepAlive = true
+                Log.d(TAG, "Aware connect to [$host]:$port (connId=$connId)…")
+                // Pass the InetAddress directly so the IPv6 link-local scope id is preserved.
+                socket.connect(InetSocketAddress(peerAddress, port), TIMEOUT)
+                Log.d(TAG, "Aware data-path socket connected to $host")
+
+                val out = socket.getOutputStream()
+                clientStreams[connId] = out
+                connectionRoles[connId] = false
+                connectionAddresses[connId] = host
+                listener.onSocketConnected(host, isServer = false)
+
+                handleIncomingData(socket.getInputStream(), host, connId)
+                clientStreams.remove(connId)
+                connectionAddresses.remove(connId)
+            } catch (e: Exception) {
+                if (isActive) Log.e(TAG, "Aware client error to $host", e)
+                clientStreams.remove(connId)
+                connectionAddresses.remove(connId)
+            }
+        }
+        return connId
     }
 
     /**

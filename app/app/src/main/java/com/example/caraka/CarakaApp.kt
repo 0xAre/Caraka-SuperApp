@@ -5,7 +5,8 @@ import com.example.caraka.crypto.CryptoManager
 import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.data.local.CarakaDatabase
 import com.example.caraka.network.ConnectivityMonitor
-import com.example.caraka.network.WifiDirectManager
+import com.example.caraka.network.MeshManager
+import com.example.caraka.network.MeshTransport
 import com.example.caraka.repository.MeshRepository
 import net.sqlcipher.database.SQLiteDatabase
 
@@ -19,7 +20,7 @@ class CarakaApp : Application() {
     lateinit var cryptoManager: CryptoManager
     lateinit var identityManager: IdentityManager
     lateinit var repository: MeshRepository
-    lateinit var wifiDirectManager: WifiDirectManager
+    lateinit var transport: MeshTransport
     lateinit var connectivityMonitor: ConnectivityMonitor
 
     override fun onCreate() {
@@ -41,7 +42,8 @@ class CarakaApp : Application() {
             identityManager = identityManager
         )
 
-        wifiDirectManager = WifiDirectManager(
+        // Mesh facade: Wi-Fi Aware primary (when supported) + Wi-Fi Direct fallback/brain.
+        transport = MeshManager(
             context = this,
             repository = repository,
             identityManager = identityManager,
@@ -49,7 +51,7 @@ class CarakaApp : Application() {
         )
 
         // Resolve circular dependency
-        repository.wifiDirectManager = wifiDirectManager
+        repository.transport = transport
 
         // Connectivity monitor — tracks internet vs mesh-only state
         connectivityMonitor = ConnectivityMonitor(this)

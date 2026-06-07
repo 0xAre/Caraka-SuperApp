@@ -94,6 +94,10 @@ dependencies {
     // Gson (JSON parsing for mesh protocol)
     implementation(libs.gson)
 
+    // Google Nearby Connections — offline P2P mesh overlay (BT + Wi-Fi, auto medium upgrade).
+    // Primary reliable transport on commodity phones without Wi-Fi Aware hardware.
+    implementation("com.google.android.gms:play-services-nearby:19.3.0")
+
     // Lazysodium (libsodium - E2E encryption)
     implementation(libs.lazysodium.android) {
         exclude(group = "net.java.dev.jna", module = "jna")
