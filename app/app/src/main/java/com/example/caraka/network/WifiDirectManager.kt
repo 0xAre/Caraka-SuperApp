@@ -344,8 +344,16 @@ class WifiDirectManager(
         }
     }
 
+    /** Last device name requested — retried when WiFi P2P becomes enabled. */
+    @Volatile private var pendingDeviceName: String? = null
+
     fun updateDeviceName(name: String) {
         val carakaName = if (name.startsWith("CRK:", ignoreCase = true)) name else "CRK:$name"
+        pendingDeviceName = carakaName
+        applyDeviceName(carakaName)
+    }
+
+    private fun applyDeviceName(carakaName: String) {
         try {
             val method = manager.javaClass.getMethod(
                 "setDeviceName",
@@ -438,6 +446,15 @@ class WifiDirectManager(
         _isWifiP2pEnabled.value = isEnabled
         Log.d(TAG, "WiFi P2P enabled: $isEnabled")
         if (isEnabled) {
+            // Retry device name — setDeviceName fails silently if called before
+            // the P2P stack is fully ready. Delay 600ms to let channel settle.
+            pendingDeviceName?.let { name ->
+                scope.launch {
+                    delay(600L)
+                    applyDeviceName(name)
+                    Log.d(TAG, "Device name retry after P2P enable: $name")
+                }
+            }
             requestCurrentPeers()
             discoverPeers()
         } else {
