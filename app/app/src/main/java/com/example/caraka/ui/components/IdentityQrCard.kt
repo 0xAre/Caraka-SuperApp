@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
@@ -59,19 +59,19 @@ fun IdentityQrCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = AmberAccent.copy(0.2f))
+            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = CyanAccent.copy(0.2f))
             .clip(RoundedCornerShape(24.dp))
             .background(SurfaceDark)
-            .border(1.dp, AmberAccent.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+            .border(1.dp, CyanAccent.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.QrCode2, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.QrCode2, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.qr_my_identity_title),
-                color = AmberAccent,
+                color = CyanAccent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 letterSpacing = 1.sp
@@ -89,7 +89,7 @@ fun IdentityQrCard(
                     modifier = Modifier
                         .size(240.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(AmberAccent)
+                        .background(CyanAccent)
                         .padding(8.dp)
                 ) {
                     Image(
@@ -110,7 +110,7 @@ fun IdentityQrCard(
                     .background(GlassSurface),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = AmberAccent, modifier = Modifier.size(40.dp))
+                CircularProgressIndicator(color = CyanAccent, modifier = Modifier.size(40.dp))
             }
         }
 
@@ -130,7 +130,7 @@ fun IdentityQrCard(
         Spacer(Modifier.height(4.dp))
         Text(
             stringResource(R.string.qr_verbal_fingerprint, fingerprint),
-            color = AmberAccent,
+            color = CyanAccent,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold
@@ -158,7 +158,7 @@ fun IdentityQrCard(
 private fun RoleBadgeDefault(role: String) {
     val (color, label) = when (role) {
         "BPBD" -> com.example.caraka.ui.theme.DisasterBlue to "🛡️ BPBD"
-        "POLRI" -> AmberAccent to "🚔 POLRI"
+        "POLRI" -> CyanAccent to "🚔 POLRI"
         "PMI" -> com.example.caraka.ui.theme.DangerRed to "🏥 PMI"
         else -> com.example.caraka.ui.theme.NeonMint to "👤 Civilian"
     }

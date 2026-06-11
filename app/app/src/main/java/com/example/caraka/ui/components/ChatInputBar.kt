@@ -25,7 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
@@ -47,7 +47,7 @@ fun ChatInputBar(
     Surface(
         modifier = modifier
             .padding(16.dp)
-            .shadow(8.dp, RoundedCornerShape(24.dp), ambientColor = AmberAccent, spotColor = SurfaceDark),
+            .shadow(8.dp, RoundedCornerShape(24.dp), ambientColor = CyanAccent, spotColor = SurfaceDark),
         shape = RoundedCornerShape(24.dp),
         color = GlassSurface,
         border = androidx.compose.foundation.BorderStroke(1.dp, SurfaceDark)
@@ -66,7 +66,7 @@ fun ChatInputBar(
                     value = value,
                     onValueChange = onValueChange,
                     textStyle = Typography.bodyLarge.copy(color = TextPrimary),
-                    cursorBrush = SolidColor(AmberAccent),
+                    cursorBrush = SolidColor(CyanAccent),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -79,13 +79,13 @@ fun ChatInputBar(
                 enabled = value.isNotBlank(),
                 modifier = Modifier
                     .size(44.dp)
-                    .background(if (value.isNotBlank()) AmberAccent.copy(alpha = 0.2f) else SurfaceDark, CircleShape)
+                    .background(if (value.isNotBlank()) CyanAccent.copy(alpha = 0.2f) else SurfaceDark, CircleShape)
                     .semantics { contentDescription = sendCd }
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = null,
-                    tint = if (value.isNotBlank()) AmberAccent else TextSecondary,
+                    tint = if (value.isNotBlank()) CyanAccent else TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }

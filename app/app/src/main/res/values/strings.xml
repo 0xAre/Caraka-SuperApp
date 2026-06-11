@@ -79,6 +79,10 @@
     <!-- ───── SOS Screen ───── -->
     <string name="sos_title">SOS DARURAT</string>
     <string name="sos_question">Apa keadaan darurat Anda?</string>
+    <string name="sos_describe_hint">Jelaskan situasi darurat... (Opsional)</string>
+    <string name="sos_auto_location">LOKASI TERDETEKSI OTOMATIS</string>
+    <string name="sos_coordinates">Koordinat</string>
+    <string name="sos_mock_location">Jakarta,\nIndonesia</string>
     <string name="sos_cat_medical">🚨 Medis</string>
     <string name="sos_cat_fire">🔥 Kebakaran</string>
     <string name="sos_cat_security">⚠️ Keamanan</string>

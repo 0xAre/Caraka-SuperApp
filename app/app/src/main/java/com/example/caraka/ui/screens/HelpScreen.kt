@@ -40,7 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.NavyBackground
 import com.example.caraka.ui.theme.NeonMint
@@ -61,7 +61,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(22.dp))
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.help_title), color = TextPrimary, fontWeight = FontWeight.Bold)
                     }
@@ -91,14 +91,14 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(8.dp, RoundedCornerShape(20.dp), ambientColor = AmberAccent, spotColor = SurfaceDark)
+                        .shadow(8.dp, RoundedCornerShape(20.dp), ambientColor = CyanAccent, spotColor = SurfaceDark)
                         .clip(RoundedCornerShape(20.dp))
                         .background(GlassSurface)
-                        .border(1.dp, AmberAccent.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                        .border(1.dp, CyanAccent.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.School, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.School, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.padding(end = 12.dp)) {
                         Text("Tur Interaktif", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
@@ -106,7 +106,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     }
                     androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                     androidx.compose.material3.TextButton(onClick = onLaunchTour) {
-                        Text("Mulai", color = AmberAccent, fontWeight = FontWeight.Bold)
+                        Text("Mulai", color = CyanAccent, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -167,7 +167,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
 private fun SectionHeader(textRes: Int) {
     Text(
         stringResource(textRes),
-        color = AmberAccent,
+        color = CyanAccent,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         modifier = Modifier.padding(vertical = 4.dp)
@@ -186,7 +186,7 @@ private fun QaCard(qRes: Int, aRes: Int) {
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.QuestionMark, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.QuestionMark, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringResource(qRes), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }

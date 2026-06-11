@@ -35,7 +35,7 @@ import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.ui.components.EmergencyAlertCard
 import com.example.caraka.ui.components.EmptyStateIllustration
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.NavyBackground
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
@@ -141,8 +141,8 @@ private fun AlertFilterRow(selected: AlertFilter, onSelect: (AlertFilter) -> Uni
                 onClick = { onSelect(f) },
                 label = { Text(stringResource(labelRes), fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = AmberAccent.copy(alpha = 0.2f),
-                    selectedLabelColor = AmberAccent
+                    selectedContainerColor = CyanAccent.copy(alpha = 0.2f),
+                    selectedLabelColor = CyanAccent
                 )
             )
         }

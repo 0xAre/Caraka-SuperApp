@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,15 +20,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.caraka.ui.theme.AmberAccent
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.SpaceGroteskFamily
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun EmptyStateIllustration(
     icon: ImageVector,
     message: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     contentDescription: String? = null
@@ -38,27 +40,49 @@ fun EmptyStateIllustration(
             .semantics { contentDescription?.let { this.contentDescription = it } },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = TextSecondary,
-            modifier = Modifier.size(56.dp)
-        )
-        Spacer(Modifier.height(16.dp))
+        CarakaGlassSurface(
+            modifier = Modifier.size(96.dp),
+            shape = CircleShape
+        ) {
+            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(42.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(24.dp))
         Text(
             message,
-            color = TextPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp,
+            fontFamily = SpaceGroteskFamily,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
             textAlign = TextAlign.Center
         )
+        if (subtitle != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                subtitle,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
         if (actionLabel != null && onAction != null) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             Button(
                 onClick = onAction,
-                colors = ButtonDefaults.buttonColors(containerColor = AmberAccent)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
-                Text(actionLabel, color = androidx.compose.ui.graphics.Color.Black, fontWeight = FontWeight.Bold)
+                Text(actionLabel, fontFamily = SpaceGroteskFamily, fontWeight = FontWeight.Bold)
             }
         }
     }

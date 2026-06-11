@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
@@ -78,7 +78,7 @@ fun IdentityDisplayRow(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.identity_fingerprint, fingerprint),
-                    color = AmberAccent,
+                    color = CyanAccent,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
@@ -95,7 +95,7 @@ fun IdentityDisplayRow(
                 Icon(
                     Icons.Default.ContentCopy,
                     contentDescription = stringResource(R.string.identity_copy),
-                    tint = AmberAccent,
+                    tint = CyanAccent,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -110,7 +110,7 @@ fun IdentityDisplayRow(
                     Icon(
                         Icons.Default.QrCode2,
                         contentDescription = stringResource(R.string.identity_qr_shortcut),
-                        tint = AmberAccent,
+                        tint = CyanAccent,
                         modifier = Modifier.size(20.dp)
                     )
                 }

@@ -49,7 +49,7 @@ fun FloatingChatAlert(
     ) {
         val current = alert ?: return@AnimatedVisibility
         val isAuthority = current.senderRole in listOf("BPBD", "POLRI", "PMI")
-        val accent = if (isAuthority) NeonMint else AmberAccent
+        val accent = if (isAuthority) NeonMint else CyanAccent
 
         Row(
             modifier = Modifier

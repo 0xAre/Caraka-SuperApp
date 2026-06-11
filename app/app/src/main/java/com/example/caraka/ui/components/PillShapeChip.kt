@@ -4,17 +4,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.caraka.ui.theme.AmberAccent
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
 
 @Composable
 fun PillShapeChip(
@@ -22,21 +18,26 @@ fun PillShapeChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    selectedColor: Color = AmberAccent
+    selectedColor: Color? = null
 ) {
+    val activeColor = selectedColor ?: MaterialTheme.colorScheme.primary
+    val containerColor = if (isSelected) activeColor.copy(alpha = 0.15f) else com.example.caraka.ui.theme.SurfaceHigh
+    val borderColor = if (isSelected) activeColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+    
     Surface(
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
-        color = if (isSelected) selectedColor.copy(alpha = 0.15f) else GlassSurface,
+        color = containerColor,
         border = BorderStroke(
             width = 1.dp,
-            color = if (isSelected) selectedColor.copy(alpha = 0.5f) else SurfaceDark
+            color = borderColor
         )
     ) {
         Text(
             text = text,
-            color = if (isSelected) selectedColor else TextSecondary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            color = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge
         )
     }
 }

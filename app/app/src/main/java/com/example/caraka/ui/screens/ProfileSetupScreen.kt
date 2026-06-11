@@ -95,7 +95,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
         ) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Shield, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.Shield, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(stringResource(R.string.setup_welcome), color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -182,7 +182,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             if (isAuthority) {
                 Text(
                     text = stringResource(R.string.setup_password_label),
-                    color = AmberAccent, fontWeight = FontWeight.SemiBold,
+                    color = CyanAccent, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
@@ -197,7 +197,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AmberAccent,
+                        focusedBorderColor = CyanAccent,
                         unfocusedBorderColor = SurfaceDark,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -219,7 +219,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             } else {
                 Text(
                     text = stringResource(R.string.setup_display_name),
-                    color = AmberAccent, fontWeight = FontWeight.SemiBold,
+                    color = CyanAccent, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
@@ -228,7 +228,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     label = { Text(stringResource(R.string.setup_enter_name), color = TextSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AmberAccent,
+                        focusedBorderColor = CyanAccent,
                         unfocusedBorderColor = SurfaceDark,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -266,7 +266,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AmberAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
@@ -290,7 +290,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
 
 private fun roleColorFor(role: String): Color = when (role) {
     IdentityManager.ROLE_BPBD  -> DisasterBlue
-    IdentityManager.ROLE_POLRI -> AmberAccent
+    IdentityManager.ROLE_POLRI -> CyanAccent
     IdentityManager.ROLE_PMI   -> DangerRed
     else                       -> NeonMint
 }

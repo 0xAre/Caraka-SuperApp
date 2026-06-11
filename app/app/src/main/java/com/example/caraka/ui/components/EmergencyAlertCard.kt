@@ -36,7 +36,7 @@ import com.example.caraka.ui.theme.DangerRed
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
-import com.example.caraka.ui.theme.WarningYellow
+import com.example.caraka.ui.theme.WarningCyan
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -96,10 +96,10 @@ fun EmergencyAlertCard(
 private fun alertCategoryVisual(category: String?): Pair<ImageVector, Color> {
     return when (category?.uppercase()) {
         "MEDICAL" -> Icons.Default.LocalHospital to DangerRed
-        "FIRE" -> Icons.Default.Warning to WarningYellow
-        "SECURITY" -> Icons.Default.Warning to WarningYellow
+        "FIRE" -> Icons.Default.Warning to WarningCyan
+        "SECURITY" -> Icons.Default.Warning to WarningCyan
         "DISASTER" -> Icons.Default.Warning to com.example.caraka.ui.theme.DisasterBlue
-        else -> Icons.Default.Warning to WarningYellow
+        else -> Icons.Default.Warning to WarningCyan
     }
 }
 

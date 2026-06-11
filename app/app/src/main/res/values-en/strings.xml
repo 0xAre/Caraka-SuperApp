@@ -79,6 +79,10 @@
     <!-- ───── SOS Screen ───── -->
     <string name="sos_title">EMERGENCY SOS</string>
     <string name="sos_question">What is your emergency?</string>
+    <string name="sos_describe_hint">Describe emergency... (Optional)</string>
+    <string name="sos_auto_location">AUTO-DETECTED LOCATION</string>
+    <string name="sos_coordinates">Coordinates</string>
+    <string name="sos_mock_location">Jakarta,\nIndonesia</string>
     <string name="sos_cat_medical">🚨 Medical</string>
     <string name="sos_cat_fire">🔥 Fire</string>
     <string name="sos_cat_security">⚠️ Security</string>

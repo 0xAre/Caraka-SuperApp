@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.ui.theme.NeonMint
 import com.example.caraka.ui.theme.TextSecondary
-import com.example.caraka.ui.theme.WarningYellow
+import com.example.caraka.ui.theme.WarningCyan
 
 enum class MessageDeliveryUiStatus {
     QUEUED,
@@ -38,7 +38,7 @@ fun MessageStatusIcon(
     showLabel: Boolean = true
 ) {
     val (icon, tint, labelRes) = when (status) {
-        MessageDeliveryUiStatus.QUEUED -> Triple(Icons.Default.Schedule, WarningYellow, R.string.msg_status_queued)
+        MessageDeliveryUiStatus.QUEUED -> Triple(Icons.Default.Schedule, WarningCyan, R.string.msg_status_queued)
         MessageDeliveryUiStatus.SENT -> Triple(Icons.Default.Check, TextSecondary, R.string.msg_status_sent)
         MessageDeliveryUiStatus.RELAYED -> Triple(Icons.Default.DoneAll, NeonMint, R.string.msg_status_relayed)
     }

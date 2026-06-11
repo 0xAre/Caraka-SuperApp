@@ -130,6 +130,12 @@ class IdentityManager(
         return context.identityStore.data.first()[KEY_ROLE] ?: ROLE_CIVILIAN
     }
 
+    suspend fun updateRole(newRole: String) {
+        context.identityStore.edit { prefs ->
+            prefs[KEY_ROLE] = newRole
+        }
+    }
+
     suspend fun isAuthority(): Boolean {
         val role = getRole()
         return role == ROLE_BPBD || role == ROLE_POLRI || role == ROLE_PMI

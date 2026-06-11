@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.NavyBackground
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
@@ -53,7 +53,7 @@ fun AlertsBottomSheet(
         ) {
             Text(
                 stringResource(R.string.alerts_sheet_title),
-                color = AmberAccent,
+                color = CyanAccent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -91,7 +91,7 @@ fun AlertsBottomSheet(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.alerts_view_all), color = AmberAccent, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.alerts_view_all), color = CyanAccent, fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(Modifier.height(16.dp))

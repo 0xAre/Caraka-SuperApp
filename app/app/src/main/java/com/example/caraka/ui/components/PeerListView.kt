@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import com.example.caraka.ui.components.CarakaCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,13 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.data.local.entity.ConnectionStatus
 import com.example.caraka.data.local.entity.PeerEntity
-import com.example.caraka.ui.theme.AmberAccent
-import com.example.caraka.ui.theme.DangerRed
-import com.example.caraka.ui.theme.DisasterBlue
-import com.example.caraka.ui.theme.NeonMint
-import com.example.caraka.ui.theme.NavyBackground
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.LocalStatusColors
 
 /**
  * Displays list of peers with their connection status and action buttons.
@@ -48,7 +43,7 @@ fun PeerListView(
         ) {
             Text(
                 "No peers discovered yet",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )
         }
@@ -78,11 +73,10 @@ private fun PeerItemCard(
     onAcceptClick: (String) -> Unit,
     onRejectClick: (String) -> Unit
 ) {
-    Surface(
+    CarakaCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
+        hasSubtleBorder = true
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -99,12 +93,12 @@ private fun PeerItemCard(
                         text = peer.displayName,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = peer.role,
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 StatusBadge(peer.status)
@@ -119,7 +113,7 @@ private fun PeerItemCard(
                             .fillMaxWidth()
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DisasterBlue
+                            containerColor = LocalStatusColors.current.hybrid
                         )
                     ) {
                         Text("CONNECT", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -134,8 +128,8 @@ private fun PeerItemCard(
                             .height(48.dp),
                         enabled = false,
                         colors = ButtonDefaults.buttonColors(
-                            disabledContainerColor = MaterialTheme.colorScheme.surface,
-                            disabledContentColor = TextSecondary
+                            disabledContainerColor = com.example.caraka.ui.theme.SurfaceHigh,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Text("Menunggu...", fontSize = 13.sp)
@@ -146,7 +140,7 @@ private fun PeerItemCard(
                     Text(
                         text = "✓ Terhubung",
                         fontSize = 13.sp,
-                        color = NeonMint,
+                        color = LocalStatusColors.current.online,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -184,11 +178,15 @@ private fun StatusBadge(status: ConnectionStatus) {
     }
 }
 
-private fun statusColor(status: ConnectionStatus): Color = when (status) {
-    ConnectionStatus.DISCOVERED -> DisasterBlue
-    ConnectionStatus.PENDING_REQUEST -> AmberAccent
-    ConnectionStatus.CONNECTED -> NeonMint
-    ConnectionStatus.ACTIVE_MESH -> NeonMint
+@Composable
+private fun statusColor(status: ConnectionStatus): Color {
+    val statusColors = LocalStatusColors.current
+    return when (status) {
+        ConnectionStatus.DISCOVERED -> statusColors.hybrid
+        ConnectionStatus.PENDING_REQUEST -> MaterialTheme.colorScheme.tertiary
+        ConnectionStatus.CONNECTED -> statusColors.online
+        ConnectionStatus.ACTIVE_MESH -> statusColors.online
+    }
 }
 
 private fun statusLabel(status: ConnectionStatus): String = when (status) {

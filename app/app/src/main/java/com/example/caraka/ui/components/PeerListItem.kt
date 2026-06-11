@@ -21,6 +21,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,11 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
-import com.example.caraka.ui.theme.NeonMint
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.LocalStatusColors
 
 @Composable
 fun PeerListItem(
@@ -73,7 +70,7 @@ fun PeerListItem(
             BadgedBox(
                 badge = {
                     if (unreadCount > 0) {
-                        Badge(containerColor = AmberAccent, contentColor = Color.Black) {
+                        Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
                             Text(
                                 if (unreadCount > 99) "99+" else "$unreadCount",
                                 fontSize = 10.sp,
@@ -87,10 +84,10 @@ fun PeerListItem(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(if (isAuthority) NeonMint.copy(alpha = 0.15f) else SurfaceDark)
+                        .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.15f) else com.example.caraka.ui.theme.SurfaceHigh)
                         .border(
                             2.dp,
-                            if (isAuthority) NeonMint.copy(alpha = 0.5f) else SurfaceDark,
+                            if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                             CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -101,7 +98,7 @@ fun PeerListItem(
                         Icon(
                             Icons.Default.Person,
                             contentDescription = null,
-                            tint = AmberAccent,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -114,7 +111,7 @@ fun PeerListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         displayName,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
                         modifier = Modifier.weight(1f),
@@ -124,7 +121,7 @@ fun PeerListItem(
                     if (timeLabel != null) {
                         Text(
                             timeLabel,
-                            color = if (unreadCount > 0) AmberAccent else TextSecondary,
+                            color = if (unreadCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 11.sp,
                             fontWeight = if (unreadCount > 0) FontWeight.Bold else FontWeight.Normal
                         )
@@ -138,13 +135,13 @@ fun PeerListItem(
                         if (isOutgoingPreview) {
                             Text(
                                 stringResource(R.string.messages_you_prefix),
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 13.sp
                             )
                         }
                         Text(
                             lastMessagePreview,
-                            color = if (unreadCount > 0) TextPrimary else TextSecondary,
+                            color = if (unreadCount > 0) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             fontSize = 13.sp,
                             fontWeight = if (unreadCount > 0) FontWeight.Medium else FontWeight.Normal,
                             maxLines = 1,
@@ -156,13 +153,13 @@ fun PeerListItem(
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = TextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 stringResource(R.string.messages_e2e_hint),
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 13.sp
                             )
                         }
@@ -174,12 +171,12 @@ fun PeerListItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (isAuthority) NeonMint.copy(alpha = 0.12f) else SurfaceDark)
+                            .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else com.example.caraka.ui.theme.SurfaceMid)
                             .padding(horizontal = 6.dp, vertical = 1.dp)
                     ) {
                         Text(
                             role,
-                            color = if (isAuthority) NeonMint else TextSecondary,
+                            color = if (isAuthority) LocalStatusColors.current.online else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -190,12 +187,12 @@ fun PeerListItem(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(NeonMint)
+                                .background(LocalStatusColors.current.online)
                         )
                         Spacer(Modifier.width(3.dp))
                         Text(
                             stringResource(R.string.messages_connected),
-                            color = NeonMint,
+                            color = LocalStatusColors.current.online,
                             fontSize = 10.sp
                         )
                     }
@@ -204,7 +201,7 @@ fun PeerListItem(
         }
         if (showDivider) {
             HorizontalDivider(
-                color = SurfaceDark.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }

@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
@@ -70,15 +70,15 @@ fun InfoTooltip(
                 Surface(
                     modifier = Modifier
                         .padding(top = 22.dp)
-                        .shadow(12.dp, RoundedCornerShape(14.dp), ambientColor = AmberAccent, spotColor = SurfaceDark)
+                        .shadow(12.dp, RoundedCornerShape(14.dp), ambientColor = CyanAccent, spotColor = SurfaceDark)
                         .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, AmberAccent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                        .border(1.dp, CyanAccent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                         .background(GlassSurface),
                     color = GlassSurface
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Info, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Outlined.Info, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(title, color = TextPrimary, fontSize = 12.sp)
                         }

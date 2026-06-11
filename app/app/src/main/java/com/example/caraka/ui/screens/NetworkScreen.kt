@@ -2,6 +2,7 @@ package com.example.caraka.ui.screens
 
 import android.graphics.Paint as NativePaint
 import android.graphics.Typeface
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,11 +23,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,8 +42,21 @@ import com.example.caraka.R
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MeshNodeUi
 import com.example.caraka.viewmodel.MainViewModel
+import com.example.caraka.ui.components.CarakaCard
+import com.example.caraka.ui.components.CarakaGlassSurface
+import com.example.caraka.ui.theme.SpaceGroteskFamily
 import kotlinx.coroutines.delay
 import kotlin.math.*
+
+// ─── Network State ───────────────────────────────────────────────────────────
+
+enum class NetworkActivity { IDLE, SCANNING, CONNECTED }
+
+sealed class NetworkState(val activity: NetworkActivity) {
+    object Idle : NetworkState(NetworkActivity.IDLE)
+    object Scanning : NetworkState(NetworkActivity.SCANNING)
+    data class Connected(val peers: List<MeshNodeUi>) : NetworkState(NetworkActivity.CONNECTED)
+}
 
 // ─── Data model for a graph node ─────────────────────────────────────────────
 
@@ -69,6 +89,14 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
     val relayed by viewModel?.relayedMessageCount?.collectAsStateWithLifecycle(initialValue = 0)
         ?: remember { mutableStateOf(0) }
 
+    val networkState = remember(connectionState, meshNodes) {
+        when {
+            meshNodes.isNotEmpty() -> NetworkState.Connected(meshNodes)
+            connectionState == "DISCOVERING" -> NetworkState.Scanning
+            else -> NetworkState.Idle
+        }
+    }
+
     var selectedNode by remember { mutableStateOf<MeshNodeUi?>(null) }
 
     LaunchedEffect(viewModel) {
@@ -86,16 +114,16 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.network_title), color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.network_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { viewModel?.discoverPeers() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_scan_btn), tint = AmberAccent)
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.cd_scan_btn), tint = MaterialTheme.colorScheme.primary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -103,68 +131,67 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
                 .padding(paddingValues)
         ) {
             // Force-directed network graph
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
                 MeshNetworkGraph(
-                    peers = meshNodes,
-                    hasSosActive = activeAlerts.isNotEmpty(),
+                    networkState = networkState,
                     onNodeTap = { node -> selectedNode = node },
                     modifier = Modifier.fillMaxSize()
                 )
 
-                NetworkLegendOverlay(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(12.dp)
-                )
-
-                NetworkStatsPanel(
-                    nodeCount = meshNodeCount,
-                    connectionState = connectionState,
-                    sosCount = activeAlerts.size,
-                    relayedCount = relayed,
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = meshNodeCount == 1,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
-                )
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 24.dp)
+                ) {
+                    CarakaCard(
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Minta perangkat lain membuka tab Jaringan",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
             }
+
+            val hasWeakSignal = meshNodes.any { it.hopCount > 0 }
+            NetworkStatsPanel(
+                nodeCount = meshNodeCount,
+                hasWeakSignal = hasWeakSignal,
+                networkState = networkState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 24.dp)
+            )
         }
     }
 }
 
 // ─── Force-Directed Graph Canvas ─────────────────────────────────────────────
 
-@Composable
-private fun NetworkLegendOverlay(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .shadow(6.dp, RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(GlassSurface)
-            .border(1.dp, SurfaceDark, RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        LegendItem(AmberAccent, stringResource(R.string.network_legend_self))
-        LegendItem(NeonMint, stringResource(R.string.network_legend_authority))
-        LegendItem(AmberAccent.copy(alpha = 0.7f), stringResource(R.string.network_legend_direct))
-        LegendItem(DisasterBlue, stringResource(R.string.network_legend_relay))
-        LegendItem(DangerRed, stringResource(R.string.network_legend_sos))
-    }
-}
-
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = TextSecondary, fontSize = 10.sp)
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,43 +205,43 @@ private fun NodeDetailBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NavyBackground
+        containerColor = com.example.caraka.ui.theme.SurfaceLow
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 28.dp)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Text(node.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(node.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.network_node_role, node.role), color = TextSecondary, fontSize = 13.sp)
+            Text(stringResource(R.string.network_node_role, node.role), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
             Text(
                 stringResource(
                     if (node.isConnected) R.string.network_node_connected else R.string.network_node_discovered
                 ),
-                color = if (node.isConnected) NeonMint else TextSecondary,
-                fontSize = 13.sp
+                color = if (node.isConnected) LocalStatusColors.current.online else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontSize = 14.sp
             )
             if (node.hopCount > 0) {
-                Text(stringResource(R.string.network_node_hops, node.hopCount), color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.network_node_hops, node.hopCount), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
             }
             if (node.isAuthority) {
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.network_node_authority), color = NeonMint, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.network_node_authority), color = LocalStatusColors.current.online, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
 
             // Manual connect action — only for peers that are not the local node and not yet connected.
             if (node.id != "SELF" && !node.isConnected) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = {
                         requested = true
                         onConnect(node)
                     },
                     enabled = !requested,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AmberAccent, contentColor = NavyBackground)
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                 ) {
                     Text(
                         if (requested) "Menghubungkan…" else "Hubungkan",
@@ -228,11 +255,16 @@ private fun NodeDetailBottomSheet(
 
 @Composable
 private fun MeshNetworkGraph(
-    peers: List<MeshNodeUi>,
-    hasSosActive: Boolean,
+    networkState: NetworkState,
     onNodeTap: (MeshNodeUi) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val peers = when (networkState) {
+        is NetworkState.Connected -> networkState.peers
+        else -> emptyList()
+    }
+    val isScanning = networkState.activity == NetworkActivity.SCANNING
+
     // Continuous animations
     val infiniteTransition = rememberInfiniteTransition(label = "meshAnim")
     val pulse by infiniteTransition.animateFloat(
@@ -240,15 +272,17 @@ private fun MeshNetworkGraph(
         animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "pulse"
     )
-    val sosPulse by infiniteTransition.animateFloat(
-        initialValue = 0.2f, targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "sosPulse"
+    
+    val scanningAlpha by animateFloatAsState(
+        targetValue = if (isScanning) 1f else 0f,
+        animationSpec = tween(500),
+        label = "scanningAlpha"
     )
-    val scanAngle by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(5000, easing = LinearEasing)),
-        label = "scan"
+    
+    val rippleProgress by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing)),
+        label = "ripple"
     )
     val dataFlowProgress by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -314,38 +348,53 @@ private fun MeshNetworkGraph(
         }
     }
 
+    val context = LocalContext.current
+    val interTypeface = remember {
+        androidx.core.content.res.ResourcesCompat.getFont(context, R.font.inter) ?: Typeface.DEFAULT
+    }
+
     // Text paints for node labels — created outside Canvas to avoid allocation on each frame
-    val namePaint = remember {
+    val namePaint = remember(interTypeface) {
         NativePaint().apply {
             color = android.graphics.Color.argb(220, 248, 250, 252)
             textSize = 34f
             textAlign = NativePaint.Align.CENTER
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            typeface = Typeface.create(interTypeface, Typeface.BOLD)
             isAntiAlias = true
         }
     }
-    val rolePaint = remember {
+    val rolePaint = remember(interTypeface) {
         NativePaint().apply {
             color = android.graphics.Color.argb(150, 148, 163, 184)
             textSize = 26f
             textAlign = NativePaint.Align.CENTER
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+            typeface = Typeface.create(interTypeface, Typeface.NORMAL)
             isAntiAlias = true
         }
     }
 
+
     val peerById = remember(peers) { peers.associateBy { it.id } }
 
-    Canvas(
-        modifier = modifier.pointerInput(peers, nodes.size) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(peers, nodes.size) {
             detectTapGestures { offset ->
                 val cx = size.width / 2f
                 val cy = size.height / 2f
-                val scale = minOf(size.width, size.height) / 2f
+                val scale = size.height / 2f
                 val hitRadius = 40.dp.toPx()
+                val nodePadding = 40.dp.toPx()
                 nodes.filter { it.id != "SELF" }.forEach { node ->
-                    val px = cx + node.x * scale
-                    val py = cy + node.y * scale
+                    val rawX = cx + node.x * scale
+                    val rawY = cy + node.y * scale
+                    val px = rawX.coerceIn(nodePadding, size.width - nodePadding)
+                    val py = rawY.coerceIn(nodePadding, size.height - nodePadding)
                     val dx = offset.x - px
                     val dy = offset.y - py
                     if (dx * dx + dy * dy <= hitRadius * hitRadius) {
@@ -357,14 +406,14 @@ private fun MeshNetworkGraph(
     ) {
         val cx = size.width / 2f
         val cy = size.height / 2f
-        val scale = minOf(size.width, size.height) / 2f
+        val scale = size.height / 2f
 
         // ── Tactical HUD Grid ────────────────────────────────────────────────
         val gridSize = 40.dp.toPx()
         for (i in 0..(size.width / gridSize).toInt()) {
             val x = i * gridSize
             drawLine(
-                color = AmberAccent.copy(alpha = 0.05f),
+                color = primaryColor.copy(alpha = 0.03f),
                 start = Offset(x, 0f),
                 end = Offset(x, size.height),
                 strokeWidth = 1f
@@ -373,142 +422,207 @@ private fun MeshNetworkGraph(
         for (i in 0..(size.height / gridSize).toInt()) {
             val y = i * gridSize
             drawLine(
-                color = AmberAccent.copy(alpha = 0.05f),
+                color = primaryColor.copy(alpha = 0.03f),
                 start = Offset(0f, y),
                 end = Offset(size.width, y),
                 strokeWidth = 1f
             )
         }
 
-        // ── Background radar rings ────────────────────────────────────────────
-        listOf(0.38f, 0.68f, 0.95f).forEach { r ->
+        // ── Environmental Layer (Volumetric Ripples) ──────────────────────────────
+        for (i in 0..3) {
+            val progress = (rippleProgress + (i / 4f)) % 1f
+            val radius = (scale * 0.75f) * progress
+            val alpha = (1f - progress).coerceIn(0f, 1f)
+            
+            val baseAlpha = if (networkState is NetworkState.Idle) 0.2f else 0.6f
+            
             drawCircle(
-                color = AmberAccent.copy(alpha = 0.06f),
-                radius = scale * r,
-                center = Offset(cx, cy),
-                style = Stroke(1.dp.toPx())
+                brush = Brush.radialGradient(
+                    0.6f to primaryColor.copy(alpha = 0f),
+                    0.9f to primaryColor.copy(alpha = alpha * baseAlpha),
+                    0.96f to primaryColor.copy(alpha = alpha * (baseAlpha + 0.3f)),
+                    1.0f to primaryColor.copy(alpha = 0f),
+                    center = Offset(cx, cy),
+                    radius = radius.coerceAtLeast(0.1f)
+                ),
+                radius = radius,
+                center = Offset(cx, cy)
             )
         }
 
-        // Rotating radar sweep
-        drawArc(
-            color = AmberAccent.copy(alpha = 0.25f),
-            startAngle = scanAngle,
-            sweepAngle = 55f,
-            useCenter = true,
-            size = Size(scale * 1.9f, scale * 1.9f),
-            topLeft = Offset(cx - scale * 0.95f, cy - scale * 0.95f)
-        )
-        drawArc(
-            color = AmberAccent.copy(alpha = 0.07f),
-            startAngle = scanAngle - 20f,
-            sweepAngle = 75f,
-            useCenter = true,
-            size = Size(scale * 1.9f, scale * 1.9f),
-            topLeft = Offset(cx - scale * 0.95f, cy - scale * 0.95f)
-        )
+
+        // Show scanning text if only self is present
+        if (nodes.size == 1) {
+            val showScanText = scanningAlpha > 0.5f
+            val titleText = if (showScanText) "MESH DISCOVERY ACTIVE" else "MESH STANDBY"
+            val subText = if (showScanText) "Scanning Channel 4..." else "Ready to connect"
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawText(titleText, cx, cy + 90.dp.toPx(), namePaint)
+                canvas.nativeCanvas.drawText(subText, cx, cy + 115.dp.toPx(), rolePaint)
+            }
+        }
 
         // Helper: screen coords
-        fun pos(node: GraphNode) = Offset(cx + node.x * scale, cy + node.y * scale)
+        fun pos(node: GraphNode): Offset {
+            val nodePadding = 40.dp.toPx()
+            val rawX = cx + node.x * scale
+            val rawY = cy + node.y * scale
+            return Offset(
+                x = rawX.coerceIn(nodePadding, size.width - nodePadding),
+                y = rawY.coerceIn(nodePadding, size.height - nodePadding)
+            )
+        }
 
         val selfNode = nodes.firstOrNull { it.id == "SELF" } ?: return@Canvas
         val selfPos = pos(selfNode)
 
-        // ── Edges ─────────────────────────────────────────────────────────────
+        // ── Organic Edges ─────────────────────────────────────────────────────────────
         nodes.filter { it.id != "SELF" }.forEach { peer ->
             val peerPos = pos(peer)
             val isDirect = peer.hopCount == 0 && peer.isConnected
 
+            val midX = (selfPos.x + peerPos.x) / 2
+            val midY = (selfPos.y + peerPos.y) / 2
+            val dx = peerPos.x - selfPos.x
+            val dy = peerPos.y - selfPos.y
+            val dist = sqrt(dx*dx + dy*dy).coerceAtLeast(0.1f)
+            val perpX = -dy / dist * (dist * 0.15f)
+            val perpY = dx / dist * (dist * 0.15f)
+            val cpX = midX + perpX
+            val cpY = midY + perpY
+
+            val path = Path().apply {
+                moveTo(selfPos.x, selfPos.y)
+                quadraticBezierTo(cpX, cpY, peerPos.x, peerPos.y)
+            }
+
             if (isDirect) {
-                // Direct peer — solid amber line
-                drawLine(
-                    color = AmberAccent.copy(alpha = 0.45f),
-                    start = selfPos,
-                    end = peerPos,
-                    strokeWidth = 1.8f.dp.toPx(),
-                    cap = StrokeCap.Round
+                // Direct peer — flowing glowing path
+                drawPath(
+                    path = path,
+                    color = primaryColor.copy(alpha = 0.4f),
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                 )
-                // Animated data-flow dot travelling along the edge
-                val dotX = selfPos.x + (peerPos.x - selfPos.x) * dataFlowProgress
-                val dotY = selfPos.y + (peerPos.y - selfPos.y) * dataFlowProgress
-                drawCircle(color = AmberAccent, radius = 3.5f.dp.toPx(), center = Offset(dotX, dotY))
-                val dotX2 = selfPos.x + (peerPos.x - selfPos.x) * ((dataFlowProgress + 0.5f) % 1f)
-                val dotY2 = selfPos.y + (peerPos.y - selfPos.y) * ((dataFlowProgress + 0.5f) % 1f)
-                drawCircle(color = AmberAccent.copy(alpha = 0.5f), radius = 2.5f.dp.toPx(), center = Offset(dotX2, dotY2))
+                
+                // Animated data-flow particle along Bezier
+                val t = dataFlowProgress
+                val invT = 1f - t
+                val particleX = invT * invT * selfPos.x + 2 * invT * t * cpX + t * t * peerPos.x
+                val particleY = invT * invT * selfPos.y + 2 * invT * t * cpY + t * t * peerPos.y
+                
+                drawCircle(color = Color.White, radius = 4f.dp.toPx(), center = Offset(particleX, particleY))
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.6f), primaryColor.copy(alpha=0f)),
+                        center = Offset(particleX, particleY),
+                        radius = 14.dp.toPx()
+                    ),
+                    radius = 14.dp.toPx(),
+                    center = Offset(particleX, particleY)
+                )
             } else {
-                // Relayed peer — dashed blue line via nearest direct peer
+                // Relayed peer
                 val relay = nodes.filter { it.id != "SELF" && it.hopCount == 0 }.minByOrNull { n ->
                     val np = pos(n)
                     (np.x - peerPos.x).pow(2) + (np.y - peerPos.y).pow(2)
                 } ?: selfNode
                 val relayPos = pos(relay)
-                val segments = 8
-                for (k in 0 until segments step 2) {
-                    val t0 = k / segments.toFloat()
-                    val t1 = (k + 1) / segments.toFloat()
-                    drawLine(
-                        color = DisasterBlue.copy(alpha = 0.4f),
-                        start = Offset(relayPos.x + (peerPos.x - relayPos.x) * t0, relayPos.y + (peerPos.y - relayPos.y) * t0),
-                        end   = Offset(relayPos.x + (peerPos.x - relayPos.x) * t1, relayPos.y + (peerPos.y - relayPos.y) * t1),
-                        strokeWidth = 1.2f.dp.toPx()
-                    )
+                
+                val rmX = (relayPos.x + peerPos.x) / 2
+                val rmY = (relayPos.y + peerPos.y) / 2
+                val rdx = peerPos.x - relayPos.x
+                val rdy = peerPos.y - relayPos.y
+                val rdist = sqrt(rdx*rdx + rdy*rdy).coerceAtLeast(0.1f)
+                val rcpX = rmX - rdy / rdist * (rdist * 0.1f)
+                val rcpY = rmY + rdx / rdist * (rdist * 0.1f)
+                
+                val relayPath = Path().apply {
+                    moveTo(relayPos.x, relayPos.y)
+                    quadraticBezierTo(rcpX, rcpY, peerPos.x, peerPos.y)
                 }
+                
+                drawPath(
+                    path = relayPath,
+                    color = secondaryColor.copy(alpha = 0.25f),
+                    style = Stroke(width = 1.5f.dp.toPx(), cap = StrokeCap.Round)
+                )
             }
         }
 
-        // ── SOS pulse overlay ─────────────────────────────────────────────────
-        if (hasSosActive) {
-            drawCircle(
-                color = DangerRed.copy(alpha = sosPulse * 0.35f),
-                radius = scale * 0.22f * (0.85f + sosPulse * 0.3f),
-                center = selfPos
-            )
-            drawCircle(
-                color = DangerRed.copy(alpha = 0.6f),
-                radius = scale * 0.22f,
-                center = selfPos,
-                style = Stroke(2.dp.toPx())
-            )
-        }
 
-        // ── Nodes ─────────────────────────────────────────────────────────────
+
+        // ── Nodes (Volumetric Glowing Orbs) ──────────────────────────────────────────
         nodes.forEach { node ->
             val p = pos(node)
+
             when {
                 node.id == "SELF" -> {
-                    // Outer pulse ring
-                    drawCircle(color = AmberAccent.copy(alpha = 0.12f * pulse), radius = 28.dp.toPx() * pulse, center = p)
-                    // Mid glow
-                    drawCircle(color = AmberAccent.copy(alpha = 0.3f), radius = 20.dp.toPx(), center = p)
-                    // Core
-                    drawCircle(color = AmberAccent, radius = 13.dp.toPx(), center = p)
-                    drawCircle(color = NavyBackground, radius = 6.dp.toPx(), center = p)
+                    // Outer volumetric pulse ring
+                    if (scanningAlpha > 0f) {
+                        val pR = 40.dp.toPx() * pulse
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(primaryColor.copy(alpha = 0.4f * pulse * scanningAlpha), primaryColor.copy(alpha = 0f)),
+                                center = p,
+                                radius = pR.coerceAtLeast(0.1f)
+                            ),
+                            radius = pR,
+                            center = p
+                        )
+                    }
+                    // Core Glow
+                    drawCircle(color = primaryColor, radius = 16.dp.toPx(), center = p)
+                    drawCircle(color = Color.White.copy(alpha = 0.9f), radius = 6.dp.toPx(), center = p)
                 }
                 node.isAuthority -> {
-                    drawCircle(color = NeonMint.copy(alpha = 0.18f), radius = 22.dp.toPx(), center = p)
-                    drawCircle(color = NeonMint, radius = 13.dp.toPx(), center = p)
-                    drawCircle(color = Color.White.copy(alpha = 0.6f), radius = 13.dp.toPx(), center = p, style = Stroke(1.5f.dp.toPx()))
-                    // Shield cross mark
-                    drawLine(Color.White.copy(alpha = 0.9f), Offset(p.x, p.y - 6.dp.toPx()), Offset(p.x, p.y + 6.dp.toPx()), 1.5f.dp.toPx())
-                    drawLine(Color.White.copy(alpha = 0.9f), Offset(p.x - 5.dp.toPx(), p.y), Offset(p.x + 5.dp.toPx(), p.y), 1.5f.dp.toPx())
+                    // Hexagon with inner glow
+                    val radius = 16.dp.toPx()
+                    val path = Path().apply {
+                        for (i in 0 until 6) {
+                            val angle_deg = 60 * i - 30
+                            val angle_rad = Math.PI / 180 * angle_deg
+                            val x = p.x + radius * cos(angle_rad).toFloat()
+                            val y = p.y + radius * sin(angle_rad).toFloat()
+                            if (i == 0) moveTo(x, y) else lineTo(x, y)
+                        }
+                        close()
+                    }
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(secondaryColor.copy(alpha = 0.6f), secondaryColor.copy(alpha = 0f)),
+                            center = p, radius = radius * 2.5f
+                        ),
+                        radius = radius * 2.5f, center = p
+                    )
+                    drawPath(path = path, color = secondaryColor)
+                    drawPath(path = path, color = Color.White, style = Stroke(1.5f.dp.toPx()))
                 }
                 !node.isConnected -> {
-                    drawCircle(color = DisasterBlue.copy(alpha = 0.12f), radius = 20.dp.toPx(), center = p)
-                    drawCircle(color = SurfaceDark, radius = 13.dp.toPx(), center = p)
-                    drawCircle(color = DisasterBlue.copy(alpha = 0.75f), radius = 13.dp.toPx(), center = p, style = Stroke(1.5f.dp.toPx()))
-                    drawCircle(color = DisasterBlue.copy(alpha = 0.9f), radius = 5.dp.toPx(), center = p)
+                    drawCircle(color = Color.DarkGray, radius = 13.dp.toPx(), center = p)
                 }
                 node.hopCount > 0 -> {
-                    // Relayed (multi-hop) node
-                    drawCircle(color = DisasterBlue.copy(alpha = 0.15f), radius = 18.dp.toPx(), center = p)
-                    drawCircle(color = DisasterBlue.copy(alpha = 0.7f), radius = 10.dp.toPx(), center = p)
-                    drawCircle(color = DisasterBlue, radius = 10.dp.toPx(), center = p, style = Stroke(1.dp.toPx()))
+                    // Relayed node - Cyan glow
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(secondaryColor.copy(alpha = 0.5f), secondaryColor.copy(alpha = 0f)),
+                            center = p, radius = 20.dp.toPx()
+                        ),
+                        radius = 20.dp.toPx(), center = p
+                    )
+                    drawCircle(color = secondaryColor.copy(alpha = 0.8f), radius = 11.dp.toPx(), center = p)
                 }
                 else -> {
-                    // Direct peer
-                    drawCircle(color = SurfaceDark, radius = 16.dp.toPx(), center = p)
-                    drawCircle(color = AmberAccent.copy(alpha = 0.7f), radius = 9.dp.toPx(), center = p)
-                    drawCircle(color = AmberAccent, radius = 9.dp.toPx(), center = p, style = Stroke(1.dp.toPx()))
+                    // Direct peer - Blue glow
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(primaryColor.copy(alpha = 0.5f), primaryColor.copy(alpha = 0f)),
+                            center = p, radius = 24.dp.toPx()
+                        ),
+                        radius = 24.dp.toPx(), center = p
+                    )
+                    drawCircle(color = primaryColor, radius = 12.dp.toPx(), center = p)
+                    drawCircle(color = Color.White.copy(alpha=0.6f), radius = 4.dp.toPx(), center = p)
                 }
             }
         }
@@ -525,12 +639,17 @@ private fun MeshNetworkGraph(
                 val labelY = p.y + nodeRadius + 14.dp.toPx()
                 val name = if (node.id == "SELF") "YOU" else node.name.take(11)
                 canvas.nativeCanvas.drawText(name, p.x, labelY, namePaint)
-                if (node.id != "SELF" && node.role.isNotBlank() && node.role !in listOf("DISCOVERED", "AVAILABLE", "CONNECTED")) {
-                    canvas.nativeCanvas.drawText(node.role, p.x, labelY + 15.dp.toPx(), rolePaint)
+                
+                // Add tactical telemetry stats
+                if (node.id != "SELF") {
+                    val mockSnr = "${12 - (node.hopCount * 4)}dB"
+                    val mockBat = "${85 - (node.hopCount * 10)}%"
+                    canvas.nativeCanvas.drawText("SNR: $mockSnr | Bat: $mockBat", p.x, labelY + 18.dp.toPx(), rolePaint)
                 }
             }
         }
     }
+}
 }
 
 // ─── Stats Panel ──────────────────────────────────────────────────────────────
@@ -538,32 +657,79 @@ private fun MeshNetworkGraph(
 @Composable
 private fun NetworkStatsPanel(
     nodeCount: Int,
-    connectionState: String,
-    sosCount: Int,
-    relayedCount: Int,
+    hasWeakSignal: Boolean,
+    networkState: NetworkState,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = AmberAccent.copy(alpha = 0.2f), spotColor = SurfaceDark)
-            .clip(RoundedCornerShape(24.dp))
-            .background(GlassSurface)
-            .border(1.dp, SurfaceDark, RoundedCornerShape(24.dp))
-            .padding(vertical = 16.dp, horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+    CarakaGlassSurface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
     ) {
-        StatChip(label = "Nodes",   value = "$nodeCount",          color = AmberAccent)
-        StatChip(label = "Range",   value = "~${nodeCount * 100}m", color = NeonMint)
-        StatChip(label = "SOS",     value = "$sosCount",           color = DangerRed)
-        StatChip(label = "Relayed", value = "$relayedCount",       color = DisasterBlue)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 18.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val peerCount = maxOf(0, nodeCount - 1)
+            
+            val healthValue: String
+            val healthColor: Color
+            when {
+                peerCount == 0 -> {
+                    healthValue = "NO PEER"
+                    healthColor = Color.Gray
+                }
+                hasWeakSignal -> {
+                    healthValue = "LEMAH"
+                    healthColor = Color(0xFF5AC8FA)
+                }
+                else -> {
+                    healthValue = "BAIK"
+                    healthColor = LocalStatusColors.current.online
+                }
+            }
+
+            StatChip(label = "PEERS",     value = "$peerCount", color = MaterialTheme.colorScheme.primary)
+            Divider(Modifier.width(1.dp).height(32.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
+            StatChip(label = "HEALTH",    value = healthValue, color = healthColor)
+            Divider(Modifier.width(1.dp).height(32.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
+            StatChip(label = "CHANNEL",   value = "CH-04", color = MaterialTheme.colorScheme.primary)
+            Divider(Modifier.width(1.dp).height(32.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
+            
+            val isActivityActive = networkState.activity != NetworkActivity.IDLE
+            StatChip(label = "ACTIVITY",  value = networkState.activity.name, color = if(isActivityActive) LocalStatusColors.current.hybrid else Color.Gray)
+        }
     }
 }
 
 @Composable
 private fun StatChip(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = color, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-        Text(label, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        Text(
+            text = value, 
+            fontFamily = SpaceGroteskFamily, 
+            color = color, 
+            fontWeight = FontWeight.Bold, 
+            fontSize = 20.sp,
+            style = LocalTextStyle.current.copy(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = color.copy(alpha = 0.4f),
+                    blurRadius = 12f
+                )
+            )
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label, 
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), 
+            fontSize = 10.sp, 
+            fontWeight = FontWeight.Bold, 
+            letterSpacing = 1.2.sp
+        )
     }
 }

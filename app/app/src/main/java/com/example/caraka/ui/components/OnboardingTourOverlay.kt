@@ -42,7 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
+import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.NavyBackground
 import com.example.caraka.ui.theme.SurfaceDark
@@ -89,10 +89,10 @@ fun OnboardingTourOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp)
-                    .shadow(24.dp, RoundedCornerShape(24.dp), ambientColor = AmberAccent, spotColor = SurfaceDark)
+                    .shadow(24.dp, RoundedCornerShape(24.dp), ambientColor = CyanAccent, spotColor = SurfaceDark)
                     .clip(RoundedCornerShape(24.dp))
                     .background(GlassSurface)
-                    .border(1.dp, AmberAccent.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                    .border(1.dp, CyanAccent.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -100,11 +100,11 @@ fun OnboardingTourOverlay(
                     modifier = Modifier
                         .size(60.dp)
                         .clip(CircleShape)
-                        .background(AmberAccent.copy(alpha = 0.15f))
-                        .border(2.dp, AmberAccent.copy(alpha = 0.5f), CircleShape),
+                        .background(CyanAccent.copy(alpha = 0.15f))
+                        .border(2.dp, CyanAccent.copy(alpha = 0.5f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Lightbulb, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.Lightbulb, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.height(16.dp))
 
@@ -115,7 +115,7 @@ fun OnboardingTourOverlay(
                             modifier = Modifier
                                 .size(if (i == stepIndex) 10.dp else 6.dp)
                                 .clip(CircleShape)
-                                .background(if (i == stepIndex) AmberAccent else TextSecondary.copy(alpha = 0.4f))
+                                .background(if (i == stepIndex) CyanAccent else TextSecondary.copy(alpha = 0.4f))
                         )
                     }
                 }
@@ -149,7 +149,7 @@ fun OnboardingTourOverlay(
                             if (stepIndex < tourSteps.lastIndex) stepIndex++
                             else onDismiss()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = AmberAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Text(

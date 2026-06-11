@@ -13,17 +13,16 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -34,11 +33,6 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.caraka.R
-import com.example.caraka.ui.theme.AmberAccent
-import com.example.caraka.ui.theme.DangerRed
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextSecondary
 
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
     object Home : Screen("home", R.string.nav_home, Icons.Default.Home)
@@ -70,18 +64,20 @@ fun BottomNavBar(
     sosBadgeCount: Int = 0,
     messagesBadgeCount: Int = 0
 ) {
-    Surface(
-        modifier = Modifier
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .shadow(16.dp, RoundedCornerShape(28.dp), ambientColor = AmberAccent, spotColor = SurfaceDark),
-        shape = RoundedCornerShape(28.dp),
-        color = GlassSurface
+    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    
+    // Wrap in a surface to apply tonal elevation and a border line at the top
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp, // MD3 tonal elevation
+        shadowElevation = 16.dp,
+        modifier = Modifier.padding(bottom = 12.dp, start = 12.dp, end = 12.dp),
+        shape = RoundedCornerShape(24.dp)
     ) {
         NavigationBar(
-            containerColor = Color.Transparent,
-            contentColor = TextSecondary,
-            tonalElevation = 0.dp,
-            modifier = Modifier.height(68.dp)
+            containerColor = com.example.caraka.ui.theme.CanvasDark,
+            contentColor = unselectedColor,
+            tonalElevation = 0.dp
         ) {
             val navBackStackEntry = navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry.value?.destination?.route
@@ -92,25 +88,27 @@ fun BottomNavBar(
                     else -> currentRoute == screen.route
                 }
                 val title = stringResource(screen.titleRes)
-                val accent = if (screen == Screen.Sos) DangerRed else AmberAccent
+                val isSos = screen == Screen.Sos
+                val activeColor = if (isSos) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                
                 NavigationBarItem(
                     icon = {
                         when {
                             screen == Screen.Sos && sosBadgeCount > 0 -> {
                                 BadgedBox(
                                     badge = {
-                                        Badge(containerColor = DangerRed, contentColor = Color.White) {
+                                        Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White) {
                                             Text("$sosBadgeCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 ) {
-                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(22.dp))
+                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
                                 }
                             }
                             screen == Screen.Messages && messagesBadgeCount > 0 -> {
                                 BadgedBox(
                                     badge = {
-                                        Badge(containerColor = AmberAccent, contentColor = Color.Black) {
+                                        Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
                                             Text(
                                                 if (messagesBadgeCount > 99) "99+" else "$messagesBadgeCount",
                                                 fontSize = 9.sp,
@@ -119,20 +117,20 @@ fun BottomNavBar(
                                         }
                                     }
                                 ) {
-                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(22.dp))
+                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
                                 }
                             }
-                            else -> Icon(screen.icon, contentDescription = title, modifier = Modifier.size(22.dp))
+                            else -> Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
                         }
                     },
                     label = {
                         Text(
                             title,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
                             softWrap = false,
-                            overflow = TextOverflow.Clip
+                            overflow = TextOverflow.Visible
                         )
                     },
                     alwaysShowLabel = true,
@@ -148,11 +146,11 @@ fun BottomNavBar(
                     },
                     modifier = Modifier.semantics { contentDescription = title },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = accent,
-                        unselectedIconColor = TextSecondary,
-                        selectedTextColor = accent,
-                        unselectedTextColor = TextSecondary,
-                        indicatorColor = accent.copy(alpha = 0.16f)
+                        selectedIconColor = activeColor,
+                        unselectedIconColor = unselectedColor,
+                        selectedTextColor = activeColor,
+                        unselectedTextColor = unselectedColor,
+                        indicatorColor = activeColor.copy(alpha = 0.16f)
                     )
                 )
             }

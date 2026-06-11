@@ -120,6 +120,13 @@ class MainViewModel(
     /** 🟢 ONLINE / 🟡 HYBRID / 🔴 MESH_ONLY */
     val connectivityStatus: StateFlow<ConnectivityStatus> = connectivityMonitor.status
 
+    private val _attackSimActive = MutableStateFlow(false)
+    val attackSimActive: StateFlow<Boolean> = _attackSimActive
+
+    fun toggleAttackSim() {
+        _attackSimActive.value = !_attackSimActive.value
+    }
+
     // ========== STATE FLOWS (Stats) ==========
 
     /** Messages relayed for other nodes (multi-hop stat). */
@@ -184,6 +191,21 @@ class MainViewModel(
             transport.updateDeviceName(_displayName.value)
             transport.startFallbackDiscovery()
             _hasIdentity.value = true
+        }
+    }
+
+    fun updateRole(newRole: String) {
+        viewModelScope.launch {
+            if (newRole != IdentityManager.ROLE_CIVILIAN) {
+                identityManager.loadAuthorityIdentity(newRole)
+            } else {
+                // If dropping back to civilian, maybe keep current keys or generate new ones?
+                // For demo purposes, we can just change the role string or recreate identity.
+                // Recreating identity for civilian ensures they drop authority keys.
+                identityManager.createIdentity(_displayName.value, newRole)
+            }
+            _myRole.value = identityManager.getRole()
+            _myPeerId.value = identityManager.getPeerId()
         }
     }
 

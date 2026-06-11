@@ -14,28 +14,28 @@ import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 
 private val DefaultColorScheme = darkColorScheme(
-    primary = AmberAccent,
-    secondary = NeonMint,
-    tertiary = DisasterBlue,
-    background = NavyBackground,
-    surface = SurfaceDark,
-    error = DangerRed,
-    onPrimary = NavyBackground,
-    onSecondary = NavyBackground,
-    onTertiary = NavyBackground,
+    primary = TealPrimary,
+    secondary = CyanSecondary,
+    tertiary = SkyInfo,
+    background = CanvasDark,
+    surface = SurfaceLow,
+    error = CoralError,
+    onPrimary = CanvasDark,
+    onSecondary = CanvasDark,
+    onTertiary = CanvasDark,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
     onError = TextPrimary
 )
 
-// WCAG AAA boost — pure white-on-pure-navy and stronger amber for visually impaired users.
+// WCAG AAA boost — pure white-on-pure-navy and stronger teal/amber for visually impaired users.
 private val HighContrastScheme = DefaultColorScheme.copy(
     background = androidx.compose.ui.graphics.Color(0xFF000814),
     surface    = androidx.compose.ui.graphics.Color(0xFF0B1A33),
     onBackground = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
     onSurface    = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
-    primary    = androidx.compose.ui.graphics.Color(0xFFFFC857), // brighter amber
-    secondary  = androidx.compose.ui.graphics.Color(0xFF34E89E)  // brighter mint
+    primary    = androidx.compose.ui.graphics.Color(0xFF4DD4E8), // brighter teal
+    secondary  = androidx.compose.ui.graphics.Color(0xFF5AC8FA)  // brighter cyan
 )
 
 /**
@@ -67,7 +67,22 @@ fun CarakaTheme(
         Density(density = baseDensity.density, fontScale = baseDensity.fontScale * 1.25f)
     } else baseDensity
 
-    CompositionLocalProvider(LocalDensity provides density) {
+    val statusColors = StatusColors(
+        online = EmeraldSuccess,
+        hybrid = CyanSecondary,
+        meshOnly = CoralError,
+        relay = SkyInfo,
+        sos = CoralError,
+        authority = EmeraldSuccess,
+        direct = TealPrimary
+    )
+
+    CompositionLocalProvider(
+        LocalDensity provides density,
+        LocalStatusColors provides statusColors,
+        LocalCarakaShapes provides CarakaShapes(),
+        LocalCarakaDimens provides CarakaDimens()
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

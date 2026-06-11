@@ -15,12 +15,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.caraka.ui.theme.DangerRed
-import com.example.caraka.ui.theme.DisasterBlue
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.NavyBackground
+import com.example.caraka.ui.components.CarakaCard
+import com.example.caraka.ui.components.CarakaGlassSurface
+import com.example.caraka.ui.theme.CoralError
+import com.example.caraka.ui.theme.TealPrimary
+import com.example.caraka.ui.theme.CanvasDark
 import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.TextMuted
+import com.example.caraka.ui.theme.SkyInfo
 
 @Composable
 fun ConnectionRequestDialog(
@@ -39,11 +41,10 @@ fun ConnectionRequestDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        Surface(
+        CarakaCard(
             modifier = Modifier.fillMaxWidth(0.9f),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp
+            hasSubtleBorder = true
         ) {
             Column(
                 modifier = Modifier
@@ -60,10 +61,9 @@ fun ConnectionRequestDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Surface(
+                CarakaGlassSurface(
                     modifier = Modifier.size(64.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = GlassSurface
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
@@ -71,7 +71,7 @@ fun ConnectionRequestDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(12.dp),
-                        tint = DisasterBlue
+                        tint = TealPrimary
                     )
                 }
 
@@ -88,7 +88,7 @@ fun ConnectionRequestDialog(
 
                 Row(
                     modifier = Modifier
-                        .background(NavyBackground, RoundedCornerShape(8.dp))
+                        .background(CanvasDark, RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -97,13 +97,13 @@ fun ConnectionRequestDialog(
                         imageVector = Icons.Default.NetworkWifi,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = TextSecondary
+                        tint = TextMuted
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = peerRole,
                         fontSize = 13.sp,
-                        color = TextSecondary
+                        color = TextMuted
                     )
                 }
 
@@ -116,7 +116,7 @@ fun ConnectionRequestDialog(
                 Text(
                     text = "Terima permintaan koneksi dari perangkat ini?",
                     fontSize = 14.sp,
-                    color = TextSecondary,
+                    color = TextMuted,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
 
@@ -135,7 +135,7 @@ fun ConnectionRequestDialog(
                             onDismiss()
                         },
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = DangerRed
+                            contentColor = CoralError
                         )
                     ) {
                         Text("TOLAK", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
@@ -150,8 +150,8 @@ fun ConnectionRequestDialog(
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DisasterBlue,
-                            contentColor = TextPrimary
+                            containerColor = TealPrimary,
+                            contentColor = CanvasDark
                         )
                     ) {
                         Text("TERIMA", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)

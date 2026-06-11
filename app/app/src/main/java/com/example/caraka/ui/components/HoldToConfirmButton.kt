@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,10 +39,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.caraka.ui.theme.DangerRed
-import com.example.caraka.ui.theme.NeonMint
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.LocalStatusColors
 import com.example.caraka.ui.util.rememberHaptics
 import kotlinx.coroutines.delay
 
@@ -99,11 +97,12 @@ fun HoldToConfirmButton(
         }
     }
 
+    val onlineColor = LocalStatusColors.current.online
     val containerColor = when {
-        completed -> NeonMint
-        !enabled  -> SurfaceDark
-        pressed   -> DangerRed
-        else      -> DangerRed.copy(alpha = 0.9f)
+        completed -> onlineColor
+        !enabled  -> com.example.caraka.ui.theme.SurfaceMid
+        pressed   -> MaterialTheme.colorScheme.error
+        else      -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
     }
 
     val state = when {
@@ -117,10 +116,10 @@ fun HoldToConfirmButton(
             .fillMaxWidth()
             .height(64.dp)
             .shadow(
-                elevation = if (enabled) 16.dp else 0.dp,
+                elevation = if (enabled) 4.dp else 0.dp,
                 shape = RoundedCornerShape(24.dp),
-                ambientColor = if (completed) NeonMint else DangerRed,
-                spotColor = if (completed) NeonMint else DangerRed
+                ambientColor = if (completed) onlineColor else MaterialTheme.colorScheme.error,
+                spotColor = if (completed) onlineColor else MaterialTheme.colorScheme.error
             )
             .clip(RoundedCornerShape(24.dp))
             .background(containerColor)
@@ -170,7 +169,7 @@ fun HoldToConfirmButton(
         ) {
             Text(
                 if (pressed) holdingLabel else "Hold to send",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 fontSize = 11.sp
             )
         }

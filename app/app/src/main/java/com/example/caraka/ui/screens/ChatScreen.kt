@@ -161,9 +161,9 @@ fun ChatScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = AmberAccent, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Lock, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.chat_e2e_banner), color = AmberAccent, fontSize = 12.sp)
+                Text(stringResource(R.string.chat_e2e_banner), color = CyanAccent, fontSize = 12.sp)
             }
 
             LazyColumn(
@@ -171,8 +171,7 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(
                     count = messages.size,
@@ -182,8 +181,17 @@ fun ChatScreen(
                     val prevMsg = messages.getOrNull(index - 1)
                     val showDateSep = shouldShowDateSeparator(msg, prevMsg)
 
+                    // Dynamic vertical spacing
+                    if (index > 0) {
+                        val spacing = if (showDateSep) 24.dp
+                        else if (prevMsg?.isIncoming == msg.isIncoming && prevMsg?.senderName == msg.senderName) 4.dp
+                        else 12.dp
+                        Spacer(modifier = Modifier.height(spacing))
+                    }
+
                     if (showDateSep) {
                         DateSeparator(timestamp = msg.timestamp)
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     val timeFormatted = remember(msg.timestamp) {
@@ -217,7 +225,7 @@ fun ChatScreen(
     if (showFlagDialog && flagTargetId != null) {
         AlertDialog(
             onDismissRequest = { showFlagDialog = false },
-            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = WarningYellow) },
+            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = WarningCyan) },
             title = { Text(stringResource(R.string.chat_flag_title), color = TextPrimary) },
             text = { Text(stringResource(R.string.chat_flag_desc), color = TextSecondary) },
             confirmButton = {
@@ -228,7 +236,7 @@ fun ChatScreen(
                         showFlagDialog = false
                         flagTargetId = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = WarningYellow)
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningCyan)
                 ) { Text(stringResource(R.string.chat_flag_confirm), color = Color.Black, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
@@ -300,21 +308,22 @@ fun IncomingMessageBubble(
             if (isAuthority) {
                 VerifiedBadge(size = 20.dp)
             } else {
-                Icon(Icons.Default.Person, contentDescription = null, tint = AmberAccent)
+                Icon(Icons.Default.Person, contentDescription = null, tint = CyanAccent)
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
-                    .background(if (isFlagged) WarningYellow.copy(alpha = 0.08f) else GlassSurface)
-                    .border(1.dp, SurfaceDark, RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
+                    .widthIn(max = 280.dp)
+                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
+                    .background(if (isFlagged) WarningCyan.copy(alpha = 0.08f) else GlassSurface)
+                    .border(1.dp, SurfaceDark, RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
                     .combinedClickable(
                         onClick = {},
                         onLongClick = { onLongPress?.invoke() }
                     )
-                    .padding(12.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -325,10 +334,10 @@ fun IncomingMessageBubble(
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(message, color = TextPrimary, fontSize = 16.sp)
+                    Text(message, color = TextPrimary, fontSize = 16.sp, lineHeight = 24.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(time, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text(time, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
                         if (!isAuthority) {
                             Icon(
                                 Icons.Default.Flag,
@@ -345,15 +354,15 @@ fun IncomingMessageBubble(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(WarningYellow.copy(alpha = 0.2f))
+                        .background(WarningCyan.copy(alpha = 0.2f))
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(12.dp))
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = WarningCyan, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         String.format(stringResource(R.string.chat_flagged_by), flagCount),
-                        color = WarningYellow,
+                        color = WarningCyan,
                         fontSize = 12.sp
                     )
                 }
@@ -372,17 +381,18 @@ fun OutgoingMessageBubble(
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Box(
             modifier = Modifier
-                .shadow(4.dp, RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp), ambientColor = OutgoingChat, spotColor = OutgoingChat)
-                .clip(RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
+                .widthIn(max = 280.dp)
+                .shadow(4.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp), ambientColor = OutgoingChat, spotColor = OutgoingChat)
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp))
                 .background(OutgoingChat.copy(alpha = 0.9f))
-                .border(1.dp, OutgoingChat, RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
-                .padding(12.dp)
+                .border(1.dp, OutgoingChat, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp))
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Column {
-                Text(message, color = TextPrimary, fontSize = 16.sp)
+                Text(message, color = TextPrimary, fontSize = 16.sp, lineHeight = 24.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.End)) {
-                    Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 11.sp)
                     Spacer(modifier = Modifier.width(6.dp))
                     MessageStatusIcon(status = deliveryStatus)
                 }
