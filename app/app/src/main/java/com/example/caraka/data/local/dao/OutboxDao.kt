@@ -42,6 +42,21 @@ interface OutboxDao {
     @Query("SELECT COALESCE(SUM(LENGTH(payloadJson)), 0) FROM outbox")
     suspend fun totalPayloadBytes(): Long
 
+    /**
+     * Eviction candidates ordered worst-first for quota enforcement (EU-2.3 / D7):
+     * LOWEST priority first, then OLDEST, then MOST-replicated. The first rows are the safest to drop.
+     */
+    @Query(
+        """
+        SELECT * FROM outbox ORDER BY
+          CASE priority WHEN 'EMERGENCY' THEN 3 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 2 ELSE 1 END ASC,
+          createdAt ASC,
+          replicaCount DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun evictionCandidates(limit: Int): List<OutboxEntity>
+
     /** Remove units past their coarse wall-clock expiry bound. */
     @Query("DELETE FROM outbox WHERE ttlExpiry > 0 AND ttlExpiry < :now")
     suspend fun deleteExpired(now: Long)

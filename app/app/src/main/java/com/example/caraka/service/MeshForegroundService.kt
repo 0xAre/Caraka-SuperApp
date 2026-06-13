@@ -16,6 +16,14 @@ import androidx.core.app.NotificationCompat
 import com.example.caraka.CarakaApp
 import com.example.caraka.MainActivity
 import com.example.caraka.R
+import com.example.caraka.network.MeshPolicy
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Foreground service yang menjaga mesh tetap hidup saat layar mati, app di-background,
@@ -50,6 +58,11 @@ class MeshForegroundService : Service() {
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
+    // EU-2.1: periodic DTN queue-processor. A timer-based sweep (NOT a transport hook, per D9/D10)
+    // that drives outbox retries + carry delivery + expiry. Lives only while the service runs.
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var queueJob: Job? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -77,9 +90,12 @@ class MeshForegroundService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Gagal start mesh transport", e)
         }
+        startQueueProcessor()
     }
 
     private fun stopMesh() {
+        queueJob?.cancel()
+        queueJob = null
         try {
             (application as CarakaApp).transport.stopListening()
             Log.d(TAG, "Mesh transport dihentikan")
@@ -87,6 +103,29 @@ class MeshForegroundService : Service() {
             Log.e(TAG, "Gagal stop mesh transport", e)
         }
         releaseLocks()
+    }
+
+    /**
+     * EU-2.1: timer-based DTN queue-processor. Periodically sweeps the outbox — resending un-ACKed
+     * unicast with bounded backoff, carrying messages for verified contacts, and evicting expired/
+     * over-quota units (the actual policy lives in [MeshRepository.retryDueMessages], EU-1.4/2.2/2.3).
+     * This is the periodic driver mandated by D10; it is idempotent and safe to run alongside the
+     * lightweight on-send trigger from Phase 1.
+     */
+    private fun startQueueProcessor() {
+        if (queueJob?.isActive == true) return
+        val repository = (application as CarakaApp).repository
+        queueJob = serviceScope.launch {
+            while (isActive) {
+                delay(MeshPolicy.QUEUE_PROCESSOR_TICK_MS)
+                try {
+                    repository.retryDueMessages()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Queue-processor tick gagal", e)
+                }
+            }
+        }
+        Log.d(TAG, "DTN queue-processor dimulai (tiap ${MeshPolicy.QUEUE_PROCESSOR_TICK_MS}ms)")
     }
 
     private fun acquireLocks() {

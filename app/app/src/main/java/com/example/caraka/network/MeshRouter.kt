@@ -31,6 +31,20 @@ class MeshRouter(
     private var heartbeatJob: Job? = null
     private val gson = Gson()
 
+    // EU-2.4 companion: per-message anti-replay so the new no-route broadcast fallback cannot loop
+    // or storm. The Aware inbound path has no dispatcher-level dedup (unlike the Wi-Fi Direct path),
+    // so the router must dedup by message id itself. LRU-bounded. Heartbeats carry unique ids each
+    // tick, so they are never wrongly suppressed.
+    private val seenIds: MutableSet<String> =
+        java.util.Collections.synchronizedSet(
+            object : LinkedHashSet<String>() {
+                override fun add(element: String): Boolean {
+                    if (size >= 2_000) iterator().let { it.next(); it.remove() }
+                    return super.add(element)
+                }
+            }
+        )
+
     @Volatile private var myId: String = ""
     @Volatile private var myName: String = ""
     @Volatile private var myRole: String = ""
@@ -115,6 +129,13 @@ class MeshRouter(
                 return false // Jangan laporkan ke UI
             }
 
+            // EU-2.4 companion: anti-replay gate. Drop any non-heartbeat message we have already
+            // seen so neither normal forwarding nor the new no-route broadcast fallback can loop.
+            // (Route-learning above already ran, which is harmless for duplicates.)
+            if (!seenIds.add(msg.id)) {
+                return false
+            }
+
             // 2. Cek tujuan pesan
             if (msg.recipientId == myId || msg.recipientId == "BROADCAST" || msg.recipientId.isBlank()) {
                 return true // Pesan untuk kita
@@ -132,7 +153,14 @@ class MeshRouter(
                 Log.d(TAG, "Meneruskan ${forwardMsg.senderId}→${forwardMsg.recipientId} via $nextHop (ttl=${forwardMsg.ttl})")
                 sendOutboundMessage(nextHop, fwdJson)
             } else {
-                Log.w(TAG, "Tujuan ${forwardMsg.recipientId} tidak di routing table. Drop.")
+                // EU-2.4 / D16: do NOT silently drop an addressed transit message when no route is
+                // known. Fall back to a TTL-bounded broadcast (managed flood) so the message still
+                // gets a chance to reach its destination via other paths; the seenIds anti-replay
+                // dedup prevents loops. We deliberately do NOT store transit messages for strangers
+                // here — origin-side carry is bounded to verified contacts in the outbox (D7), and
+                // general stranger-carry remains POSTPONED (D8).
+                Log.d(TAG, "Tidak ada rute ke ${forwardMsg.recipientId} — fallback broadcast (no-drop, D16)")
+                broadcastOutboundMessage(fwdJson)
             }
             return false
         } catch (e: Exception) {

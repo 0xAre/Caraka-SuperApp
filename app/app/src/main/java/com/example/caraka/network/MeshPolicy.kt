@@ -46,6 +46,24 @@ object MeshPolicy {
     /** Debounce window (ms) to ignore peer-appeared flapping before flushing to a peer again. */
     const val PEER_FLUSH_DEBOUNCE_MS = 8_000L
 
+    // ── Duty cycle (D14) ──────────────────────────────────────────────────────────────────────────
+    /**
+     * No mesh activity (no inbound/outbound traffic, no new peer) for this long → enter IDLE state
+     * and widen the beacon/gossip/discovery intervals to save battery. Any activity returns to ACTIVE.
+     */
+    const val IDLE_THRESHOLD_MS = 60_000L
+    /** Multiplier applied to beacon/gossip/discovery intervals while IDLE (e.g. 3s → 12s). */
+    const val IDLE_INTERVAL_MULTIPLIER = 4L
+
+    /**
+     * After this much continued inactivity the node enters DEEP IDLE and suspends the most
+     * power-hungry work — active Wi-Fi Direct discovery/scanning (EU-3.2). The passive LAN listener
+     * stays alive so the node remains reachable and any inbound traffic wakes it back to ACTIVE.
+     * NOTE: fully powering down Wi-Fi awaits a low-power presence channel (BLE), which is POSTPONED
+     * (D15); until then we only suspend active scanning, never the receive path.
+     */
+    const val DEEP_IDLE_THRESHOLD_MS = 5L * 60 * 1000
+
     // ── Drop priority (D7) ────────────────────────────────────────────────────────────────────────
     /**
      * Priority classes used to decide which messages survive when the outbox is over quota.

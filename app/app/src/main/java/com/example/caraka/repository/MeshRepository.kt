@@ -154,17 +154,59 @@ class MeshRepository(
         val now = System.currentTimeMillis()
         outboxDao.deleteExpired(now)
         for (entry in outboxDao.getDue(now)) {
-            if (entry.attemptCount >= MeshPolicy.UNICAST_MAX_ATTEMPTS) {
-                messageDao.updateDeliveryStatus(entry.id, "FAILED")
-                outboxDao.deleteById(entry.id)
-                continue
+            val capReached = entry.attemptCount >= MeshPolicy.UNICAST_MAX_ATTEMPTS
+            if (capReached) {
+                // EU-2.2 / D7: once the active-retry budget is spent, only VERIFIED contacts are
+                // carried (held + slowly retried until ttlExpiry). Non-verified recipients fail —
+                // this bounds carry to trusted contacts and limits abuse/storage growth.
+                val verified = peerDao.getPeerById(entry.recipientId)?.isVerified == true
+                if (!verified) {
+                    messageDao.updateDeliveryStatus(entry.id, "FAILED")
+                    outboxDao.deleteById(entry.id)
+                    continue
+                }
             }
             transport?.sendToPeer(entry.recipientId, entry.payloadJson)
-            val nextAttempt = entry.attemptCount + 1
-            val backoff = (MeshPolicy.UNICAST_RETRY_BASE_MS shl (entry.attemptCount - 1).coerceAtLeast(0))
-                .coerceAtMost(MeshPolicy.UNICAST_RETRY_MAX_MS)
+            val nextAttempt = if (capReached) entry.attemptCount else entry.attemptCount + 1
+            val backoff = if (capReached) {
+                MeshPolicy.UNICAST_RETRY_MAX_MS // slow carry cadence for verified contacts
+            } else {
+                (MeshPolicy.UNICAST_RETRY_BASE_MS shl (entry.attemptCount - 1).coerceAtLeast(0))
+                    .coerceAtMost(MeshPolicy.UNICAST_RETRY_MAX_MS)
+            }
             val jitter = (Math.random() * MeshPolicy.RETRY_JITTER_MS).toLong()
             outboxDao.updateAttempt(entry.id, "SENT", nextAttempt, now + backoff + jitter)
+        }
+    }
+
+    /**
+     * Opportunistic carry delivery (EU-2.2 / D7/D10): when a peer becomes reachable, immediately
+     * (re)send everything queued for it instead of waiting for the next timer tick. Caller is
+     * responsible for debouncing flapping peers (PEER_FLUSH_DEBOUNCE_MS). Receiver-side dedup makes
+     * any overlap with the timer harmless.
+     */
+    suspend fun flushForPeer(peerId: String) {
+        for (entry in outboxDao.getPendingForPeer(peerId)) {
+            transport?.sendToPeer(peerId, entry.payloadJson)
+        }
+    }
+
+    /**
+     * Enforce the outbox storage quota (EU-2.3 / D7 Resource Management Model). When the outbox
+     * exceeds the message-count or total-byte cap, evict worst-first (lowest priority → oldest →
+     * most-replicated) until back within limits. Evicted units are marked FAILED so the UI is
+     * honest. Called after each enqueue; eviction is incremental so a small candidate batch suffices.
+     */
+    suspend fun enforceOutboxQuota() {
+        var count = outboxDao.count()
+        var bytes = outboxDao.totalPayloadBytes()
+        if (count <= MeshPolicy.OUTBOX_MAX_MESSAGES && bytes <= MeshPolicy.OUTBOX_MAX_TOTAL_BYTES) return
+        for (candidate in outboxDao.evictionCandidates(limit = 32)) {
+            if (count <= MeshPolicy.OUTBOX_MAX_MESSAGES && bytes <= MeshPolicy.OUTBOX_MAX_TOTAL_BYTES) break
+            messageDao.updateDeliveryStatus(candidate.id, "FAILED")
+            outboxDao.deleteById(candidate.id)
+            count -= 1
+            bytes -= candidate.payloadJson.length.toLong()
         }
     }
 
@@ -304,6 +346,8 @@ class MeshRepository(
                 ttlExpiry = now + MeshPolicy.MESSAGE_MAX_AGE_MS
             )
         )
+        // EU-2.3: keep the outbox within its storage quota after enqueueing.
+        enforceOutboxQuota()
 
         // Directed message → LAN unicast straight to the recipient (true B↔C delivery)
         transport?.sendToPeer(recipientId, payloadJson)

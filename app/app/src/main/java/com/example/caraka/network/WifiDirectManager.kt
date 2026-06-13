@@ -172,6 +172,25 @@ class WifiDirectManager(
     /** peerId → last time we received any LAN packet from them (for liveness pruning). */
     private val peerLastLanSeen = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** peerId → last time we flushed the outbox to them on appearance (debounce, EU-2.2). */
+    private val lastPeerFlushAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    // EU-3.1 / D14: two-state duty cycle. Beacon/gossip/discovery run tight when there is recent
+    // mesh activity and widen when idle, to save battery during long disaster operation. Any
+    // inbound/outbound traffic refreshes [lastActivityAt]; intervals scale via [dutyInterval].
+    @Volatile private var lastActivityAt = System.currentTimeMillis()
+    private fun touchActivity() { lastActivityAt = System.currentTimeMillis() }
+    private fun isMeshIdle(): Boolean =
+        System.currentTimeMillis() - lastActivityAt > MeshPolicy.IDLE_THRESHOLD_MS
+    private fun dutyInterval(baseMs: Long): Long =
+        if (isMeshIdle()) baseMs * MeshPolicy.IDLE_INTERVAL_MULTIPLIER else baseMs
+
+    // EU-3.2 / D14: deep idle suspends only ACTIVE Wi-Fi Direct discovery (the costly part). The
+    // passive LAN listener is never stopped, so the node stays reachable and inbound traffic
+    // (→ touchActivity) returns it to ACTIVE. Full Wi-Fi power-down awaits the BLE channel (D15).
+    private fun isMeshDeepIdle(): Boolean =
+        System.currentTimeMillis() - lastActivityAt > MeshPolicy.DEEP_IDLE_THRESHOLD_MS
+
     /** How long a LAN peer stays "connected" without a fresh beacon before being pruned. */
     private val LAN_PEER_TIMEOUT_MS = 20_000L
 
@@ -958,7 +977,11 @@ class WifiDirectManager(
         if (scanJob?.isActive == true) return
         scanJob = scope.launch {
             while (true) {
-                delay(DISCOVERY_INTERVAL_MS)
+                delay(dutyInterval(DISCOVERY_INTERVAL_MS)) // EU-3.1: widen when idle
+                // EU-3.2: during deep idle, suspend active Wi-Fi Direct discovery to save battery.
+                // The loop keeps spinning cheaply (so it resumes instantly once activity returns via
+                // touchActivity), and the passive LAN listener stays up so we remain reachable.
+                if (isMeshDeepIdle()) continue
                 // Keep WiFi-Direct discovery alive unless we are in an ACTUAL P2P connection.
                 // (MESH_ACTIVE / PEERS_FOUND / DISCOVERING etc. must NOT block rediscovery.)
                 val state = _connectionState.value
@@ -1045,7 +1068,7 @@ class WifiDirectManager(
         lanBroadcastJob = scope.launch {
             while (true) {
                 sendLanHandshake()
-                delay(LAN_DISCOVERY_INTERVAL_MS)
+                delay(dutyInterval(LAN_DISCOVERY_INTERVAL_MS)) // EU-3.1: widen when idle
             }
         }
     }
@@ -1197,7 +1220,7 @@ class WifiDirectManager(
         peerListGossipJob = scope.launch {
             try {
                 while (true) {
-                    delay(5_000L)
+                    delay(dutyInterval(5_000L)) // EU-3.1: widen when idle
                     broadcastPeerList()
                 }
             } catch (_: Exception) { Log.d(TAG, "Peer-list gossip stopped") }
@@ -1355,6 +1378,9 @@ class WifiDirectManager(
                 Log.d(TAG, "Persistent dedup: already-stored ${protocol.type} id=${protocol.id} — skipped")
                 return@launch
             }
+            // EU-3.1 / D14: real payload traffic (not background gossip/heartbeat/handshake beacons)
+            // counts as mesh activity and keeps the duty cycle in the tight ACTIVE state.
+            if (protocol.type in listOf("TEXT", "SOS", "ACK", "FLAG")) touchActivity()
             when (protocol.type) {
                 "HANDSHAKE" -> handleHandshake(protocol, fromAddress)
                 "TEXT"      -> handleTextMessage(protocol)
@@ -1481,6 +1507,16 @@ class WifiDirectManager(
         // Mark as freshly seen so liveness pruning treats this WiFi-Direct peer as live.
         peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
         Log.d(TAG, "Peer ACTIVE_MESH via WiFi-Direct HANDSHAKE: ${peer.displayName}")
+
+        // EU-2.2 / D10: a directly-connected peer just appeared → opportunistically flush any
+        // carried/queued messages for it now, instead of waiting for the next timer tick.
+        // Debounced to absorb discovery flapping (PEER_FLUSH_DEBOUNCE_MS).
+        val nowFlush = System.currentTimeMillis()
+        val lastFlush = lastPeerFlushAt[protocol.senderId] ?: 0L
+        if (nowFlush - lastFlush > MeshPolicy.PEER_FLUSH_DEBOUNCE_MS) {
+            lastPeerFlushAt[protocol.senderId] = nowFlush
+            repository.flushForPeer(protocol.senderId)
+        }
     }
 
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
