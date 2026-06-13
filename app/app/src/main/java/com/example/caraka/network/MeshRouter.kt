@@ -31,15 +31,20 @@ class MeshRouter(
     private var heartbeatJob: Job? = null
     private val gson = Gson()
 
-    private var myId: String = ""
-    private var myName: String = ""
-    private var myRole: String = ""
+    @Volatile private var myId: String = ""
+    @Volatile private var myName: String = ""
+    @Volatile private var myRole: String = ""
+
+    private suspend fun ensureIdentityLoaded() {
+        if (myId.isNotEmpty()) return
+        myId = identityManager.getPeerId()
+        myName = identityManager.getDisplayName()
+        myRole = identityManager.getRole()
+    }
 
     init {
         scope.launch {
-            myId = identityManager.getPeerId()
-            myName = identityManager.getDisplayName()
-            myRole = identityManager.getRole()
+            ensureIdentityLoaded()
             startHeartbeat()
         }
     }
@@ -52,9 +57,7 @@ class MeshRouter(
         heartbeatJob = scope.launch {
             while (isActive) {
                 cleanupStaleRoutes()
-                
-                val myId = identityManager.getPeerId()
-                // Umumkan diri kita dan siapa saja yang bisa kita capai
+                ensureIdentityLoaded()
                 val reachablePeers = routingTable.keys().toList()
                 val heartbeat = MeshHeartbeat(
                     originatorId = myId,
@@ -85,7 +88,14 @@ class MeshRouter(
      * Jika pesan untuk orang lain, diteruskan otomatis dan mengembalikan false.
      */
     fun onMessageReceived(json: String, senderHopId: String): Boolean {
-        if (myId.isEmpty()) return false // Belum siap
+        if (myId.isEmpty()) {
+            // Identity not loaded yet — queue via coroutine so no messages are dropped (BUG-P4 fix).
+            scope.launch {
+                ensureIdentityLoaded()
+                onMessageReceived(json, senderHopId)
+            }
+            return false
+        }
 
         try {
             val msg = gson.fromJson(json, MeshProtocol::class.java)
@@ -110,13 +120,19 @@ class MeshRouter(
                 return true // Pesan untuk kita
             }
 
-            // 3. Forward (Penerusan) pesan jika bukan untuk kita
-            val nextHop = routingTable[msg.recipientId]
+            // 3. Forward (Penerusan) pesan jika bukan untuk kita — decrement TTL sebelum forward
+            if (msg.ttl <= 1) {
+                Log.w(TAG, "TTL habis saat routing — drop ${msg.id}")
+                return false
+            }
+            val forwardMsg = msg.copy(ttl = msg.ttl - 1)
+            val fwdJson = gson.toJson(forwardMsg)
+            val nextHop = routingTable[forwardMsg.recipientId]
             if (nextHop != null) {
-                Log.d(TAG, "Meneruskan pesan dari ${msg.senderId} ke ${msg.recipientId} melalui hop $nextHop")
-                sendOutboundMessage(nextHop, json)
+                Log.d(TAG, "Meneruskan ${forwardMsg.senderId}→${forwardMsg.recipientId} via $nextHop (ttl=${forwardMsg.ttl})")
+                sendOutboundMessage(nextHop, fwdJson)
             } else {
-                Log.w(TAG, "Tujuan ${msg.recipientId} tidak ditemukan di routing table. Drop pesan.")
+                Log.w(TAG, "Tujuan ${forwardMsg.recipientId} tidak di routing table. Drop.")
             }
             return false
         } catch (e: Exception) {
@@ -129,18 +145,23 @@ class MeshRouter(
      * Mengirim pesan menggunakan tabel routing (Multi-hop).
      */
     fun routeMessage(msg: MeshProtocol) {
-        val json = gson.toJson(msg)
-        if (msg.recipientId == "BROADCAST" || msg.recipientId.isBlank()) {
+        if (msg.ttl <= 1) {
+            Log.w(TAG, "routeMessage: TTL habis untuk ${msg.id} — drop")
+            return
+        }
+        val routed = msg.copy(ttl = msg.ttl - 1)
+        val json = gson.toJson(routed)
+        if (routed.recipientId == "BROADCAST" || routed.recipientId.isBlank()) {
             broadcastOutboundMessage(json)
             return
         }
 
-        val nextHop = routingTable[msg.recipientId]
+        val nextHop = routingTable[routed.recipientId]
         if (nextHop != null) {
-            Log.d(TAG, "Routing pesan ke ${msg.recipientId} melalui next-hop $nextHop")
+            Log.d(TAG, "Routing pesan ke ${routed.recipientId} via $nextHop (ttl=${routed.ttl})")
             sendOutboundMessage(nextHop, json)
         } else {
-            Log.w(TAG, "Tidak ada rute ke ${msg.recipientId}, fallback ke broadcast")
+            Log.w(TAG, "Tidak ada rute ke ${routed.recipientId}, fallback ke broadcast")
             broadcastOutboundMessage(json)
         }
     }

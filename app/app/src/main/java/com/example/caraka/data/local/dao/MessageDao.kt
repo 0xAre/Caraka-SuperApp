@@ -67,6 +67,10 @@ interface MessageDao {
     @Query("UPDATE messages SET isRelayed = 1 WHERE id = :messageId")
     suspend fun markAsRelayed(messageId: String)
 
+    /** Update the delivery lifecycle status of an outgoing message (EU-1.3 / D4). */
+    @Query("UPDATE messages SET deliveryStatus = :status WHERE id = :messageId")
+    suspend fun updateDeliveryStatus(messageId: String, status: String)
+
     // ========== DELETE ==========
 
     @Query("DELETE FROM messages")

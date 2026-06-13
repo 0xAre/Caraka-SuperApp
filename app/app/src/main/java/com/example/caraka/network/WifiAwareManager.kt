@@ -45,13 +45,24 @@ class WifiAwareManager(
     companion object {
         private const val TAG = "WifiAwareManager"
         private const val AWARE_SERVICE_NAME = "CarakaAwareMesh"
-        // Passphrase securing every Aware data path. setPmk requires a 32-byte key; the passphrase
-        // form is simpler and is what the platform docs recommend.
-        private const val AWARE_PASSPHRASE = "CarakaSecureMesh2026"
         /** TCP port the publisher (server) listens on over the Aware data path. */
         const val AWARE_PORT = 8989
         private const val PING_MESSAGE_ID = 1
+
+        /**
+         * Derive a per-pair WPA2 passphrase from two peer IDs so every device-pair uses a
+         * unique PSK instead of the old shared hardcoded "CarakaSecureMesh2026".
+         * Sorted so both sides produce the same string regardless of who initiates.
+         */
+        fun deriveAwarePsk(peerId1: String, peerId2: String): String {
+            val sorted = listOf(peerId1, peerId2).sorted()
+            // 16 chars from each side → 33-char PSK (WPA2 allows 8-63 chars)
+            return "CRK-${sorted[0].take(16)}-${sorted[1].take(16)}"
+        }
     }
+
+    // Populated in startAwareSession() so PSK derivation has access to our own peerId.
+    private var localPeerId: String = ""
 
     private val awareManager: android.net.wifi.aware.WifiAwareManager? =
         context.getSystemService(Context.WIFI_AWARE_SERVICE) as? android.net.wifi.aware.WifiAwareManager
@@ -74,7 +85,8 @@ class WifiAwareManager(
     fun isSupported(): Boolean =
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
 
-    fun startAwareSession() {
+    fun startAwareSession(localPeerId: String = "") {
+        if (localPeerId.isNotBlank()) this.localPeerId = localPeerId
         if (!isSupported() || awareManager == null) {
             Log.e(TAG, "Wi-Fi Aware tidak didukung di perangkat ini.")
             _isAwareAvailable.value = false
@@ -103,7 +115,12 @@ class WifiAwareManager(
     }
 
     private fun startPublish() {
-        val config = PublishConfig.Builder().setServiceName(AWARE_SERVICE_NAME).build()
+        // Embed our peerId in serviceSpecificInfo so subscribers can derive the per-pair PSK.
+        val ssi = localPeerId.toByteArray(Charsets.UTF_8).takeIf { it.isNotEmpty() }
+        val config = PublishConfig.Builder()
+            .setServiceName(AWARE_SERVICE_NAME)
+            .apply { if (ssi != null) setServiceSpecificInfo(ssi) }
+            .build()
         awareSession?.publish(config, object : DiscoverySessionCallback() {
             override fun onPublishStarted(session: PublishDiscoverySession) {
                 Log.d(TAG, "Publish session dimulai")
@@ -111,9 +128,11 @@ class WifiAwareManager(
             }
 
             override fun onMessageReceived(peerHandle: PeerHandle, message: ByteArray) {
-                // A subscriber pinged us → become the responder (server) for that peer.
-                Log.d(TAG, "Ping diterima dari subscriber — menyiapkan data path responder")
-                requestResponderNetwork(peerHandle)
+                // Subscriber sends its peerId as the ping payload so we can derive the same PSK.
+                val remotePeerId = String(message, Charsets.UTF_8)
+                    .takeIf { it.isNotBlank() && it != "CRK" } ?: "unknown"
+                Log.d(TAG, "Ping dari subscriber (peerId=$remotePeerId) — menyiapkan responder")
+                requestResponderNetwork(peerHandle, remotePeerId)
             }
 
             override fun onSessionConfigFailed() {
@@ -135,12 +154,16 @@ class WifiAwareManager(
                 serviceSpecificInfo: ByteArray,
                 matchFilter: List<ByteArray>
             ) {
-                Log.d(TAG, "Ditemukan peer Aware: $peerHandle")
+                // Publisher embeds its peerId in serviceSpecificInfo so we can derive the PSK.
+                val remotePeerId = serviceSpecificInfo.takeIf { it.isNotEmpty() }
+                    ?.let { String(it, Charsets.UTF_8) }
+                    ?.takeIf { it.isNotBlank() } ?: "unknown"
+                Log.d(TAG, "Ditemukan peer Aware: $peerHandle (peerId=$remotePeerId)")
                 onPeerDiscovered(peerHandle, null)
-                // Nudge the publisher so it sets up the matching responder path…
-                subscribeSession?.sendMessage(peerHandle, PING_MESSAGE_ID, "CRK".toByteArray())
-                // …and initiate our client-side data path.
-                requestInitiatorNetwork(peerHandle)
+                // Send our peerId as ping so the publisher can derive the same per-pair PSK.
+                subscribeSession?.sendMessage(peerHandle, PING_MESSAGE_ID, localPeerId.toByteArray(Charsets.UTF_8))
+                // Initiate our client-side data path with the per-pair PSK.
+                requestInitiatorNetwork(peerHandle, remotePeerId)
             }
 
             override fun onSessionConfigFailed() {
@@ -150,12 +173,13 @@ class WifiAwareManager(
     }
 
     /** Initiator (client): build a data path from the subscribe session and connect a socket. */
-    private fun requestInitiatorNetwork(peerHandle: PeerHandle) {
+    private fun requestInitiatorNetwork(peerHandle: PeerHandle, remotePeerId: String) {
         val session = subscribeSession ?: return
         if (!initiatorRequested.add(peerHandle)) return // already requested
 
+        val psk = deriveAwarePsk(localPeerId, remotePeerId)
         val specifier = WifiAwareNetworkSpecifier.Builder(session, peerHandle)
-            .setPskPassphrase(AWARE_PASSPHRASE)
+            .setPskPassphrase(psk)
             .build()
         val request = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
@@ -185,12 +209,13 @@ class WifiAwareManager(
     }
 
     /** Responder (server): build a data path from the publish session, advertising [AWARE_PORT]. */
-    private fun requestResponderNetwork(peerHandle: PeerHandle) {
+    private fun requestResponderNetwork(peerHandle: PeerHandle, remotePeerId: String) {
         val session = publishSession ?: return
         if (!responderRequested.add(peerHandle)) return
 
+        val psk = deriveAwarePsk(localPeerId, remotePeerId)
         val specifier = WifiAwareNetworkSpecifier.Builder(session, peerHandle)
-            .setPskPassphrase(AWARE_PASSPHRASE)
+            .setPskPassphrase(psk)
             .setPort(AWARE_PORT)
             .build()
         val request = NetworkRequest.Builder()

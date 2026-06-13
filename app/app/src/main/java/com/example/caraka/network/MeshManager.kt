@@ -228,7 +228,8 @@ class MeshManager(
         if (awareSupported) {
             // Publisher (server) listens on the agreed Aware port; subscribers dial in.
             awareSocketManager?.startServer(WifiAwareManager.AWARE_PORT)
-            wifiAwareManager?.startAwareSession()
+            // Pass localPeerId so WifiAwareManager can derive per-pair PSK (replaces hardcoded PSK).
+            scope.launch { wifiAwareManager?.startAwareSession(identityManager.getPeerId()) }
         }
         nearby?.let { transport ->
             // Advertise/discover under our peerId so neighbours learn it on connect.

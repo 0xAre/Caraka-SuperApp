@@ -78,15 +78,29 @@ class MeshSocketManager(private val listener: MeshMessageListener) {
             }
         )
 
+    /**
+     * Anti-replay gate. Returns true if the message should be dropped as a duplicate.
+     *
+     * Baseline D1: the PRIMARY gate is the message ID (works without synchronized clocks, which
+     * cannot be assumed in an offline disaster with no NTP). The wall-clock drift check is demoted
+     * to a SOFT HINT — it is logged for diagnostics but no longer drops messages on its own, so a
+     * node with a wrong clock is not silently cut off from the mesh.
+     */
     fun isDuplicate(id: String, timestamp: Long): Boolean {
-        // Timestamp drift check
         val drift = Math.abs(System.currentTimeMillis() - timestamp)
         if (drift > MAX_TIMESTAMP_DRIFT_MS) {
-            android.util.Log.w(TAG, "Anti-replay: timestamp drift ${drift}ms for msg $id — dropped")
-            return true
+            // Soft hint only (D1): do NOT drop on clock drift; ID-based dedup below is the gate.
+            android.util.Log.d(TAG, "Anti-replay hint: timestamp drift ${drift}ms for msg $id (clock skew?) — not dropping")
         }
-        // ID dedup check
-        return !seenIds.add(id) // add returns false if already present
+        return !seenIds.add(id)
+    }
+
+    /**
+     * Pre-register an outgoing message ID so this device never processes its own
+     * relayed copies when they arrive back via other paths (BUG-P2 fix).
+     */
+    fun markSent(id: String) {
+        seenIds.add(id)
     }
 
     fun startServer() = startServer(PORT)

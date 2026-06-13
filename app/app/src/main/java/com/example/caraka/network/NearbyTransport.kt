@@ -83,7 +83,9 @@ class NearbyTransport(
             // requestConnection at once they collide → STATUS_ENDPOINT_IO_ERROR (8012). Only the
             // lexicographically-smaller peerId initiates; the other waits and accepts via
             // onConnectionInitiated.
-            if (localName >= info.endpointName) {
+            // Only the lexicographically-SMALLER peerId initiates to break symmetry.
+            // Use strict > so equal names (e.g. both fallback to "caraka") still connect.
+            if (localName > info.endpointName) {
                 Log.d(TAG, "Menunggu '${info.endpointName}' menginisiasi (tiebreaker)")
                 return
             }

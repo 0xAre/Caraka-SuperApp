@@ -46,24 +46,51 @@ object DatabasePassphraseManager {
         val encryptedB64 = prefs.getString(PREF_ENCRYPTED_PASSPHRASE, null)
         val ivB64 = prefs.getString(PREF_PASSPHRASE_IV, null)
 
-        return if (encryptedB64 != null && ivB64 != null) {
-            // Decrypt existing passphrase
-            val encryptedBytes = Base64.decode(encryptedB64, Base64.NO_WRAP)
-            val iv = Base64.decode(ivB64, Base64.NO_WRAP)
-            decryptPassphrase(encryptedBytes, iv)
-        } else {
-            // Generate new random passphrase (32 bytes = 256 bits)
-            val newPassphrase = generateSecureRandom32Bytes()
-            val (encrypted, iv) = encryptPassphrase(newPassphrase)
+        if (encryptedB64 != null && ivB64 != null) {
+            try {
+                val encryptedBytes = Base64.decode(encryptedB64, Base64.NO_WRAP)
+                val iv = Base64.decode(ivB64, Base64.NO_WRAP)
+                return decryptPassphrase(encryptedBytes, iv)
+            } catch (e: Exception) {
+                // Keystore key was invalidated (device reset, biometric change, TEE error).
+                // Clear the stale blob so we create a fresh passphrase below.
+                android.util.Log.w("DBPassphrase", "Keystore decrypt failed — regenerating passphrase", e)
+                prefs.edit(commit = true) {
+                    remove(PREF_ENCRYPTED_PASSPHRASE)
+                    remove(PREF_PASSPHRASE_IV)
+                }
+                runCatching {
+                    val ks = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
+                    ks.deleteEntry(KEY_ALIAS)
+                }
+            }
+        }
 
-            // Persist encrypted passphrase
-            prefs.edit {
+        // Generate new random passphrase (32 bytes = 256 bits).
+        val newPassphrase = generateSecureRandom32Bytes()
+        return try {
+            val (encrypted, iv) = encryptPassphrase(newPassphrase)
+            // Use commit=true (synchronous) so the blob survives an immediate crash.
+            prefs.edit(commit = true) {
                 putString(PREF_ENCRYPTED_PASSPHRASE, Base64.encodeToString(encrypted, Base64.NO_WRAP))
                 putString(PREF_PASSPHRASE_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
             }
-
+            newPassphrase
+        } catch (e: Exception) {
+            // Keystore TEE unavailable (seen on some MTK devices with RKPD timeout).
+            // Fall back to storing the passphrase obfuscated in SharedPreferences.
+            android.util.Log.w("DBPassphrase", "Keystore unavailable — using fallback storage", e)
+            val b64 = Base64.encodeToString(newPassphrase, Base64.NO_WRAP)
+            prefs.edit(commit = true) { putString("fallback_passphrase", b64) }
             newPassphrase
         }
+    }
+
+    /** Read the fallback (non-Keystore) passphrase if it exists. */
+    private fun getFallbackPassphrase(context: Context): ByteArray? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val b64 = prefs.getString("fallback_passphrase", null) ?: return null
+        return try { Base64.decode(b64, Base64.NO_WRAP) } catch (_: Exception) { null }
     }
 
     /**

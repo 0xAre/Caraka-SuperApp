@@ -752,6 +752,13 @@ class WifiDirectManager(
      * versions). WiFi Direct socket is also used so that offline (no-WiFi) scenarios work.
      */
     override fun sendMessage(json: String) {
+        // Mark outgoing messages in the anti-replay cache so this device never
+        // processes its own relayed copies (BUG-P2: duplicate notifications/DB entries).
+        MeshProtocol.fromJson(json)?.let { p ->
+            if (p.type !in listOf("HANDSHAKE", "CONNECTION_REQUEST", "CONNECTION_ACCEPT", "CONNECTION_REJECT")) {
+                socketManager.markSent(p.id)
+            }
+        }
         sendLanPayload(json)       // LAN first — reliable, any-to-any
         socketManager.sendPayload(json) // WiFi Direct socket — offline fallback
         overlayBroadcastSinks.forEach { it(json) } // Aware / Nearby overlays (when active)
@@ -1140,13 +1147,32 @@ class WifiDirectManager(
             val directlyLive = (System.currentTimeMillis() - (peerLastLanSeen[share.peerId] ?: 0L)) < LAN_PEER_TIMEOUT_MS
             val status = if (directlyLive) com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH
                          else com.example.caraka.data.local.entity.ConnectionStatus.DISCOVERED
+            // T5: TOFU — jangan timpa key yang sudah dikenal dengan key dari gossip.
+            // Key dari PEER_LIST bisa dipalsukan; hanya HANDSHAKE langsung yang lebih tepercaya.
+            val safeEncPub = when {
+                share.encPub.isBlank() -> existing?.publicKey ?: ""
+                existing?.publicKey?.isNotBlank() == true && share.encPub != existing.publicKey -> {
+                    Log.w(TAG, "TOFU: encPub berbeda untuk ${share.peerId} via gossip — abaikan")
+                    existing.publicKey
+                }
+                else -> share.encPub
+            }
+            val safeSignPub = when {
+                share.signPub.isBlank() -> existing?.signingKey ?: ""
+                existing?.signingKey?.isNotBlank() == true && share.signPub != existing.signingKey -> {
+                    Log.w(TAG, "TOFU: signPub berbeda untuk ${share.peerId} via gossip — abaikan")
+                    existing.signingKey
+                }
+                else -> share.signPub
+            }
+
             val peer = (existing ?: PeerEntity(
                 id = share.peerId,
                 deviceName = share.name,
                 displayName = share.name,
                 role = share.role,
-                publicKey = share.encPub,
-                signingKey = share.signPub,
+                publicKey = safeEncPub,
+                signingKey = safeSignPub,
                 isVerified = false,
                 isAuthority = share.role in listOf("BPBD", "POLRI", "PMI"),
                 macAddress = share.ip?.let { "lan:$it" },
@@ -1156,8 +1182,8 @@ class WifiDirectManager(
             )).copy(
                 displayName = share.name,
                 role = share.role,
-                publicKey = share.encPub.ifBlank { existing?.publicKey ?: "" },
-                signingKey = share.signPub.ifBlank { existing?.signingKey ?: "" },
+                publicKey = safeEncPub,
+                signingKey = safeSignPub,
                 lastSeen = System.currentTimeMillis(),
                 status = status
             )
@@ -1321,10 +1347,19 @@ class WifiDirectManager(
             return
         }
         scope.launch {
+            // Persistent dedup (D3 / EU-0.2): the in-memory LRU above is empty after a process
+            // restart, so a TEXT/SOS we already stored in a previous session would otherwise be
+            // re-processed (re-notify/re-relay). messageExists() survives restart and stops that.
+            // Transit messages (not addressed to us, never stored) are unaffected and still relay.
+            if (protocol.type in listOf("TEXT", "SOS") && repository.messageExists(protocol.id)) {
+                Log.d(TAG, "Persistent dedup: already-stored ${protocol.type} id=${protocol.id} — skipped")
+                return@launch
+            }
             when (protocol.type) {
                 "HANDSHAKE" -> handleHandshake(protocol, fromAddress)
                 "TEXT"      -> handleTextMessage(protocol)
                 "SOS"       -> handleSosMessage(protocol)
+                "ACK"       -> handleAck(protocol)
                 "FLAG"      -> handleFlagMessage(protocol)
                 "CONNECTION_REQUEST" -> handleConnectionRequest(protocol, fromAddress)
                 "CONNECTION_ACCEPT"  -> handleConnectionAccept(protocol, fromAddress)
@@ -1397,6 +1432,28 @@ class WifiDirectManager(
         // A completed HANDSHAKE over the WiFi-Direct socket means the peer is connected.
         // Mark ACTIVE_MESH so it shows as connected; preserve any prior QR verification.
         val existing = repository.getPeerById(protocol.senderId)
+
+        // T5: TOFU — jika peer sudah dikenal dengan signingKey berbeda, ini potensi MITM.
+        // Pertahankan key lama dan jangan terima key baru sampai QR re-scan dilakukan.
+        if (existing != null &&
+            existing.signingKey.isNotBlank() &&
+            !protocol.signingKey.isNullOrBlank() &&
+            existing.signingKey != protocol.signingKey
+        ) {
+            Log.w(TAG, "SECURITY ALERT (TOFU): Signing key berubah untuk ${protocol.senderName}!")
+            Log.w(TAG, "  Key lama: ${existing.signingKey.take(20)}...")
+            Log.w(TAG, "  Key baru (DIABAIKAN): ${protocol.signingKey.take(20)}...")
+            // Update status koneksi tapi JANGAN timpa key — QR re-scan diperlukan untuk update key
+            repository.savePeer(existing.copy(
+                displayName = protocol.senderName,
+                lastSeen = System.currentTimeMillis(),
+                status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
+                isVerified = false  // Reset verified karena key mismatch mencurigakan
+            ))
+            peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
+            return  // Jangan lanjutkan — key lama dipertahankan
+        }
+
         val peer = (existing ?: PeerEntity(
             id = protocol.senderId,
             deviceName = protocol.senderName,
@@ -1428,8 +1485,10 @@ class WifiDirectManager(
 
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
         val myId = identityManager.getPeerId()
-        val isForMe = protocol.recipientId == myId || protocol.recipientId == "BROADCAST"
+        val isBroadcast = protocol.recipientId == "BROADCAST" || protocol.recipientId.isBlank()
+        val isForMe = protocol.recipientId == myId || isBroadcast
 
+        // Relay unicast messages not addressed to us.
         if (!isForMe && protocol.ttl > 1) {
             sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
             _relayedMessageCount.value++
@@ -1437,15 +1496,46 @@ class WifiDirectManager(
         }
         if (!isForMe) return
 
-        var plaintext = protocol.content
-        if (protocol.encryptedPayload != null) {
-            val senderPeer = repository.getPeerById(protocol.senderId)
-            if (senderPeer != null) {
-                val senderPubKey = cryptoManager.keyFromBase64(senderPeer.publicKey)
-                val mySecretKey = identityManager.getEncryptionKeyPair().secretKey
-                val decrypted = cryptoManager.decryptMessage(protocol.encryptedPayload, senderPubKey, mySecretKey)
-                if (decrypted != null) plaintext = decrypted
+        // Relay broadcast messages so they reach nodes beyond the first hop (BUG-P1).
+        // Only relay if we are not the original sender (avoids redundant re-flood).
+        if (isBroadcast && protocol.senderId != myId && protocol.ttl > 1) {
+            sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
+            _relayedMessageCount.value++
+        }
+
+        val senderPeer = repository.getPeerById(protocol.senderId)
+
+        // T4: Verifikasi signature Ed25519 sebelum simpan ke DB.
+        // Relay sudah terjadi di atas, tapi penyimpanan lokal memerlukan signature valid.
+        // Catatan: jika senderPeer belum dikenal (peer baru, belum HANDSHAKE), kita skip verifikasi
+        // karena kita belum punya signingKey — pesan tetap diterima tapi tidak bisa diverifikasi.
+        if (!protocol.signature.isNullOrBlank() && senderPeer?.signingKey?.isNotBlank() == true) {
+            val signingKey = cryptoManager.keyFromBase64(senderPeer.signingKey)
+            val messageToVerify = protocol.encryptedPayload ?: protocol.content
+            if (!cryptoManager.verifySignature(messageToVerify, protocol.signature, signingKey)) {
+                Log.w(TAG, "SECURITY: Signature TEXT tidak valid dari ${protocol.senderId} (${protocol.senderName}) — drop lokal")
+                return
             }
+        }
+
+        // T4: Badge authority (BPBD/POLRI/PMI) hanya diberikan jika signingKey sudah diketahui.
+        // Peer yang baru pertama kali muncul belum bisa diklaim sebagai authority tanpa QR-scan.
+        val effectiveRole = if (
+            protocol.senderRole in listOf("BPBD", "POLRI", "PMI") &&
+            senderPeer?.signingKey.isNullOrBlank()
+        ) {
+            Log.w(TAG, "Authority role '${protocol.senderRole}' diklaim oleh ${protocol.senderName} tapi key belum terverifikasi — degradasi ke CIVILIAN")
+            "CIVILIAN"
+        } else {
+            protocol.senderRole
+        }
+
+        var plaintext = protocol.content
+        if (protocol.encryptedPayload != null && senderPeer != null) {
+            val senderPubKey = cryptoManager.keyFromBase64(senderPeer.publicKey)
+            val mySecretKey = identityManager.getEncryptionKeyPair().secretKey
+            val decrypted = cryptoManager.decryptMessage(protocol.encryptedPayload, senderPubKey, mySecretKey)
+            if (decrypted != null) plaintext = decrypted
         }
 
         repository.saveMessage(
@@ -1454,7 +1544,7 @@ class WifiDirectManager(
                 type = protocol.type,
                 senderId = protocol.senderId,
                 senderName = protocol.senderName,
-                senderRole = protocol.senderRole,
+                senderRole = effectiveRole,
                 recipientId = protocol.recipientId,
                 content = plaintext,
                 encryptedPayload = protocol.encryptedPayload,
@@ -1473,25 +1563,86 @@ class WifiDirectManager(
             ChatAlert(
                 senderId = protocol.senderId,
                 senderName = protocol.senderName,
-                senderRole = protocol.senderRole,
+                senderRole = effectiveRole,
                 content = plaintext
             )
         )
+
+        // EU-1.2: acknowledge unicast TEXT addressed to us with an end-to-end ACK back to the
+        // sender. Broadcast/SOS are best-effort and intentionally NOT acknowledged (baseline D6 —
+        // avoids ACK implosion). The ACK carries the original message id in `content` so the sender
+        // can correlate it to its outbox entry (EU-1.3).
+        if (!isBroadcast && protocol.senderId != myId) {
+            sendAck(protocol.id, protocol.senderId)
+        }
+    }
+
+    /**
+     * Handle an incoming ACK (EU-1.3 / D4/D5). If it is addressed to us, mark the corresponding
+     * outbox message DELIVERED (only if we actually sent it — spoof-safe in the repository). If it
+     * is for someone else, forward it toward the origin while TTL allows. DELIVERED is set ONLY
+     * here, from a real ACK — never from overhearing (D5).
+     */
+    private suspend fun handleAck(protocol: MeshProtocol) {
+        val myId = identityManager.getPeerId()
+        if (protocol.recipientId == myId) {
+            repository.markUnicastDelivered(protocol.content)
+            return
+        }
+        // Not for us — relay the ACK toward its origin if there is hop budget left.
+        if (protocol.ttl > 1) {
+            sendToPeer(protocol.recipientId, protocol.copy(ttl = protocol.ttl - 1).toJson())
+        }
+    }
+
+    /** Send an end-to-end ACK for [ackedMessageId] back to [originSenderId] (EU-1.2 / D4). */
+    private suspend fun sendAck(ackedMessageId: String, originSenderId: String) {
+        val ack = MeshProtocol(
+            type = "ACK",
+            id = java.util.UUID.randomUUID().toString(),
+            senderId = identityManager.getPeerId(),
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = originSenderId,
+            content = ackedMessageId,
+            timestamp = System.currentTimeMillis(),
+            ttl = 5,
+            priority = "NORMAL"
+        )
+        sendToPeer(originSenderId, ack.toJson())
     }
 
     private suspend fun handleSosMessage(protocol: MeshProtocol) {
         Log.d(TAG, "SOS from ${protocol.senderName}: ${protocol.content}")
+        // SOS di-relay dulu (DTN principle: propagasi cepat) baru verifikasi lokal.
         if (protocol.ttl > 1) {
             sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
             _relayedMessageCount.value++
         }
+
+        // T4: Verifikasi signature SOS sebelum simpan ke DB dan tampilkan notifikasi.
+        val senderPeer = repository.getPeerById(protocol.senderId)
+        if (!protocol.signature.isNullOrBlank() && senderPeer?.signingKey?.isNotBlank() == true) {
+            val signingKey = cryptoManager.keyFromBase64(senderPeer.signingKey)
+            if (!cryptoManager.verifySignature(protocol.content, protocol.signature, signingKey)) {
+                Log.w(TAG, "SECURITY: Signature SOS tidak valid dari ${protocol.senderId} — drop lokal")
+                return
+            }
+        }
+
+        // T4: Badge authority untuk SOS juga memerlukan key yang diketahui.
+        val effectiveRole = if (
+            protocol.senderRole in listOf("BPBD", "POLRI", "PMI") &&
+            senderPeer?.signingKey.isNullOrBlank()
+        ) "CIVILIAN" else protocol.senderRole
+
         repository.saveMessage(
             MessageEntity(
                 id = protocol.id,
                 type = "SOS",
                 senderId = protocol.senderId,
                 senderName = protocol.senderName,
-                senderRole = protocol.senderRole,
+                senderRole = effectiveRole,
                 recipientId = "BROADCAST",
                 content = protocol.content,
                 encryptedPayload = null,
@@ -1573,7 +1724,7 @@ class WifiDirectManager(
             timestamp = System.currentTimeMillis()
         )
         Log.d(TAG, "Sending CONNECTION_ACCEPT to $peerId")
-        sendMessage(accept.toJson())
+        sendToPeer(peerId, accept.toJson())
     }
 
     /**

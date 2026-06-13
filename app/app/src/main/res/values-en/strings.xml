@@ -140,8 +140,10 @@
     <string name="chat_via_relay">Via mesh relay</string>
     <string name="chat_unknown_peer">Unknown peer</string>
     <string name="msg_status_queued">Queued</string>
-    <string name="msg_status_sent">Sent</string>
+    <string name="msg_status_sent">Sent to network</string>
     <string name="msg_status_relayed">Relayed</string>
+    <string name="msg_status_delivered">Delivered</string>
+    <string name="msg_status_failed">Failed</string>
     <string name="chat_hold_to_flag">Hold to flag</string>
     <string name="chat_flag_title">Flag as Suspicious?</string>
     <string name="chat_flag_desc">This message will be marked as potentially hoax. If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.</string>

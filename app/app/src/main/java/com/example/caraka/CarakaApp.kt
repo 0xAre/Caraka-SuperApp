@@ -38,6 +38,7 @@ class CarakaApp : Application() {
             messageDao = database.messageDao(),
             peerDao = database.peerDao(),
             relayDao = database.relayDao(),
+            outboxDao = database.outboxDao(),
             cryptoManager = cryptoManager,
             identityManager = identityManager
         )

@@ -140,8 +140,10 @@
     <string name="chat_via_relay">Via relay mesh</string>
     <string name="chat_unknown_peer">Peer tidak dikenal</string>
     <string name="msg_status_queued">Antri</string>
-    <string name="msg_status_sent">Terkirim</string>
+    <string name="msg_status_sent">Terkirim ke jaringan</string>
     <string name="msg_status_relayed">Diteruskan</string>
+    <string name="msg_status_delivered">Sampai</string>
+    <string name="msg_status_failed">Gagal</string>
     <string name="chat_hold_to_flag">Tahan untuk menandai</string>
     <string name="chat_flag_title">Tandai sebagai Mencurigakan?</string>
     <string name="chat_flag_desc">Pesan ini akan ditandai sebagai potensial hoaks. Jika 3+ pengguna menandai, label ⚠️ peringatan akan muncul untuk semua orang di mesh.</string>

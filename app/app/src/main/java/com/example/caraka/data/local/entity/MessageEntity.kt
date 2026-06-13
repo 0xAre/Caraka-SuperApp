@@ -1,5 +1,6 @@
 package com.example.caraka.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -38,5 +39,12 @@ data class MessageEntity(
     val isRead: Boolean = false,       // Read receipt (local only)
     val flagCount: Int = 0,            // Number of "suspicious" flags from other users
     val isRelayed: Boolean = false,    // Whether this message has been relayed to other peers
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+
+    // Delivery lifecycle for outgoing messages (baseline Message Lifecycle, D4/D5).
+    // Driven by the outbox/ACK path; "DELIVERED" is set ONLY from a real end-to-end ACK (never
+    // from overhearing/implicit ACK — D5). Incoming messages leave this at the default.
+    // Values: SENT | DELIVERED | EXPIRED | FAILED  (QUEUED lives only in the outbox table).
+    @ColumnInfo(defaultValue = "SENT")
+    val deliveryStatus: String = "SENT"
 )

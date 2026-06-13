@@ -1,9 +1,13 @@
 package com.example.caraka
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -11,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.caraka.service.MeshForegroundService
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -82,9 +87,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun startMeshService() {
+        // Request battery optimization exemption dulu (kritis untuk HiOS/MIUI/XOS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                try {
+                    startActivity(Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:$packageName")
+                    ))
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Start foreground service — mesh akan tetap hidup di background dan saat layar mati
+        val intent = MeshForegroundService.startIntent(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.stopWifiDirect()
+        // JANGAN stop service di sini — FGS sengaja dibiarkan jalan saat Activity hancur
+        // agar mesh tetap hidup di background. Service hanya berhenti via:
+        // 1. Tombol "Stop Mesh" di notifikasi persistent
+        // 2. clearIdentity() dari user
     }
 }
 
@@ -152,10 +183,11 @@ private fun CarakaNav(
     }
 
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val activity = ctx as? MainActivity
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ -> viewModel.startWifiDirect() }
+    ) { _ -> activity?.startMeshService() }
 
     LaunchedEffect(Unit) {
         val permissions = mutableListOf(
@@ -175,7 +207,7 @@ private fun CarakaNav(
         val notGranted = permissions.filter {
             ContextCompat.checkSelfPermission(ctx, it) != PackageManager.PERMISSION_GRANTED
         }
-        if (notGranted.isEmpty()) viewModel.startWifiDirect()
+        if (notGranted.isEmpty()) activity?.startMeshService()
         else permissionLauncher.launch(notGranted.toTypedArray())
     }
 

@@ -214,7 +214,7 @@ fun ChatScreen(
                         OutgoingMessageBubble(
                             message = msg.content,
                             time = timeFormatted,
-                            deliveryStatus = deriveMessageDeliveryStatus(msg.isRelayed, msg.isIncoming)
+                            deliveryStatus = deriveMessageDeliveryStatus(msg.deliveryStatus, msg.isIncoming)
                         )
                     }
                 }

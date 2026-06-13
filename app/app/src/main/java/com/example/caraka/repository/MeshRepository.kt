@@ -3,10 +3,13 @@ package com.example.caraka.repository
 import com.example.caraka.crypto.CryptoManager
 import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.data.local.dao.MessageDao
+import com.example.caraka.data.local.dao.OutboxDao
 import com.example.caraka.data.local.dao.PeerDao
 import com.example.caraka.data.local.dao.RelayDao
 import com.example.caraka.data.local.entity.MessageEntity
+import com.example.caraka.data.local.entity.OutboxEntity
 import com.example.caraka.data.local.entity.PeerEntity
+import com.example.caraka.network.MeshPolicy
 import com.example.caraka.network.MeshProtocol
 import com.example.caraka.network.MeshTransport
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +23,7 @@ class MeshRepository(
     private val messageDao: MessageDao,
     private val peerDao: PeerDao,
     private val relayDao: RelayDao,
+    private val outboxDao: OutboxDao,
     private val cryptoManager: CryptoManager,
     private val identityManager: IdentityManager
 ) {
@@ -110,12 +114,58 @@ class MeshRepository(
         messageDao.deleteAllMessages()
         peerDao.deleteAllPeers()
         relayDao.deleteAll()
+        outboxDao.deleteAll()
     }
 
     // ========== MESSAGING ==========
 
     suspend fun saveMessage(message: MessageEntity) {
         messageDao.insertMessage(message)
+    }
+
+    /**
+     * Persistent dedup gate (D3 / EU-0.2). Returns true if a message with this ID is already
+     * stored locally. Survives process restart (the in-memory LRU does not), so a message that was
+     * already delivered in a previous session is not re-processed (re-relayed / re-notified).
+     */
+    suspend fun messageExists(messageId: String): Boolean = messageDao.messageExists(messageId)
+
+    /**
+     * Mark a unicast message DELIVERED upon receiving a genuine end-to-end ACK (EU-1.3 / D4).
+     * Only acts if the message is in OUR outbox (i.e. we actually sent it) — this rejects spoofed
+     * ACKs for messages we never sent, and is the ONLY path that may set DELIVERED (never implicit
+     * ACK / overhearing — baseline D5). The transport unit is then removed from the outbox.
+     */
+    suspend fun markUnicastDelivered(messageId: String) {
+        if (outboxDao.getById(messageId) == null) return
+        messageDao.updateDeliveryStatus(messageId, "DELIVERED")
+        outboxDao.deleteById(messageId)
+    }
+
+    /**
+     * Bounded retry sweep for un-ACKed unicast messages (EU-1.4 / D4). For each outbox unit that is
+     * due (nextAttemptAt ≤ now) and not yet delivered: resend, increment the attempt counter, and
+     * reschedule with capped exponential backoff + jitter. When attempts exceed
+     * [MeshPolicy.UNICAST_MAX_ATTEMPTS] the message is marked FAILED and removed — never infinite
+     * retry. Expired units are evicted first. This method is idempotent and safe to call from any
+     * trigger (a new send in Phase 1; the periodic queue-processor in Phase 2 / EU-2.1).
+     */
+    suspend fun retryDueMessages() {
+        val now = System.currentTimeMillis()
+        outboxDao.deleteExpired(now)
+        for (entry in outboxDao.getDue(now)) {
+            if (entry.attemptCount >= MeshPolicy.UNICAST_MAX_ATTEMPTS) {
+                messageDao.updateDeliveryStatus(entry.id, "FAILED")
+                outboxDao.deleteById(entry.id)
+                continue
+            }
+            transport?.sendToPeer(entry.recipientId, entry.payloadJson)
+            val nextAttempt = entry.attemptCount + 1
+            val backoff = (MeshPolicy.UNICAST_RETRY_BASE_MS shl (entry.attemptCount - 1).coerceAtLeast(0))
+                .coerceAtMost(MeshPolicy.UNICAST_RETRY_MAX_MS)
+            val jitter = (Math.random() * MeshPolicy.RETRY_JITTER_MS).toLong()
+            outboxDao.updateAttempt(entry.id, "SENT", nextAttempt, now + backoff + jitter)
+        }
     }
 
     fun getMessagesByPeer(peerId: String): Flow<List<MessageEntity>> {
@@ -168,8 +218,12 @@ class MeshRepository(
      * Transmits it over WiFi Direct sockets.
      */
     suspend fun sendDirectMessage(recipientId: String, content: String) {
+        // EU-1.4: opportunistically sweep due retries on each new send (lightweight Phase-1 trigger;
+        // the periodic queue-processor in Phase 2 / EU-2.1 will drive this on a timer too).
+        retryDueMessages()
+
         val recipient = peerDao.getPeerById(recipientId) ?: return // Peer not found locally
-        
+
         val myId = identityManager.getPeerId()
         val myName = identityManager.getDisplayName()
         val myRole = identityManager.getRole()
@@ -213,7 +267,7 @@ class MeshRepository(
         )
 
         messageDao.insertMessage(messageEntity)
-        
+
         // 4. Send via WiFi Direct manager
         val protocol = MeshProtocol(
             type = "TEXT",
@@ -229,8 +283,30 @@ class MeshRepository(
             priority = "NORMAL",
             signature = signature
         )
+        val payloadJson = protocol.toJson()
+
+        // 5. Record the transport unit in the persistent outbox (EU-1.1).
+        // This is the unit the queue-processor (Phase 2) and ACK path (EU-1.3/1.4) will track.
+        // State starts SENT because we attempt an immediate send below; bounded retry (EU-1.4)
+        // and DELIVERED-on-ACK (EU-1.3) update it later. ttlExpiry is the coarse wall-clock bound
+        // (the hop TTL lives inside the payload), per MeshPolicy / D1 / D7.
+        val now = System.currentTimeMillis()
+        outboxDao.upsert(
+            OutboxEntity(
+                id = messageId,
+                recipientId = recipientId,
+                payloadJson = payloadJson,
+                state = "SENT",
+                priority = "NORMAL",
+                attemptCount = 1,
+                nextAttemptAt = now + MeshPolicy.UNICAST_RETRY_BASE_MS,
+                createdAt = now,
+                ttlExpiry = now + MeshPolicy.MESSAGE_MAX_AGE_MS
+            )
+        )
+
         // Directed message → LAN unicast straight to the recipient (true B↔C delivery)
-        transport?.sendToPeer(recipientId, protocol.toJson())
+        transport?.sendToPeer(recipientId, payloadJson)
     }
 
     /**

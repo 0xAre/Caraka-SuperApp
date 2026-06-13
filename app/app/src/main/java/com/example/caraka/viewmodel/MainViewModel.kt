@@ -223,10 +223,13 @@ class MainViewModel(
     }
 
     fun startWifiDirect() {
-        transport.startListening()
+        // MeshForegroundService sekarang yang memanggil transport.startListening().
+        // Fungsi ini dibiarkan sebagai no-op agar tidak ada double-start.
     }
 
     fun stopWifiDirect() {
+        // Hentikan transport secara langsung. FGS-nya sendiri hanya bisa dihentikan
+        // via ACTION_STOP intent (dari tombol notifikasi atau clearIdentity).
         transport.stopListening()
     }
 
