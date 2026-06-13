@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Represents a message in the Garuda Mesh network.
+ * Represents a message in the CARAKA network.
  * Covers all message types: TEXT (direct/group), SOS (broadcast), SYSTEM (join/leave).
  */
 @Entity(tableName = "messages")

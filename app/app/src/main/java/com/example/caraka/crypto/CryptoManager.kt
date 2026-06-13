@@ -9,7 +9,7 @@ import com.goterl.lazysodium.utils.Key
 import com.goterl.lazysodium.utils.KeyPair
 
 /**
- * CryptoManager — handles all cryptographic operations for Garuda Mesh.
+ * CryptoManager — handles all cryptographic operations for CARAKA.
  *
  * Algorithms used (per PRD):
  * - X25519: Key exchange (Diffie-Hellman) for deriving shared secrets

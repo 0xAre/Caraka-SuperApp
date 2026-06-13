@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Garuda Mesh"
+rootProject.name = "CARAKA"
 include(":app")
