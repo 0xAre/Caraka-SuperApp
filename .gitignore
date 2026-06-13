@@ -9,13 +9,16 @@
 *.ap_
 *.aab
 
-# IDE
+# IDE / Cursor (local plans, not for repo)
 **/.idea/
+.cursor/
 *.iml
 .DS_Store
 
 # Kotlin
 **/.kotlin/
+
+# Secrets
 .env
 .env.*
 *.env
@@ -23,3 +26,13 @@ credentials.json
 *.pem
 *.key
 .credentials
+
+# Local debug logs (device testing)
+crash.log
+log_device*.txt
+
+# AI session prompts & scratch notes (keep on disk, do not commit)
+prompt*.md
+research_prompt.md
+CARAKA_BIGPLAN_V2.md
+docs/RENCANA_IMPLEMENTASI_13JUNI.md
