@@ -56,10 +56,10 @@ fun FloatingChatAlert(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                .shadow(8.dp, shape)
+                .shadow(4.dp, shape)
                 .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, accent.copy(alpha = 0.35f), shape)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
                 .clickable { onClick(current) }
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically

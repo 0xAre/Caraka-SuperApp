@@ -8,7 +8,7 @@
     <string name="nav_messages">Messages</string>
     <string name="nav_network">Network</string>
     <string name="nav_sos">SOS</string>
-    <string name="nav_settings">Settings</string>
+    <string name="nav_settings">Profile</string>
 
     <!-- ───── Profile Setup ───── -->
     <string name="setup_title">PROFILE SETUP</string>
@@ -254,7 +254,7 @@
     <string name="help_hci_error_prev">Error Prevention — SOS requires 2-second hold; confirmation dialog before flag/reset.</string>
     <string name="help_hci_recognition">Recognition &gt; Recall — First-run coach marks, role badges always shown.</string>
     <string name="help_hci_flexibility">Flexibility &amp; Efficiency — Hold gestures, swipe back, language toggle.</string>
-    <string name="help_hci_minimalist">Aesthetic &amp; Minimalist Design — Tactical dark theme, clear visual hierarchy.</string>
+    <string name="help_hci_minimalist">Aesthetic &amp; Minimalist Design — Clean white interface with a clear visual hierarchy.</string>
     <string name="help_hci_recovery">Error Recovery — Inline error messages with corrective suggestions.</string>
     <string name="help_hci_help">Help &amp; Documentation — This very screen 🙂</string>
 

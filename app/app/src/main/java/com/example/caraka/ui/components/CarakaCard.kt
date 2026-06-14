@@ -11,26 +11,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.example.caraka.ui.theme.LocalCarakaShapes
-import com.example.caraka.ui.theme.SurfaceLow
 
 @Composable
 fun CarakaCard(
     modifier: Modifier = Modifier,
-    shape: Shape = LocalCarakaShapes.current.md,
-    containerColor: Color = SurfaceLow,
+    shape: Shape = LocalCarakaShapes.current.lg,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     hasSubtleBorder: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val border = if (hasSubtleBorder) {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-    } else null
-
     Card(
         modifier = modifier,
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = border,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = if (hasSubtleBorder) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        } else {
+            null
+        },
         content = content
     )
 }

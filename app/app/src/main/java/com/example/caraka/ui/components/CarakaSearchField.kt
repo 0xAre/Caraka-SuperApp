@@ -26,23 +26,23 @@ fun CarakaSearchField(
         modifier = modifier.fillMaxWidth(),
         shape = LocalCarakaShapes.current.full,
         placeholder = {
-            Text(text = placeholder, style = MaterialTheme.typography.bodyMedium)
+            Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
         },
         leadingIcon = {
             Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search",
-                tint = MaterialTheme.colorScheme.primary
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = com.example.caraka.ui.theme.SurfaceHigh,
-            unfocusedContainerColor = com.example.caraka.ui.theme.SurfaceHigh,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent
         ),
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium
+        textStyle = MaterialTheme.typography.bodyLarge
     )
 }

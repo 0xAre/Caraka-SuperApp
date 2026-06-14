@@ -262,7 +262,12 @@ private fun CarakaNav(
                     HomeScreen(
                         viewModel = viewModel,
                         onNavigateToSos = { navController.navigate(Screen.Sos.route) },
-                        onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) }
+                        onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
+                        onNavigateToMessages = { navController.navigate(Screen.Messages.route) },
+                        onNavigateToNetwork = { navController.navigate(Screen.Network.route) },
+                        onNavigateToProfile = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToQr = { navController.navigate(Screen.QrIdentity.route) },
+                        onNavigateToHelp = { navController.navigate(Screen.Help.route) }
                     )
                 }
                 composable(Screen.Messages.route) {

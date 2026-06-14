@@ -129,7 +129,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clip(roleShape)
-                        .background(if (isSelected) roleColor.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceVariant)
+                        .background(if (isSelected) roleColor.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface)
                         .border(borderWidth, borderColor.copy(alpha = if (isSelected) 0.6f else 0.4f), roleShape)
                         .clickable {
                             haptics.tick()

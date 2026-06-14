@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -44,10 +43,9 @@ fun ChatInputBar(
 
     Surface(
         modifier = modifier
-            .padding(16.dp)
-            .shadow(4.dp, shape),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         shape = shape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
         Row(
@@ -82,7 +80,7 @@ fun ChatInputBar(
                 modifier = Modifier
                     .size(44.dp)
                     .background(
-                        if (value.isNotBlank()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        if (value.isNotBlank()) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.surfaceVariant,
                         CircleShape
                     )
@@ -91,7 +89,7 @@ fun ChatInputBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = null,
-                    tint = if (value.isNotBlank()) MaterialTheme.colorScheme.primary
+                    tint = if (value.isNotBlank()) MaterialTheme.colorScheme.onPrimary
                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )

@@ -88,8 +88,8 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(shapes.xl)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), shapes.xl)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shapes.xl)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -143,8 +143,8 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(shapes.md)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, LocalStatusColors.current.authority.copy(alpha = 0.3f), shapes.md)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shapes.md)
                         .padding(14.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -176,8 +176,8 @@ private fun QaCard(qRes: Int, aRes: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(shapes.md)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), shapes.md)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shapes.md)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -197,7 +197,7 @@ private fun HciItem(index: Int, textRes: Int) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(shapes.sm)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top
     ) {

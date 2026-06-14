@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -127,17 +128,18 @@ private fun AlertFilterRow(selected: AlertFilter, onSelect: (AlertFilter) -> Uni
         AlertFilter.SECURITY to R.string.alerts_filter_security,
         AlertFilter.DISASTER to R.string.alerts_filter_disaster
     )
-    androidx.compose.foundation.layout.Row(
+    LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier.padding(bottom = 4.dp)
     ) {
-        chips.forEach { (f, labelRes) ->
+        items(chips.size) { index ->
+            val (f, labelRes) = chips[index]
             FilterChip(
                 selected = selected == f,
                 onClick = { onSelect(f) },
                 label = { Text(stringResource(labelRes), fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.primary
                 )
             )

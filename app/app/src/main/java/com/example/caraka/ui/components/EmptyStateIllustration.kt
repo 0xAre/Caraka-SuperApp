@@ -78,8 +78,8 @@ fun EmptyStateIllustration(
                 onClick = onAction,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    contentColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(actionLabel, fontFamily = SpaceGroteskFamily, fontWeight = FontWeight.Bold)

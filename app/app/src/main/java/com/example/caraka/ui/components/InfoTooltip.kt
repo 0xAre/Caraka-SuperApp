@@ -63,10 +63,10 @@ fun InfoTooltip(
                 Surface(
                     modifier = Modifier
                         .padding(top = 22.dp)
-                        .shadow(8.dp, popupShape)
+                        .shadow(4.dp, popupShape)
                         .clip(popupShape)
                         .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), popupShape),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.surface,
                     shape = popupShape
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {

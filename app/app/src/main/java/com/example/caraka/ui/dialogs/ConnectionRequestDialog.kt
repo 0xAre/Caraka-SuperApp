@@ -19,7 +19,6 @@ import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaGlassSurface
 import com.example.caraka.ui.theme.CoralError
 import com.example.caraka.ui.theme.TealPrimary
-import com.example.caraka.ui.theme.CanvasDark
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextMuted
 import com.example.caraka.ui.theme.SkyInfo
@@ -88,7 +87,7 @@ fun ConnectionRequestDialog(
 
                 Row(
                     modifier = Modifier
-                        .background(CanvasDark, RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -109,7 +108,7 @@ fun ConnectionRequestDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.surface)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -151,7 +150,7 @@ fun ConnectionRequestDialog(
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = TealPrimary,
-                            contentColor = CanvasDark
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Text("TERIMA", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)

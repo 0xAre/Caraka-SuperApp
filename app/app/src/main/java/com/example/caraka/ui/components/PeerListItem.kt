@@ -84,10 +84,10 @@ fun PeerListItem(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.15f) else com.example.caraka.ui.theme.SurfaceHigh)
+                        .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else MaterialTheme.colorScheme.primaryContainer)
                         .border(
                             2.dp,
-                            if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                            if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.45f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
                             CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -171,7 +171,7 @@ fun PeerListItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else com.example.caraka.ui.theme.SurfaceMid)
+                                        .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 6.dp, vertical = 1.dp)
                     ) {
                         Text(

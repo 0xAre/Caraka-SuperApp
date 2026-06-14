@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
@@ -40,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.LocalStatusColors
-import com.example.caraka.ui.theme.SurfaceMid
 import com.example.caraka.ui.util.rememberHaptics
 import kotlinx.coroutines.delay
 
@@ -90,7 +88,7 @@ fun HoldToConfirmButton(
     val shape = LocalCarakaShapes.current.xl
     val containerColor = when {
         completed -> onlineColor
-        !enabled  -> SurfaceMid
+        !enabled  -> MaterialTheme.colorScheme.surfaceVariant
         pressed   -> MaterialTheme.colorScheme.error
         else      -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
     }
@@ -100,12 +98,16 @@ fun HoldToConfirmButton(
         pressed   -> holdingLabel
         else      -> label
     }
+    val contentColor = if (enabled || completed) {
+        MaterialTheme.colorScheme.onError
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
-            .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape)
             .clip(shape)
             .background(containerColor)
             .semantics(mergeDescendants = true) {
@@ -126,17 +128,17 @@ fun HoldToConfirmButton(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White.copy(alpha = 0.10f * animatedProgress))
+                .background(MaterialTheme.colorScheme.onError.copy(alpha = 0.10f * animatedProgress))
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.WifiTethering, contentDescription = null, tint = Color.White)
+            Icon(Icons.Default.WifiTethering, contentDescription = null, tint = contentColor)
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(state, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(state, color = contentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 if (pressed && !completed) {
                     Text(
                         "${"%.1f".format(elapsed / 1000f)} / ${"%.1f".format(holdDurationMs / 1000f)} s",
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = contentColor.copy(alpha = 0.85f),
                         fontSize = 11.sp
                     )
                 }

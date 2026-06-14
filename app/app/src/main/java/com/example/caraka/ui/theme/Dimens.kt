@@ -8,10 +8,11 @@ import androidx.compose.ui.unit.dp
 @Immutable
 data class CarakaDimens(
     val screenPadding: Dp = 16.dp,
-    val sectionGap:    Dp = 20.dp,
-    val cardPadding:   Dp = 14.dp,
-    val navHeight:     Dp = 64.dp,
-    val itemSpacing:   Dp = 8.dp
+    val sectionGap: Dp = 24.dp,
+    val cardPadding: Dp = 16.dp,
+    val navHeight: Dp = 72.dp,
+    val itemSpacing: Dp = 12.dp,
+    val touchTarget: Dp = 48.dp
 )
 
 val LocalCarakaDimens = staticCompositionLocalOf { CarakaDimens() }

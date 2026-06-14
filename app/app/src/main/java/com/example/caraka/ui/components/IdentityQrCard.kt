@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -60,10 +59,9 @@ fun IdentityQrCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(4.dp, shapes.lg)
             .clip(shapes.lg)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, CyanAccent.copy(alpha = 0.3f), shapes.lg)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shapes.lg)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

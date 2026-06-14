@@ -67,7 +67,20 @@ fun MessagesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.messages_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text(
+                            stringResource(R.string.messages_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            "Percakapan terenkripsi di jaringan mesh",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -125,25 +138,31 @@ fun MessagesScreen(
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(filteredPeers, key = { it.id }) { peer ->
-                        val lastMsg = lastMessagesPerPeer[peer.id]
-                        val lastRead = lastReadMap[peer.id] ?: 0L
-                        val unreadCount = if (lastMsg != null && lastMsg.isIncoming && lastMsg.timestamp > lastRead) 1 else 0
-                        val timeStr = lastMsg?.let { formatMessageTime(it.timestamp, justNow, minAgo) }
+                com.example.caraka.ui.components.CarakaCard(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(filteredPeers, key = { it.id }) { peer ->
+                            val lastMsg = lastMessagesPerPeer[peer.id]
+                            val lastRead = lastReadMap[peer.id] ?: 0L
+                            val unreadCount = if (lastMsg != null && lastMsg.isIncoming && lastMsg.timestamp > lastRead) 1 else 0
+                            val timeStr = lastMsg?.let { formatMessageTime(it.timestamp, justNow, minAgo) }
 
-                        PeerListItem(
-                            displayName = peer.displayName,
-                            role = peer.role,
-                            isAuthority = peer.isAuthority,
-                            isConnected = true,
-                            lastMessagePreview = lastMsg?.content,
-                            isOutgoingPreview = lastMsg?.isIncoming == false,
-                            timeLabel = timeStr,
-                            unreadCount = unreadCount,
-                            onClick = { onNavigateToChat(peer.id) },
-                            showDivider = peer.id != filteredPeers.lastOrNull()?.id
-                        )
+                            PeerListItem(
+                                displayName = peer.displayName,
+                                role = peer.role,
+                                isAuthority = peer.isAuthority,
+                                isConnected = true,
+                                lastMessagePreview = lastMsg?.content,
+                                isOutgoingPreview = lastMsg?.isIncoming == false,
+                                timeLabel = timeStr,
+                                unreadCount = unreadCount,
+                                onClick = { onNavigateToChat(peer.id) },
+                                showDivider = peer.id != filteredPeers.lastOrNull()?.id
+                            )
+                        }
                     }
                 }
             }
@@ -169,94 +188,12 @@ fun MeshEmptyStateIllustration(
     onAction: () -> Unit,
     contentDescription: String
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "meshPulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
+    EmptyStateIllustration(
+        icon = Icons.Default.WifiTethering,
+        message = message,
+        subtitle = subtitle,
+        actionLabel = actionLabel,
+        onAction = onAction,
+        contentDescription = contentDescription
     )
-
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(horizontal = 32.dp)
-    ) {
-        Canvas(modifier = Modifier.size(120.dp, 80.dp)) {
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-
-            // Define 3 surrounding nodes
-            val nodes = listOf(
-                Offset(cx - 35.dp.toPx(), cy - 25.dp.toPx()),
-                Offset(cx + 40.dp.toPx(), cy - 10.dp.toPx()),
-                Offset(cx - 15.dp.toPx(), cy + 30.dp.toPx())
-            )
-
-            val lineColor = primaryColor.copy(alpha = pulseAlpha)
-            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-
-            // Draw connections
-            nodes.forEach { node ->
-                drawLine(
-                    color = lineColor,
-                    start = Offset(cx, cy),
-                    end = node,
-                    strokeWidth = 3f,
-                    pathEffect = dashEffect
-                )
-            }
-            // Draw connection between nodes
-            drawLine(color = lineColor, start = nodes[0], end = nodes[1], strokeWidth = 2f, pathEffect = dashEffect)
-            drawLine(color = lineColor, start = nodes[0], end = nodes[2], strokeWidth = 2f, pathEffect = dashEffect)
-
-            // Draw nodes
-            val nodeColor = primaryColor
-            nodes.forEach { node ->
-                drawCircle(color = nodeColor, radius = 4.dp.toPx(), center = node)
-            }
-            
-            // Draw Center Node (YOU)
-            drawCircle(color = nodeColor, radius = 6.dp.toPx(), center = Offset(cx, cy))
-            // Center node pulse
-            drawCircle(color = nodeColor.copy(alpha = 0.3f), radius = 6.dp.toPx() + (4.dp.toPx() * pulseAlpha), center = Offset(cx, cy))
-        }
-        
-        Spacer(Modifier.height(24.dp))
-        
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(Modifier.height(8.dp))
-        
-        Text(
-            text = subtitle,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        
-        Spacer(Modifier.height(24.dp))
-        
-        Button(
-            onClick = onAction,
-            shape = LocalCarakaShapes.current.md,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(actionLabel, fontWeight = FontWeight.Bold)
-        }
-    }
 }

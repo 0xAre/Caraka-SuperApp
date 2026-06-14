@@ -8,7 +8,7 @@
     <string name="nav_messages">Pesan</string>
     <string name="nav_network">Jaringan</string>
     <string name="nav_sos">SOS</string>
-    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_settings">Profil</string>
 
     <!-- ───── Profile Setup ───── -->
     <string name="setup_title">PENGATURAN PROFIL</string>
@@ -254,7 +254,7 @@
     <string name="help_hci_error_prev">Error Prevention — SOS perlu ditahan 2 detik; dialog konfirmasi sebelum flag/reset.</string>
     <string name="help_hci_recognition">Recognition &gt; Recall — Coach marks pertama kali, badge peran selalu tampil.</string>
     <string name="help_hci_flexibility">Flexibility &amp; Efficiency — Hold gesture, swipe back, toggle bahasa.</string>
-    <string name="help_hci_minimalist">Aesthetic &amp; Minimalist Design — Tema gelap taktis, hierarki visual yang jelas.</string>
+    <string name="help_hci_minimalist">Aesthetic &amp; Minimalist Design — Antarmuka putih bersih dengan hierarki visual yang jelas.</string>
     <string name="help_hci_recovery">Error Recovery — Pesan error inline dengan saran perbaikan.</string>
     <string name="help_hci_help">Help &amp; Documentation — Layar ini sendiri 🙂</string>
 

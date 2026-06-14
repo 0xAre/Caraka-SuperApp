@@ -10,19 +10,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import com.example.caraka.ui.theme.LocalCarakaDimens
-import com.example.caraka.ui.components.CarakaGlassSurface
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.graphics.Color
-import com.example.caraka.ui.theme.DotGothicFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.caraka.ui.theme.MonoFamily
 
 @Composable
 fun CarakaStatTile(
@@ -32,61 +23,40 @@ fun CarakaStatTile(
     alarmCount: Int,
     forwardedCount: Int
 ) {
-    CarakaGlassSurface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
-    ) {
+    CarakaCard(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 24.dp, horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatItem(value = "$nodeCount", label = "Node")
-            VerticalDivider()
-            StatItem(value = "${coverageKm}km", label = "Jangkauan")
-            VerticalDivider()
+            StatItem("$nodeCount", "Node", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+            StatItem("${"%.1f".format(coverageKm)} km", "Jangkauan", MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
             StatItem(
-                value = "$alarmCount", 
-                label = "Alarm", 
-                color = if (alarmCount > 0) com.example.caraka.ui.theme.IosSystemRed else Color.White
+                "$alarmCount",
+                "Alarm",
+                if (alarmCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                Modifier.weight(1f)
             )
-            VerticalDivider()
-            StatItem(value = "$forwardedCount", label = "Diteruskan")
+            StatItem("$forwardedCount", "Relay", MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun VerticalDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(32.dp)
-            .background(Color(0x15FFFFFF))
-    )
-}
-
-@Composable
-private fun StatItem(value: String, label: String, color: Color = Color.White) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-    ) {
+private fun StatItem(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
-            fontFamily = DotGothicFamily,
-            fontSize = 20.sp,
+            style = MaterialTheme.typography.titleMedium,
+            fontFamily = MonoFamily,
             fontWeight = FontWeight.Bold,
             color = color
         )
         Text(
             text = label,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF8899AA)
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

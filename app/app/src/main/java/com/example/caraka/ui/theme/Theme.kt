@@ -3,7 +3,7 @@ package com.example.caraka.ui.theme
 import android.app.Activity
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -14,47 +14,45 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 
-private val DefaultColorScheme = darkColorScheme(
-    primary              = TealPrimary,           // #2AABEE Telegram blue
-    onPrimary            = Color(0xFFFFFFFF),
-    primaryContainer     = Color(0xFF1565C0),      // dark blue — outgoing chat bubbles
-    onPrimaryContainer   = Color(0xFFE3F2FD),
-    secondary            = CyanSecondary,          // #238636 Gojek-tone green
-    onSecondary          = Color(0xFFFFFFFF),
-    secondaryContainer   = Color(0xFF1A3A20),
-    onSecondaryContainer = Color(0xFF4CAF50),
-    tertiary             = Color(0xFFD29922),       // amber warnings
-    onTertiary           = Color(0xFF000000),
-    tertiaryContainer    = Color(0xFF3D2B00),
-    onTertiaryContainer  = Color(0xFFFFD60A),
-    background           = CanvasDark,             // #0D1117
-    onBackground         = TextPrimary,            // #E6EDF3
-    surface              = SurfaceLow,             // #161B22
-    onSurface            = TextPrimary,
-    surfaceVariant       = SurfaceMid,             // #21262D
-    onSurfaceVariant     = TextSecondary,          // #8B949E
-    error                = CoralError,             // #E5534B
-    onError              = Color(0xFFFFFFFF),
-    errorContainer       = Color(0xFF8C1D18),
-    onErrorContainer     = Color(0xFFF9DEDC),
-    outline              = Color(0xFF30363D),
-    outlineVariant       = SurfaceMid,
+private val DefaultColorScheme = lightColorScheme(
+    primary = TelegramBlueStrong,
+    onPrimary = Color.White,
+    primaryContainer = TelegramBlueContainer,
+    onPrimaryContainer = Color(0xFF073B53),
+    secondary = InfoBlue,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE8F0FF),
+    onSecondaryContainer = Color(0xFF143E82),
+    tertiary = WarningAmber,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFF1D6),
+    onTertiaryContainer = Color(0xFF5C3700),
+    background = CanvasLight,
+    onBackground = TextPrimary,
+    surface = SurfaceLow,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceHigh,
+    onSurfaceVariant = TextSecondary,
+    error = DangerRed,
+    onError = Color.White,
+    errorContainer = Color(0xFFFFE8E5),
+    onErrorContainer = Color(0xFF7D1711),
+    outline = Color(0xFFD0D5DD),
+    outlineVariant = BorderSubtle,
 )
 
-// WCAG AAA boost — higher contrast palette for visually impaired users
 private val HighContrastScheme = DefaultColorScheme.copy(
-    background   = Color(0xFF000000),
-    surface      = Color(0xFF0D1117),
-    onBackground = Color(0xFFFFFFFF),
-    onSurface    = Color(0xFFFFFFFF),
-    primary      = Color(0xFF5CC8F8),    // brighter Telegram blue for AAA
-    secondary    = Color(0xFF3FBA6A),    // brighter green for AAA
-    error        = Color(0xFFFF6B6B),    // brighter error for AAA
+    background = Color.White,
+    surface = Color.White,
+    onBackground = Color.Black,
+    onSurface = Color.Black,
+    onSurfaceVariant = Color(0xFF333333),
+    primary = Color(0xFF005F8D),
+    secondary = Color(0xFF174EA6),
+    error = Color(0xFFB3261E),
+    outline = Color(0xFF5F6368),
 )
 
-/**
- * Always dark (per PRD); reacts to [highContrast] (WCAG AAA) and [bigText] (+25% font scale).
- */
 @Composable
 fun CarakaTheme(
     highContrast: Boolean = false,
@@ -62,45 +60,58 @@ fun CarakaTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (highContrast) HighContrastScheme else DefaultColorScheme
-
     val view = LocalView.current
+
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            window.navigationBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
         }
     }
 
     val baseDensity = LocalDensity.current
     val density = if (bigText) {
-        Density(density = baseDensity.density, fontScale = baseDensity.fontScale * 1.25f)
-    } else baseDensity
+        Density(baseDensity.density, baseDensity.fontScale * 1.25f)
+    } else {
+        baseDensity
+    }
 
+    val shapes = CarakaShapes()
     val statusColors = StatusColors(
-        online    = EmeraldSuccess,   // #2ECC71 emerald
-        hybrid    = SkyInfo,          // #58A6FF lighter blue
-        meshOnly  = CoralError,       // #E5534B muted red
-        relay     = TealPrimary,      // #2AABEE Telegram blue
-        sos       = CoralError,
-        authority = EmeraldSuccess,
-        direct    = TealPrimary
+        online = SuccessGreen,
+        hybrid = TelegramBlueStrong,
+        meshOnly = WarningAmber,
+        relay = InfoBlue,
+        sos = DangerRed,
+        authority = SuccessGreen,
+        direct = TelegramBlueStrong
     )
 
     CompositionLocalProvider(
         LocalDensity provides density,
         LocalStatusColors provides statusColors,
-        LocalCarakaShapes provides CarakaShapes(),
+        LocalCarakaShapes provides shapes,
         LocalCarakaDimens provides CarakaDimens()
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
-            content = {
-                CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground) {
-                    content()
-                }
+            shapes = MaterialTheme.shapes.copy(
+                extraSmall = shapes.xs,
+                small = shapes.sm,
+                medium = shapes.md,
+                large = shapes.lg,
+                extraLarge = shapes.xl
+            )
+        ) {
+            CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground) {
+                content()
             }
-        )
+        }
     }
 }

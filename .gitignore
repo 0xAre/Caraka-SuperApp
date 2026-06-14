@@ -30,6 +30,8 @@ credentials.json
 # Local debug logs (device testing)
 crash.log
 log_device*.txt
+**/hs_err_pid*.log
+**/replay_pid*.log
 
 # AI session prompts & scratch notes (keep on disk, do not commit)
 prompt*.md

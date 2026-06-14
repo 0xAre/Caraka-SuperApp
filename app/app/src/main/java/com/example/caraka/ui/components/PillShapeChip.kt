@@ -21,12 +21,12 @@ fun PillShapeChip(
     selectedColor: Color? = null
 ) {
     val activeColor = selectedColor ?: MaterialTheme.colorScheme.primary
-    val containerColor = if (isSelected) activeColor.copy(alpha = 0.15f) else com.example.caraka.ui.theme.SurfaceHigh
+    val containerColor = if (isSelected) activeColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
     val borderColor = if (isSelected) activeColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
     
     Surface(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(50),
         color = containerColor,
         border = BorderStroke(
             width = 1.dp,

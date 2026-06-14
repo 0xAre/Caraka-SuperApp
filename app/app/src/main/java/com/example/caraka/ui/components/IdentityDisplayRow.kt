@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
 import com.example.caraka.ui.util.rememberHaptics
@@ -59,7 +59,7 @@ fun IdentityDisplayRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(GlassSurface)
-            .border(1.dp, SurfaceDark, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
         Text(label, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)

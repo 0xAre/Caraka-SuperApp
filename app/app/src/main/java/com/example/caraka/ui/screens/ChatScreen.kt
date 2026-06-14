@@ -130,7 +130,7 @@ fun ChatScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         bottomBar = {
@@ -156,14 +156,18 @@ fun ChatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f))
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.chat_e2e_banner), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                Text(
+                    stringResource(R.string.chat_e2e_banner),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontSize = 12.sp
+                )
             }
 
             LazyColumn(
@@ -318,7 +322,7 @@ fun IncomingMessageBubble(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .clip(incomingShape)
-                    .background(if (isFlagged) WarningCyan.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant)
+                    .background(if (isFlagged) WarningCyan.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), incomingShape)
                     .combinedClickable(
                         onClick = {},

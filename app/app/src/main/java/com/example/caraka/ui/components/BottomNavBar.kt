@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -39,7 +40,7 @@ sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector)
     object Messages  : Screen("messages",    R.string.nav_messages,        Icons.AutoMirrored.Filled.Message)
     object Network   : Screen("network",     R.string.nav_network,         Icons.Default.Map)
     object Sos       : Screen("sos",         R.string.nav_sos,             Icons.Default.Warning)
-    object Settings  : Screen("settings",    R.string.nav_settings,        Icons.Default.Settings)
+    object Settings  : Screen("settings",    R.string.nav_settings,        Icons.Default.Person)
     object Help      : Screen("help",        R.string.help_title,          Icons.Default.Settings)
     object QrIdentity: Screen("qr_identity", R.string.qr_screen_title,    Icons.Default.Settings)
     object Alerts    : Screen("alerts",      R.string.alerts_screen_title, Icons.Default.Warning)
@@ -75,7 +76,7 @@ fun BottomNavBar(
             modifier = Modifier.fillMaxWidth(),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = unselectedColor,
-            tonalElevation = 3.dp
+            tonalElevation = 0.dp
         ) {
             val navBackStackEntry = navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry.value?.destination?.route
@@ -131,7 +132,7 @@ fun BottomNavBar(
                         Text(
                             title,
                             fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Visible

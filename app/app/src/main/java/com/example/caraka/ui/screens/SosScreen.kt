@@ -19,8 +19,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -223,8 +225,22 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                "Pilih jenis keadaan darurat",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                "Informasi ini membantu peer memprioritaskan respons.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (sosSent) {
                 Box(
@@ -308,7 +324,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     .fillMaxWidth()
                     .height(100.dp)
                     .clip(shapes.md)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), shapes.md)
                     .padding(16.dp)
             ) {
@@ -336,7 +352,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(shapes.md)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), shapes.md)
                     .padding(16.dp)
             ) {
@@ -392,7 +408,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier
                             .size(80.dp)
                             .clip(shapes.sm)
-                            .background(MaterialTheme.colorScheme.background)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                         val dotColor = MaterialTheme.colorScheme.primary
@@ -453,11 +469,11 @@ fun SosCategoryCard(
 
     val surfaceColor = MaterialTheme.colorScheme.surface
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor.copy(alpha = 0.18f) else surfaceColor,
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.10f) else surfaceColor,
         label = "bgColor"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor else accentColor.copy(alpha = 0.5f),
+        targetValue = if (isSelected) accentColor else MaterialTheme.colorScheme.outlineVariant,
         label = "borderColor"
     )
     val borderWidth = if (isSelected) 2.dp else 1.dp

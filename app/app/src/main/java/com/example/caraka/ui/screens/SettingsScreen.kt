@@ -39,10 +39,10 @@ import com.example.caraka.viewmodel.MainViewModel
 @Composable
 private fun SectionHeader(title: String) {
     Text(
-        text = title.uppercase(),
-        color = MaterialTheme.colorScheme.primary,
-        fontSize = 11.sp,
-        letterSpacing = 1.5.sp,
+        text = title.lowercase().replaceFirstChar { it.uppercase() },
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = 16.sp,
+        letterSpacing = 0.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
     )
@@ -88,7 +88,16 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Profil", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Identitas, keamanan, dan preferensi CARAKA",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -108,7 +117,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -210,7 +219,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -270,7 +279,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth().clickable { haptics.tick(); onOpenHelp() }.semantics { contentDescription = helpCd },
                 hasSubtleBorder = true,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -286,7 +295,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -300,7 +309,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("KEAMANAN")
+            SectionHeader("Zona berbahaya")
             Button(
                 onClick = { showResetDialog = true },
                 modifier = Modifier
@@ -312,11 +321,11 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(8.dp))
-                Text("PANIC WIPE", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        Text("Hapus data darurat", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("MODE DEMO")
+            SectionHeader("Mode demo")
             AttackSimulatorCard(
                 isActive = attackSimActive,
                 onToggle = { 
@@ -333,7 +342,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Panic Wipe", color = MaterialTheme.colorScheme.onSurface) },
+            title = { Text("Hapus seluruh data CARAKA?", color = MaterialTheme.colorScheme.onSurface) },
             text = { Text("Tindakan ini akan MENGHAPUS SEMUA DATA mesh, riwayat pesan, dan identitas Anda dari perangkat secara permanen. Lanjutkan?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
                 Button(
@@ -450,7 +459,7 @@ private fun ToggleRow(
     CarakaCard(
         modifier = Modifier.fillMaxWidth().clickable { onToggle() }.semantics { contentDescription = "$title. ${if (checked) "Enabled" else "Disabled"}" },
         hasSubtleBorder = true,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -488,7 +497,7 @@ private fun SettingsStatChip(
     CarakaCard(
         modifier = modifier,
         hasSubtleBorder = true,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp).fillMaxWidth(),
@@ -535,7 +544,8 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
             .fillMaxWidth()
             .clickable { onToggle() },
         shape = LocalCarakaShapes.current.md,
-        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        containerColor = if (isActive) MaterialTheme.colorScheme.errorContainer
+        else MaterialTheme.colorScheme.primaryContainer
     ) {
         Column {
             ListItem(
@@ -543,7 +553,7 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
                     Text(
                         text = if (isActive) stringResource(R.string.home_attack_sim_active_title)
                                else stringResource(R.string.home_attack_sim_title),
-                        color = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                        color = if (isActive) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     ) 
@@ -552,7 +562,8 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
                     Text(
                         text = if (isActive) stringResource(R.string.home_attack_sim_active_subtitle)
                                else stringResource(R.string.home_attack_sim_subtitle),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        color = if (isActive) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
+                        else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                         fontSize = 12.sp
                     ) 
                 },
@@ -560,7 +571,7 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
                     Icon(
                         imageVector = if (isActive) Icons.Default.FlashOff else Icons.Default.FlashOn,
                         contentDescription = null,
-                        tint = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary,
+                        tint = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
                     )
                 },
@@ -578,7 +589,8 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
             )
             Text(
                 text = "Fitur khusus demonstrasi — jangan aktifkan saat operasi nyata",
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                color = if (isActive) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
+                else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                 fontSize = 10.sp,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             )
