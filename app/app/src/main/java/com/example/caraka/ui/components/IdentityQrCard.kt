@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,10 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.DangerRed
+import com.example.caraka.ui.theme.DisasterBlue
+import com.example.caraka.ui.theme.LocalCarakaShapes
+import com.example.caraka.ui.theme.NeonMint
 
 @Composable
 fun IdentityQrCard(
@@ -55,23 +55,29 @@ fun IdentityQrCard(
     roleBadge: @Composable (String) -> Unit = { RoleBadgeDefault(it) }
 ) {
     val fingerprint = peerId.take(8).uppercase()
+    val shapes = LocalCarakaShapes.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = CyanAccent.copy(0.2f))
-            .clip(RoundedCornerShape(24.dp))
-            .background(SurfaceDark)
-            .border(1.dp, CyanAccent.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+            .shadow(4.dp, shapes.lg)
+            .clip(shapes.lg)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, CyanAccent.copy(alpha = 0.3f), shapes.lg)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.QrCode2, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Default.QrCode2,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.qr_my_identity_title),
-                color = CyanAccent,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 letterSpacing = 1.sp
@@ -88,8 +94,8 @@ fun IdentityQrCard(
                 Box(
                     modifier = Modifier
                         .size(240.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CyanAccent)
+                        .clip(shapes.md)
+                        .background(MaterialTheme.colorScheme.primary)
                         .padding(8.dp)
                 ) {
                     Image(
@@ -106,23 +112,31 @@ fun IdentityQrCard(
             Box(
                 modifier = Modifier
                     .size(240.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(GlassSurface),
+                    .clip(shapes.md)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = CyanAccent, modifier = Modifier.size(40.dp))
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        Text(displayName.ifBlank { "—" }, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(
+            displayName.ifBlank { "—" },
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
         Spacer(Modifier.height(4.dp))
         roleBadge(role)
         Spacer(Modifier.height(8.dp))
         Text(
             peerId.take(24) + if (peerId.length > 24) "…" else "",
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             textAlign = TextAlign.Center
@@ -130,7 +144,7 @@ fun IdentityQrCard(
         Spacer(Modifier.height(4.dp))
         Text(
             stringResource(R.string.qr_verbal_fingerprint, fingerprint),
-            color = CyanAccent,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold
@@ -138,7 +152,7 @@ fun IdentityQrCard(
         Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.qr_show_hint),
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
             lineHeight = 16.sp
@@ -146,7 +160,7 @@ fun IdentityQrCard(
         Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.qr_trust_warning),
-            color = TextSecondary.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             fontSize = 11.sp,
             textAlign = TextAlign.Center,
             lineHeight = 14.sp
@@ -156,17 +170,18 @@ fun IdentityQrCard(
 
 @Composable
 private fun RoleBadgeDefault(role: String) {
+    val shapes = LocalCarakaShapes.current
     val (color, label) = when (role) {
-        "BPBD" -> com.example.caraka.ui.theme.DisasterBlue to "🛡️ BPBD"
-        "POLRI" -> CyanAccent to "🚔 POLRI"
-        "PMI" -> com.example.caraka.ui.theme.DangerRed to "🏥 PMI"
-        else -> com.example.caraka.ui.theme.NeonMint to "👤 Civilian"
+        "BPBD"  -> DisasterBlue to "BPBD"
+        "POLRI" -> CyanAccent   to "POLRI"
+        "PMI"   -> DangerRed    to "PMI"
+        else    -> NeonMint     to "Civilian"
     }
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shapes.sm)
             .background(color.copy(alpha = 0.15f))
-            .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .border(1.dp, color.copy(alpha = 0.5f), shapes.sm)
             .padding(horizontal = 10.dp, vertical = 3.dp)
     ) {
         Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)

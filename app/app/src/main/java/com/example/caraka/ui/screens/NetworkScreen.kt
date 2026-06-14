@@ -205,7 +205,7 @@ private fun NodeDetailBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = com.example.caraka.ui.theme.SurfaceLow
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -663,7 +663,7 @@ private fun NetworkStatsPanel(
 ) {
     CarakaGlassSurface(
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = LocalCarakaShapes.current.lg,
     ) {
         Row(
             modifier = Modifier
@@ -683,7 +683,7 @@ private fun NetworkStatsPanel(
                 }
                 hasWeakSignal -> {
                     healthValue = "LEMAH"
-                    healthColor = Color(0xFF5AC8FA)
+                    healthColor = MaterialTheme.colorScheme.tertiary
                 }
                 else -> {
                     healthValue = "BAIK"
@@ -711,17 +711,11 @@ private fun StatChip(label: String, value: String, color: Color) {
         modifier = Modifier.padding(horizontal = 4.dp)
     ) {
         Text(
-            text = value, 
-            fontFamily = SpaceGroteskFamily, 
-            color = color, 
-            fontWeight = FontWeight.Bold, 
-            fontSize = 20.sp,
-            style = LocalTextStyle.current.copy(
-                shadow = androidx.compose.ui.graphics.Shadow(
-                    color = color.copy(alpha = 0.4f),
-                    blurRadius = 12f
-                )
-            )
+            text = value,
+            fontFamily = MonoFamily,
+            color = color,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
         )
         Spacer(Modifier.height(6.dp))
         Text(

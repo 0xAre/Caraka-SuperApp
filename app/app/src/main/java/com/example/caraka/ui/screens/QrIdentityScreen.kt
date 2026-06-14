@@ -93,7 +93,7 @@ fun QrIdentityScreen(
                 title = {
                     Text(
                         "Identitas QR",
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -102,14 +102,14 @@ fun QrIdentityScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -132,22 +132,22 @@ fun QrIdentityScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(SurfaceDark)
-                    .border(1.dp, NeonMint.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                    .clip(LocalCarakaShapes.current.lg)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), LocalCarakaShapes.current.lg)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = NeonMint, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("SCAN QR PEER", color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+                    Text("SCAN QR PEER", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
                 }
 
                 Spacer(Modifier.height(16.dp))
                 Text(
                     "Scan QR dari device lain untuk memverifikasi identitas mereka secara tatap muka",
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center,
                     lineHeight = 16.sp
@@ -166,13 +166,13 @@ fun QrIdentityScreen(
                         scanLauncher.launch(options)
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonMint.copy(alpha = 0.15f)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonMint.copy(alpha = 0.6f))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)),
+                    shape = LocalCarakaShapes.current.md,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f))
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = NeonMint)
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Buka Kamera & Scan", color = NeonMint, fontWeight = FontWeight.SemiBold)
+                    Text("Buka Kamera & Scan", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
                 }
 
                 scanError?.let { err ->
@@ -180,15 +180,15 @@ fun QrIdentityScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(DangerRed.copy(alpha = 0.1f))
-                            .border(1.dp, DangerRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .clip(LocalCarakaShapes.current.sm)
+                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
+                            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f), LocalCarakaShapes.current.sm)
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = DangerRed, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(err, color = DangerRed, fontSize = 13.sp)
+                        Text(err, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                     }
                 }
             }

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -26,27 +25,23 @@ import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.NavyBackground
-import com.example.caraka.ui.theme.NeonMint
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.LocalCarakaShapes
+import com.example.caraka.ui.theme.LocalStatusColors
 
 /**
  * In-app help center. Doubles as the artefact required for the HCI evaluation
@@ -56,27 +51,28 @@ import com.example.caraka.ui.theme.TextSecondary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
+    val shapes = LocalCarakaShapes.current
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(22.dp))
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.help_title), color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.help_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.help_back),
-                            tint = TextPrimary)
+                            tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -91,22 +87,21 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(8.dp, RoundedCornerShape(20.dp), ambientColor = CyanAccent, spotColor = SurfaceDark)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(GlassSurface)
-                        .border(1.dp, CyanAccent.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                        .clip(shapes.xl)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), shapes.xl)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.School, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.padding(end = 12.dp)) {
-                        Text("Tur Interaktif", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        Text("Putar ulang panduan 5 langkah", color = TextSecondary, fontSize = 12.sp)
+                        Text("Tur Interaktif", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text("Putar ulang panduan 5 langkah", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     }
-                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                    androidx.compose.material3.TextButton(onClick = onLaunchTour) {
-                        Text("Mulai", color = CyanAccent, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onLaunchTour) {
+                        Text("Mulai", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -128,7 +123,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
             // ── HCI Heuristics ────────────────────────────────────────────
             item { SectionHeader(R.string.help_section_hci) }
             item {
-                Text(stringResource(R.string.help_hci_intro), color = TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.help_hci_intro), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             }
             item { HciItem(1, R.string.help_hci_visibility) }
             item { HciItem(2, R.string.help_hci_match) }
@@ -147,15 +142,15 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(GlassSurface)
-                        .border(1.dp, NeonMint.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .clip(shapes.md)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, LocalStatusColors.current.authority.copy(alpha = 0.3f), shapes.md)
                         .padding(14.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Icon(Icons.Default.Accessibility, contentDescription = null, tint = NeonMint, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Default.Accessibility, contentDescription = null, tint = LocalStatusColors.current.authority, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(stringResource(R.string.help_a11y_a), color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+                    Text(stringResource(R.string.help_a11y_a), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
                 }
             }
             item { Spacer(Modifier.height(40.dp)) }
@@ -167,7 +162,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
 private fun SectionHeader(textRes: Int) {
     Text(
         stringResource(textRes),
-        color = CyanAccent,
+        color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         modifier = Modifier.padding(vertical = 4.dp)
@@ -176,45 +171,46 @@ private fun SectionHeader(textRes: Int) {
 
 @Composable
 private fun QaCard(qRes: Int, aRes: Int) {
+    val shapes = LocalCarakaShapes.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(GlassSurface)
-            .border(1.dp, SurfaceDark, RoundedCornerShape(16.dp))
+            .clip(shapes.md)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), shapes.md)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.QuestionMark, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.QuestionMark, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(qRes), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(stringResource(qRes), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }
-        Text(stringResource(aRes), color = TextSecondary, fontSize = 13.sp, lineHeight = 19.sp)
+        Text(stringResource(aRes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 19.sp)
     }
 }
 
 @Composable
 private fun HciItem(index: Int, textRes: Int) {
+    val shapes = LocalCarakaShapes.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark.copy(alpha = 0.4f))
+            .clip(shapes.sm)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top
     ) {
         Box(modifier = Modifier
             .size(22.dp)
             .clip(CircleShape)
-            .background(NeonMint.copy(alpha = 0.18f)),
+            .background(LocalStatusColors.current.authority.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center
         ) {
-            Text("$index", color = NeonMint, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text("$index", color = LocalStatusColors.current.authority, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         }
         Spacer(Modifier.width(10.dp))
-        Text(stringResource(textRes), color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 2.dp))
+        Text(stringResource(textRes), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 2.dp))
         Spacer(Modifier.width(6.dp))
     }
 }
-

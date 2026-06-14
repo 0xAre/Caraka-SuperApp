@@ -108,7 +108,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = com.example.caraka.ui.theme.SurfaceHigh
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -167,7 +167,7 @@ fun SettingsScreen(
                             onClick = { haptics.tick(); onOpenQr() },
                             modifier = Modifier.fillMaxWidth().height(44.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = LocalCarakaShapes.current.md,
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                         ) {
                             Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -210,7 +210,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = com.example.caraka.ui.theme.SurfaceMid
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -222,8 +222,8 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(com.example.caraka.ui.theme.SurfaceHigh)
+                            .clip(LocalCarakaShapes.current.lg)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(4.dp)
                     ) {
                         LanguagePill(
@@ -270,7 +270,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth().clickable { haptics.tick(); onOpenHelp() }.semantics { contentDescription = helpCd },
                 hasSubtleBorder = true,
-                containerColor = com.example.caraka.ui.theme.SurfaceMid
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -286,7 +286,7 @@ fun SettingsScreen(
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
-                containerColor = com.example.caraka.ui.theme.SurfaceMid
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -307,7 +307,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
-                shape = RoundedCornerShape(16.dp),
+                shape = LocalCarakaShapes.current.md,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
             ) {
                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
@@ -350,7 +350,7 @@ fun SettingsScreen(
                     Text(stringResource(R.string.settings_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = com.example.caraka.ui.theme.SurfaceHigh
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -415,7 +415,7 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showRoleConfirmDialog = false }) { Text("Batal", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             },
-            containerColor = com.example.caraka.ui.theme.SurfaceHigh
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -450,7 +450,7 @@ private fun ToggleRow(
     CarakaCard(
         modifier = Modifier.fillMaxWidth().clickable { onToggle() }.semantics { contentDescription = "$title. ${if (checked) "Enabled" else "Disabled"}" },
         hasSubtleBorder = true,
-        containerColor = com.example.caraka.ui.theme.SurfaceMid
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -468,7 +468,7 @@ private fun ToggleRow(
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.surface,
                     checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedTrackColor = com.example.caraka.ui.theme.SurfaceHigh
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
         }
@@ -488,7 +488,7 @@ private fun SettingsStatChip(
     CarakaCard(
         modifier = modifier,
         hasSubtleBorder = true,
-        containerColor = com.example.caraka.ui.theme.SurfaceMid
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp).fillMaxWidth(),
@@ -534,8 +534,8 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onToggle() },
-        shape = RoundedCornerShape(24.dp),
-        containerColor = Color(0xFF2A2000)
+        shape = LocalCarakaShapes.current.md,
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer
     ) {
         Column {
             ListItem(

@@ -169,7 +169,7 @@ fun HomeScreen(
             item {
                 com.example.caraka.ui.components.CarakaGlassSurface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                    shape = LocalCarakaShapes.current.lg
                 ) {
                     Column(
                         modifier = Modifier
@@ -256,9 +256,9 @@ private fun SosShortcutButton(onClick: () -> Unit) {
                     role = Role.Button
                     contentDescription = cdSos
                 }
-                .shadow(elevation = 16.dp, shape = CircleShape, spotColor = com.example.caraka.ui.theme.IosSystemRed.copy(alpha = 0.5f))
+                .shadow(elevation = 16.dp, shape = CircleShape)
                 .clip(CircleShape)
-                .background(com.example.caraka.ui.theme.IosSystemRed),
+                .background(MaterialTheme.colorScheme.error),
             contentAlignment = Alignment.Center
         ) {
             Column(

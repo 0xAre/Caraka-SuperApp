@@ -7,10 +7,11 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class CarakaShapes(
-    val sm: RoundedCornerShape = RoundedCornerShape(12.dp),
-    val md: RoundedCornerShape = RoundedCornerShape(16.dp),
-    val lg: RoundedCornerShape = RoundedCornerShape(20.dp),
-    val xl: RoundedCornerShape = RoundedCornerShape(28.dp),
+    val xs:   RoundedCornerShape = RoundedCornerShape(4.dp),
+    val sm:   RoundedCornerShape = RoundedCornerShape(8.dp),
+    val md:   RoundedCornerShape = RoundedCornerShape(12.dp),
+    val lg:   RoundedCornerShape = RoundedCornerShape(16.dp),
+    val xl:   RoundedCornerShape = RoundedCornerShape(20.dp),
     val full: RoundedCornerShape = RoundedCornerShape(50)
 )
 

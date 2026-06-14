@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,10 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
-import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.NavyBackground
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +40,7 @@ fun AlertsBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NavyBackground,
+        containerColor = MaterialTheme.colorScheme.surface,
         modifier = modifier
     ) {
         Column(
@@ -53,14 +50,14 @@ fun AlertsBottomSheet(
         ) {
             Text(
                 stringResource(R.string.alerts_sheet_title),
-                color = CyanAccent,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.alerts_sheet_subtitle, alerts.size),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )
             Spacer(Modifier.height(16.dp))
@@ -68,7 +65,7 @@ fun AlertsBottomSheet(
             if (alerts.isEmpty()) {
                 Text(
                     stringResource(R.string.home_no_alerts),
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(vertical = 24.dp)
                 )
@@ -91,7 +88,11 @@ fun AlertsBottomSheet(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.alerts_view_all), color = CyanAccent, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.alerts_view_all),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))

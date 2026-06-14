@@ -79,11 +79,11 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.setup_title), color = TextPrimary, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                title = { Text(stringResource(R.string.setup_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -95,26 +95,28 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
         ) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Shield, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(stringResource(R.string.setup_welcome), color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.setup_subtitle), color = TextSecondary, fontSize = 14.sp)
+                    Text(stringResource(R.string.setup_welcome), color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.setup_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text(stringResource(R.string.setup_select_role), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+            Text(stringResource(R.string.setup_select_role), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
 
             val requiresPwdText = stringResource(R.string.setup_requires_password)
+            val unselectedBorder = MaterialTheme.colorScheme.outline
+            val roleShape = LocalCarakaShapes.current.md
             roles.forEach { (roleValue, roleLabel) ->
                 val isSelected = selectedRole == roleValue
                 val isAuth = roleValue != IdentityManager.ROLE_CIVILIAN
                 val roleColor = roleColorFor(roleValue)
 
                 val borderColor by animateColorAsState(
-                    targetValue = if (isSelected) roleColor else SurfaceDark,
+                    targetValue = if (isSelected) roleColor else unselectedBorder,
                     label = "roleBorder"
                 )
                 val borderWidth by animateDpAsState(
@@ -126,9 +128,9 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) roleColor.copy(alpha = 0.10f) else GlassSurface)
-                        .border(borderWidth, borderColor.copy(alpha = if (isSelected) 0.6f else 0.4f), RoundedCornerShape(12.dp))
+                        .clip(roleShape)
+                        .background(if (isSelected) roleColor.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceVariant)
+                        .border(borderWidth, borderColor.copy(alpha = if (isSelected) 0.6f else 0.4f), roleShape)
                         .clickable {
                             haptics.tick()
                             selectedRole = roleValue
@@ -182,7 +184,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             if (isAuthority) {
                 Text(
                     text = stringResource(R.string.setup_password_label),
-                    color = CyanAccent, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
@@ -192,16 +194,16 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                         Text(
                             String.format(stringResource(R.string.setup_enter_password),
                                 roles.find { it.first == selectedRole }?.second ?: ""),
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = SurfaceDark,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        errorBorderColor = DangerRed
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        errorBorderColor = MaterialTheme.colorScheme.error
                     ),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -219,20 +221,20 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             } else {
                 Text(
                     text = stringResource(R.string.setup_display_name),
-                    color = CyanAccent, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
                     value = displayName,
                     onValueChange = { displayName = it; errorMessage = null },
-                    label = { Text(stringResource(R.string.setup_enter_name), color = TextSecondary) },
+                    label = { Text(stringResource(R.string.setup_enter_name), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = SurfaceDark,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        errorBorderColor = DangerRed
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        errorBorderColor = MaterialTheme.colorScheme.error
                     ),
                     singleLine = true,
                     isError = errorMessage != null
@@ -241,7 +243,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
 
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = errorMessage!!, color = DangerRed, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -266,20 +268,20 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
-                shape = RoundedCornerShape(12.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = LocalCarakaShapes.current.md
             ) {
                 Icon(
                     if (isAuthority) Icons.Default.Lock else Icons.Default.Person,
                     contentDescription = null,
-                    tint = NavyBackground,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     if (isAuthority) stringResource(R.string.setup_btn_authorize)
                     else stringResource(R.string.setup_btn_join),
-                    color = NavyBackground,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )

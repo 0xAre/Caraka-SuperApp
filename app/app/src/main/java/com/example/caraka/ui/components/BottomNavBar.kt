@@ -1,9 +1,8 @@
 package com.example.caraka.ui.components
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Home
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -35,14 +35,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.caraka.R
 
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
-    object Home : Screen("home", R.string.nav_home, Icons.Default.Home)
-    object Messages : Screen("messages", R.string.nav_messages, Icons.AutoMirrored.Filled.Message)
-    object Network : Screen("network", R.string.nav_network, Icons.Default.Map)
-    object Sos : Screen("sos", R.string.nav_sos, Icons.Default.Warning)
-    object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
-    object Help : Screen("help", R.string.help_title, Icons.Default.Settings)
-    object QrIdentity : Screen("qr_identity", R.string.qr_screen_title, Icons.Default.Settings)
-    object Alerts : Screen("alerts", R.string.alerts_screen_title, Icons.Default.Warning)
+    object Home      : Screen("home",        R.string.nav_home,            Icons.Default.Home)
+    object Messages  : Screen("messages",    R.string.nav_messages,        Icons.AutoMirrored.Filled.Message)
+    object Network   : Screen("network",     R.string.nav_network,         Icons.Default.Map)
+    object Sos       : Screen("sos",         R.string.nav_sos,             Icons.Default.Warning)
+    object Settings  : Screen("settings",    R.string.nav_settings,        Icons.Default.Settings)
+    object Help      : Screen("help",        R.string.help_title,          Icons.Default.Settings)
+    object QrIdentity: Screen("qr_identity", R.string.qr_screen_title,    Icons.Default.Settings)
+    object Alerts    : Screen("alerts",      R.string.alerts_screen_title, Icons.Default.Warning)
 
     companion object {
         fun chatRoute(peerId: String) = "chat/$peerId"
@@ -64,20 +64,18 @@ fun BottomNavBar(
     sosBadgeCount: Int = 0,
     messagesBadgeCount: Int = 0
 ) {
-    val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    
-    // Wrap in a surface to apply tonal elevation and a border line at the top
-    androidx.compose.material3.Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp, // MD3 tonal elevation
-        shadowElevation = 16.dp,
-        modifier = Modifier.padding(bottom = 12.dp, start = 12.dp, end = 12.dp),
-        shape = RoundedCornerShape(24.dp)
-    ) {
+    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+            thickness = 1.dp
+        )
         NavigationBar(
-            containerColor = com.example.caraka.ui.theme.CanvasDark,
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = unselectedColor,
-            tonalElevation = 0.dp
+            tonalElevation = 3.dp
         ) {
             val navBackStackEntry = navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry.value?.destination?.route
@@ -90,14 +88,17 @@ fun BottomNavBar(
                 val title = stringResource(screen.titleRes)
                 val isSos = screen == Screen.Sos
                 val activeColor = if (isSos) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                
+
                 NavigationBarItem(
                     icon = {
                         when {
                             screen == Screen.Sos && sosBadgeCount > 0 -> {
                                 BadgedBox(
                                     badge = {
-                                        Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = Color.White) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = Color.White
+                                        ) {
                                             Text("$sosBadgeCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
@@ -108,7 +109,10 @@ fun BottomNavBar(
                             screen == Screen.Messages && messagesBadgeCount > 0 -> {
                                 BadgedBox(
                                     badge = {
-                                        Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        ) {
                                             Text(
                                                 if (messagesBadgeCount > 99) "99+" else "$messagesBadgeCount",
                                                 fontSize = 9.sp,

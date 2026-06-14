@@ -128,7 +128,7 @@ private fun PeerItemCard(
                             .height(48.dp),
                         enabled = false,
                         colors = ButtonDefaults.buttonColors(
-                            disabledContainerColor = com.example.caraka.ui.theme.SurfaceHigh,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
@@ -138,7 +138,7 @@ private fun PeerItemCard(
 
                 ConnectionStatus.CONNECTED, ConnectionStatus.ACTIVE_MESH -> {
                     Text(
-                        text = "✓ Terhubung",
+                        text = "Terhubung",
                         fontSize = 13.sp,
                         color = LocalStatusColors.current.online,
                         fontWeight = FontWeight.SemiBold

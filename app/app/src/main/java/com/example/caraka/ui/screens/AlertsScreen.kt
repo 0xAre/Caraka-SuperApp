@@ -16,6 +16,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -32,13 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
-import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.ui.components.EmergencyAlertCard
 import com.example.caraka.ui.components.EmptyStateIllustration
-import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.NavyBackground
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
 import com.example.caraka.viewmodel.MainViewModel
 
 private enum class AlertFilter { ALL, MEDICAL, FIRE, SECURITY, DISASTER }
@@ -68,7 +64,7 @@ fun AlertsScreen(
                 title = {
                     Text(
                         stringResource(R.string.alerts_screen_title),
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -77,14 +73,14 @@ fun AlertsScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_back_btn),
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -97,7 +93,7 @@ fun AlertsScreen(
             item {
                 Text(
                     stringResource(R.string.alerts_screen_subtitle),
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
                 Spacer(Modifier.height(8.dp))
@@ -141,8 +137,8 @@ private fun AlertFilterRow(selected: AlertFilter, onSelect: (AlertFilter) -> Uni
                 onClick = { onSelect(f) },
                 label = { Text(stringResource(labelRes), fontSize = 11.sp) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = CyanAccent.copy(alpha = 0.2f),
-                    selectedLabelColor = CyanAccent
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    selectedLabelColor = MaterialTheme.colorScheme.primary
                 )
             )
         }

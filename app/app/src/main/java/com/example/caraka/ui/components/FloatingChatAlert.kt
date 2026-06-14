@@ -10,11 +10,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,12 +28,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.example.caraka.R
 import com.example.caraka.network.ChatAlert
-import com.example.caraka.ui.theme.*
+import com.example.caraka.ui.theme.LocalCarakaShapes
+import com.example.caraka.ui.theme.NeonMint
+import com.example.caraka.ui.theme.TextPrimary
+import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.TealPrimary
 
-/**
- * A floating heads-up alert that slides down from the top when a chat message arrives.
- * Tappable to open the conversation; auto-dismiss is handled by the caller.
- */
 @Composable
 fun FloatingChatAlert(
     alert: ChatAlert?,
@@ -49,16 +49,17 @@ fun FloatingChatAlert(
     ) {
         val current = alert ?: return@AnimatedVisibility
         val isAuthority = current.senderRole in listOf("BPBD", "POLRI", "PMI")
-        val accent = if (isAuthority) NeonMint else CyanAccent
+        val accent = if (isAuthority) NeonMint else TealPrimary
+        val shape = LocalCarakaShapes.current.lg
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                .shadow(20.dp, RoundedCornerShape(20.dp), ambientColor = accent, spotColor = SurfaceDark)
-                .clip(RoundedCornerShape(20.dp))
-                .background(GlassSurface)
-                .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                .shadow(8.dp, shape)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, accent.copy(alpha = 0.35f), shape)
                 .clickable { onClick(current) }
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -91,7 +92,12 @@ fun FloatingChatAlert(
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("· ${stringResource(R.string.alert_new_message)}", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "· ${stringResource(R.string.alert_new_message)}",
+                        color = accent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(

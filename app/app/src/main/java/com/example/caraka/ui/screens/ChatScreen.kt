@@ -103,10 +103,10 @@ fun ChatScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(if (peer.isAuthority) NeonMint.copy(alpha = 0.12f) else SurfaceDark)
+                                        .background(if (peer.isAuthority) LocalStatusColors.current.authority.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
                                         .padding(horizontal = 6.dp, vertical = 1.dp)
                                 ) {
-                                    Text(peer.role, color = if (peer.isAuthority) NeonMint else TextSecondary, fontSize = 10.sp)
+                                    Text(peer.role, color = if (peer.isAuthority) LocalStatusColors.current.authority else TextSecondary, fontSize = 10.sp)
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                             }
@@ -114,7 +114,7 @@ fun ChatScreen(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(if (peer != null) NeonMint else TextSecondary)
+                                    .background(if (peer != null) LocalStatusColors.current.online else TextSecondary)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(meshSubtitle, color = TextSecondary, fontSize = 12.sp)
@@ -130,7 +130,7 @@ fun ChatScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         bottomBar = {
@@ -146,7 +146,7 @@ fun ChatScreen(
                 }
             )
         },
-        containerColor = NavyBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -156,14 +156,14 @@ fun ChatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceDark.copy(alpha = 0.5f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.chat_e2e_banner), color = CyanAccent, fontSize = 12.sp)
+                Text(stringResource(R.string.chat_e2e_banner), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
             }
 
             LazyColumn(
@@ -225,7 +225,7 @@ fun ChatScreen(
     if (showFlagDialog && flagTargetId != null) {
         AlertDialog(
             onDismissRequest = { showFlagDialog = false },
-            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = WarningCyan) },
+            icon = { Icon(Icons.Default.Flag, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary) },
             title = { Text(stringResource(R.string.chat_flag_title), color = TextPrimary) },
             text = { Text(stringResource(R.string.chat_flag_desc), color = TextSecondary) },
             confirmButton = {
@@ -236,15 +236,15 @@ fun ChatScreen(
                         showFlagDialog = false
                         flagTargetId = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = WarningCyan)
-                ) { Text(stringResource(R.string.chat_flag_confirm), color = Color.Black, fontWeight = FontWeight.Bold) }
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) { Text(stringResource(R.string.chat_flag_confirm), color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showFlagDialog = false }) {
                     Text(stringResource(R.string.chat_flag_cancel), color = TextSecondary)
                 }
             },
-            containerColor = SurfaceDark
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -274,7 +274,7 @@ private fun DateSeparator(timestamp: Long) {
             fontSize = 11.sp,
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceDark.copy(alpha = 0.6f))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         )
     }
@@ -302,23 +302,24 @@ fun IncomingMessageBubble(
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         Box(
             modifier = Modifier.size(40.dp).clip(CircleShape)
-                .background(if (isAuthority) NeonMint.copy(alpha = 0.2f) else SurfaceDark),
+                .background(if (isAuthority) LocalStatusColors.current.authority.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             if (isAuthority) {
                 VerifiedBadge(size = 20.dp)
             } else {
-                Icon(Icons.Default.Person, contentDescription = null, tint = CyanAccent)
+                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Column {
+            val incomingShape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp)
             Box(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
-                    .background(if (isFlagged) WarningCyan.copy(alpha = 0.08f) else GlassSurface)
-                    .border(1.dp, SurfaceDark, RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp))
+                    .clip(incomingShape)
+                    .background(if (isFlagged) WarningCyan.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), incomingShape)
                     .combinedClickable(
                         onClick = {},
                         onLongClick = { onLongPress?.invoke() }
@@ -379,20 +380,19 @@ fun OutgoingMessageBubble(
         com.example.caraka.ui.components.MessageDeliveryUiStatus.SENT
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        val outgoingShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 4.dp, bottomStart = 16.dp)
         Box(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .shadow(4.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp), ambientColor = OutgoingChat, spotColor = OutgoingChat)
-                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp))
-                .background(OutgoingChat.copy(alpha = 0.9f))
-                .border(1.dp, OutgoingChat, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp))
+                .clip(outgoingShape)
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Column {
-                Text(message, color = TextPrimary, fontSize = 16.sp, lineHeight = 24.sp)
+                Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 16.sp, lineHeight = 24.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.End)) {
-                    Text(time, color = TextSecondary.copy(alpha = 0.7f), fontSize = 11.sp)
+                    Text(time, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f), fontSize = 11.sp)
                     Spacer(modifier = Modifier.width(6.dp))
                     MessageStatusIcon(status = deliveryStatus)
                 }

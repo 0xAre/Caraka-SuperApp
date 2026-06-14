@@ -180,6 +180,8 @@ fun MeshEmptyStateIllustration(
         label = "alpha"
     )
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(horizontal = 32.dp)
@@ -187,17 +189,17 @@ fun MeshEmptyStateIllustration(
         Canvas(modifier = Modifier.size(120.dp, 80.dp)) {
             val cx = size.width / 2f
             val cy = size.height / 2f
-            
+
             // Define 3 surrounding nodes
             val nodes = listOf(
                 Offset(cx - 35.dp.toPx(), cy - 25.dp.toPx()),
                 Offset(cx + 40.dp.toPx(), cy - 10.dp.toPx()),
                 Offset(cx - 15.dp.toPx(), cy + 30.dp.toPx())
             )
-            
-            val lineColor = Color(0xFF2244AA).copy(alpha = pulseAlpha)
+
+            val lineColor = primaryColor.copy(alpha = pulseAlpha)
             val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-            
+
             // Draw connections
             nodes.forEach { node ->
                 drawLine(
@@ -213,7 +215,7 @@ fun MeshEmptyStateIllustration(
             drawLine(color = lineColor, start = nodes[0], end = nodes[2], strokeWidth = 2f, pathEffect = dashEffect)
 
             // Draw nodes
-            val nodeColor = Color(0xFF1E90FF)
+            val nodeColor = primaryColor
             nodes.forEach { node ->
                 drawCircle(color = nodeColor, radius = 4.dp.toPx(), center = node)
             }
@@ -228,7 +230,6 @@ fun MeshEmptyStateIllustration(
         
         Text(
             text = message,
-            fontFamily = SpaceGroteskFamily,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
@@ -249,13 +250,13 @@ fun MeshEmptyStateIllustration(
         
         Button(
             onClick = onAction,
-            shape = RoundedCornerShape(12.dp),
+            shape = LocalCarakaShapes.current.md,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                 contentColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text(actionLabel, fontFamily = SpaceGroteskFamily, fontWeight = FontWeight.Bold)
+            Text(actionLabel, fontWeight = FontWeight.Bold)
         }
     }
 }

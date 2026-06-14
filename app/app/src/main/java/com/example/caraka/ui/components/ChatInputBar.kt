@@ -1,5 +1,6 @@
 package com.example.caraka.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -7,12 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,11 +26,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.caraka.R
-import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
-import com.example.caraka.ui.theme.TextPrimary
-import com.example.caraka.ui.theme.TextSecondary
+import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.Typography
 import com.example.caraka.ui.util.rememberHaptics
 
@@ -43,14 +40,15 @@ fun ChatInputBar(
 ) {
     val haptics = rememberHaptics()
     val sendCd = stringResource(R.string.cd_send_btn)
+    val shape = LocalCarakaShapes.current.lg
 
     Surface(
         modifier = modifier
             .padding(16.dp)
-            .shadow(8.dp, RoundedCornerShape(24.dp), ambientColor = CyanAccent, spotColor = SurfaceDark),
-        shape = RoundedCornerShape(24.dp),
-        color = GlassSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, SurfaceDark)
+            .shadow(4.dp, shape),
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier
@@ -60,13 +58,17 @@ fun ChatInputBar(
         ) {
             Box(modifier = Modifier.padding(end = 8.dp).fillMaxWidth(0.85f)) {
                 if (value.isEmpty()) {
-                    Text(text = placeholder, color = TextSecondary, style = Typography.bodyLarge)
+                    Text(
+                        text = placeholder,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = Typography.bodyLarge
+                    )
                 }
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    textStyle = Typography.bodyLarge.copy(color = TextPrimary),
-                    cursorBrush = SolidColor(CyanAccent),
+                    textStyle = Typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -79,13 +81,18 @@ fun ChatInputBar(
                 enabled = value.isNotBlank(),
                 modifier = Modifier
                     .size(44.dp)
-                    .background(if (value.isNotBlank()) CyanAccent.copy(alpha = 0.2f) else SurfaceDark, CircleShape)
+                    .background(
+                        if (value.isNotBlank()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        CircleShape
+                    )
                     .semantics { contentDescription = sendCd }
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = null,
-                    tint = if (value.isNotBlank()) CyanAccent else TextSecondary,
+                    tint = if (value.isNotBlank()) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -18,9 +18,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,8 +29,6 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.GpsFixed
-import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,23 +36,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,14 +52,13 @@ import com.example.caraka.R
 import com.example.caraka.ui.components.HoldToConfirmButton
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.theme.*
-import com.example.caraka.ui.util.rememberHaptics
 import com.example.caraka.viewmodel.MainViewModel
 
-// Custom neon colors
-val NeonRed = Color(0xFFFF2A55)
-val NeonOrange = Color(0xFFFF8A00)
-val NeonCyan = Color(0xFF00E5FF)
-val NeonBlue = Color(0xFF00F0FF)
+// Semantic SOS category colors (operational, distinct — no neon)
+private val SosMedicalColor  = CoralError          // red
+private val SosFireColor     = Color(0xFFE8833A)   // muted orange
+private val SosSecurityColor = TealPrimary         // blue (police/security)
+private val SosDisasterColor = WarningCyan         // amber (natural disaster)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +73,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
     var location by remember { mutableStateOf<Location?>(null) }
     var locationName by remember { mutableStateOf("") }
     val statusColors = LocalStatusColors.current
+    val shapes = LocalCarakaShapes.current
 
     val medicalLabel  = stringResource(R.string.sos_cat_medical)
     val fireLabel     = stringResource(R.string.sos_cat_fire)
@@ -125,7 +113,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
                         ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                     location = loc
-                    
+
                     loc?.let {
                         val geocoder = Geocoder(context, Locale.getDefault())
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -186,8 +174,8 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.sos_title).uppercase(),
-                        color = Color.White,
+                        text = stringResource(R.string.sos_title),
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         modifier = Modifier.fillMaxWidth().padding(end = 48.dp),
@@ -199,17 +187,16 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.sos_back),
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CanvasDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = CanvasDark,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Redesigned Bottom Button to match the mockup
                 HoldToConfirmButton(
                     label = stringResource(R.string.sos_broadcast_btn),
                     holdingLabel = stringResource(R.string.sos_confirming),
@@ -227,30 +214,6 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .drawBehind {
-                            if (selectedCategory != null && !sosSent) {
-                                // 3D Capsule Outer Glow
-                                drawRoundRect(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(NeonRed.copy(alpha = 0.4f), Color.Transparent),
-                                        center = Offset(size.width / 2f, size.height / 2f),
-                                        radius = size.width / 1.5f
-                                    ),
-                                    size = size.copy(width = size.width + 24.dp.toPx(), height = size.height + 24.dp.toPx()),
-                                    topLeft = Offset(-12.dp.toPx(), -12.dp.toPx()),
-                                    cornerRadius = CornerRadius(32.dp.toPx(), 32.dp.toPx())
-                                )
-                                // 3D Beveled Edge
-                                drawRoundRect(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color.White.copy(alpha = 0.3f), Color.Transparent)
-                                    ),
-                                    size = size,
-                                    cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
-                                    style = Stroke(width = 2.dp.toPx())
-                                )
-                            }
-                        }
                 )
             }
         }
@@ -267,9 +230,9 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(shapes.md)
                         .background(statusColors.online.copy(alpha = 0.12f))
-                        .border(1.dp, statusColors.online.copy(alpha = 0.4f * pulseAlpha + 0.3f), RoundedCornerShape(16.dp))
+                        .border(1.dp, statusColors.online.copy(alpha = 0.4f * pulseAlpha + 0.3f), shapes.md)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -287,7 +250,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 2x2 Grid using Rows/Columns
+            // 2x2 category grid
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -297,7 +260,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = medicalLabel,
                         icon = Icons.Default.LocalHospital,
-                        glowColor = NeonRed,
+                        accentColor = SosMedicalColor,
                         isSelected = selectedCategory == "Medical",
                         enabled = !sosSent,
                         onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); selectedCategory = "Medical" }
@@ -306,7 +269,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = fireLabel,
                         icon = Icons.Default.LocalFireDepartment,
-                        glowColor = NeonOrange,
+                        accentColor = SosFireColor,
                         isSelected = selectedCategory == "Fire",
                         enabled = !sosSent,
                         onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); selectedCategory = "Fire" }
@@ -320,7 +283,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = securityLabel,
                         icon = Icons.Default.Warning,
-                        glowColor = NeonCyan,
+                        accentColor = SosSecurityColor,
                         isSelected = selectedCategory == "Security",
                         enabled = !sosSent,
                         onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); selectedCategory = "Security" }
@@ -329,7 +292,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = disasterLabel,
                         icon = Icons.Default.Waves,
-                        glowColor = NeonBlue,
+                        accentColor = SosDisasterColor,
                         isSelected = selectedCategory == "Disaster",
                         enabled = !sosSent,
                         onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); selectedCategory = "Disaster" }
@@ -339,39 +302,28 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Glassmorphism Text Field
+            // Description text field
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.08f),
-                                Color.White.copy(alpha = 0.02f)
-                            )
-                        )
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(16.dp)
-                    )
+                    .clip(shapes.md)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), shapes.md)
                     .padding(16.dp)
             ) {
                 if (description.isEmpty()) {
                     Text(
                         text = stringResource(R.string.sos_describe_hint),
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp
                     )
                 }
                 BasicTextField(
                     value = description,
                     onValueChange = { if (!sosSent) description = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(NeonRed),
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     enabled = !sosSent,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -379,13 +331,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Premium Glassmorphism Location Widget
+            // Location widget
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceHigh.copy(alpha = 0.4f))
-                    .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+                    .clip(shapes.md)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), shapes.md)
                     .padding(16.dp)
             ) {
                 Row(
@@ -398,13 +350,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                             Icon(
                                 Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.6f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 stringResource(R.string.sos_auto_location),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
@@ -414,14 +366,15 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         if (locationPermissionGranted && location != null) {
                             Text(
                                 "${String.format(Locale.US, "%.4f", lat)}, ${String.format(Locale.US, "%.4f", lng)}",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = MonoFamily
                             )
                         } else {
                             Text(
                                 if (!locationPermissionGranted) "Akses Ditolak" else "Mencari...",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -429,44 +382,42 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.sos_coordinates),
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     }
 
-                    // Map Placeholder with Grid and Glowing Dot
+                    // Map placeholder with grid + position dot
                     Box(
                         modifier = Modifier
                             .size(80.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceLow)
+                            .clip(shapes.sm)
+                            .background(MaterialTheme.colorScheme.background)
                     ) {
+                        val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                        val dotColor = MaterialTheme.colorScheme.primary
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            // Draw grid
                             val gridSpacing = 20.dp.toPx()
-                            val lineColor = Color.White.copy(alpha = 0.1f)
                             for (i in 0..size.width.toInt() step gridSpacing.toInt()) {
-                                drawLine(lineColor, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height))
+                                drawLine(gridColor, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height))
                             }
                             for (i in 0..size.height.toInt() step gridSpacing.toInt()) {
-                                drawLine(lineColor, Offset(0f, i.toFloat()), Offset(size.width, i.toFloat()))
+                                drawLine(gridColor, Offset(0f, i.toFloat()), Offset(size.width, i.toFloat()))
                             }
-
-                            // Glowing dot in center
                             drawCircle(
-                                color = NeonCyan.copy(alpha = 0.3f),
+                                color = dotColor.copy(alpha = 0.3f),
                                 radius = 12.dp.toPx(),
                                 center = Offset(size.width / 2, size.height / 2)
                             )
                             drawCircle(
-                                color = NeonCyan,
+                                color = dotColor,
                                 radius = 4.dp.toPx(),
                                 center = Offset(size.width / 2, size.height / 2)
                             )
                         }
                         Text(
                             if (locationName.isNotEmpty()) locationName else "Unknown\nLocation",
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Medium,
                             lineHeight = 11.sp,
@@ -485,11 +436,12 @@ fun SosCategoryCard(
     modifier: Modifier = Modifier,
     title: String,
     icon: ImageVector,
-    glowColor: Color,
+    accentColor: Color,
     isSelected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit
 ) {
+    val shapes = LocalCarakaShapes.current
     val scale by animateFloatAsState(
         targetValue = if (isSelected) 1.03f else 1f,
         animationSpec = spring(
@@ -499,12 +451,13 @@ fun SosCategoryCard(
         label = "scale"
     )
 
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) glowColor.copy(alpha = 0.25f) else Color(0xFF1A1A1A),
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.18f) else surfaceColor,
         label = "bgColor"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) glowColor else glowColor.copy(alpha = 0.6f),
+        targetValue = if (isSelected) accentColor else accentColor.copy(alpha = 0.5f),
         label = "borderColor"
     )
     val borderWidth = if (isSelected) 2.dp else 1.dp
@@ -513,26 +466,23 @@ fun SosCategoryCard(
         modifier = modifier
             .aspectRatio(1.2f)
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(shapes.md)
             .background(bgColor)
-            .border(borderWidth, borderColor, RoundedCornerShape(16.dp))
-            .clickable(
-                enabled = enabled,
-                onClick = onClick
-            ),
+            .border(borderWidth, borderColor, shapes.md)
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = glowColor,
+                tint = accentColor,
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -544,7 +494,7 @@ fun SosCategoryCard(
                     .align(Alignment.TopEnd)
                     .padding(12.dp)
                     .size(24.dp)
-                    .background(glowColor, androidx.compose.foundation.shape.CircleShape),
+                    .background(accentColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

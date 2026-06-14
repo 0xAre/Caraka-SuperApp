@@ -2,44 +2,47 @@ package com.example.caraka.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val CanvasDark = Color(0xFF000000) // Pitch Black (iOS/Web3 style)
-val SurfaceLow = Color(0xFF0A0A0C)
-val SurfaceMid = Color(0xFF141416)
-val SurfaceHigh = Color(0xFF1C1C1E) // iOS Dark Mode Surface
+// ── Canvas & Surfaces (GitHub dark scale) ─────────────────────────────────────
+val CanvasDark  = Color(0xFF0D1117)   // GitHub dark canvas — not pure black
+val SurfaceLow  = Color(0xFF161B22)
+val SurfaceMid  = Color(0xFF21262D)
+val SurfaceHigh = Color(0xFF262C36)
 
-// Apple iOS Native Colors (Dark Mode)
-val IosSystemBlue = Color(0xFF0A84FF)
-val IosSystemRed = Color(0xFFFF3B30)
-val IosSystemGreen = Color(0xFF30D158)
-val IosSystemCyan = Color(0xFF5AC8FA)
-val IosLabelPrimary = Color(0xFFFFFFFF)
-val IosLabelSecondary = Color(0xFFEBEBF5).copy(alpha = 0.6f)
+// ── Palette ───────────────────────────────────────────────────────────────────
+val IosSystemBlue  = Color(0xFF2AABEE)   // Telegram blue (name kept for compat)
+val IosSystemRed   = Color(0xFFE5534B)   // Muted red
+val IosSystemGreen = Color(0xFF2ECC71)   // Emerald success
+val IosSystemCyan  = Color(0xFF58A6FF)   // Lighter blue info
 
-val TealPrimary = IosSystemBlue
-val TealMuted = IosSystemBlue.copy(alpha = 0.16f)
-val CyanSecondary = IosSystemCyan
+val IosLabelPrimary   = Color(0xFFE6EDF3)   // Warm white text
+val IosLabelSecondary = Color(0xFF8B949E)   // Muted gray text
+
+// ── Semantic tokens ───────────────────────────────────────────────────────────
+val TealPrimary    = IosSystemBlue            // Telegram blue primary
+val TealMuted      = IosSystemBlue.copy(alpha = 0.16f)
+val CyanSecondary  = Color(0xFF238636)        // Gojek-tone success green
 val EmeraldSuccess = IosSystemGreen
-val CoralError = IosSystemRed
-val SkyInfo = IosSystemBlue
+val CoralError     = IosSystemRed
+val SkyInfo        = IosSystemCyan
 
-val TextPrimary = IosLabelPrimary
+val TextPrimary   = IosLabelPrimary
 val TextSecondary = IosLabelSecondary
-val TextTertiary = IosLabelSecondary.copy(alpha = 0.5f)
+val TextTertiary  = Color(0xFF6E7681)
 
-val StrokeLight = Color.White.copy(alpha = 0.1f)
-val StrokeLightAlpha = Color.White.copy(alpha = 0.05f)
-val BorderSubtle = Color(0xFFFFFFFF).copy(alpha = 0.08f)
+val StrokeLight      = Color.White.copy(alpha = 0.08f)
+val StrokeLightAlpha = Color.White.copy(alpha = 0.04f)
+val BorderSubtle     = Color(0xFFFFFFFF).copy(alpha = 0.08f)
 
-// Backward Compatibility Aliases
+// ── Backward Compatibility Aliases ────────────────────────────────────────────
 val NavyBackground = CanvasDark
-val SurfaceDark = SurfaceLow
-val GlassSurface = Color(0x3314243D) // Deprecated
-val CyanAccent = CyanSecondary
-val DangerRed = CoralError
-val NeonMint = EmeraldSuccess
-val WarningCyan = CyanSecondary
-val DisasterBlue = SkyInfo
+val SurfaceDark    = SurfaceLow
+val GlassSurface   = SurfaceMid          // was deprecated glassmorphism; now solid surface
+val CyanAccent     = TealPrimary         // → Telegram blue
+val DangerRed      = CoralError
+val NeonMint       = EmeraldSuccess
+val WarningCyan    = Color(0xFFD29922)   // → amber warning (was cyan)
+val DisasterBlue   = SkyInfo
 
-val OutgoingChat = TealPrimary.copy(alpha = 0.3f)
-val IncomingChat = SurfaceLow
-val TextMuted = TextSecondary
+val OutgoingChat = Color(0xFF1565C0)   // Dark blue for outgoing chat container
+val IncomingChat = SurfaceMid
+val TextMuted    = TextSecondary

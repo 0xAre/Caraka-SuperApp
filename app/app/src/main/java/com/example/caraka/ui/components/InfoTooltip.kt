@@ -1,6 +1,5 @@
 package com.example.caraka.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -14,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,17 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.GlassSurface
-import com.example.caraka.ui.theme.SurfaceDark
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
 
-/**
- * A small "(i)" icon that toggles a glass-style popup with explanatory text on tap.
- * Used inline next to technical labels (TTL, Hop count, peer ID, mesh node…) so users
- * can self-serve definitions without leaving the screen. Improves Nielsen #10:
- * Help & Documentation and #6: Recognition over recall.
- */
 @Composable
 fun InfoTooltip(
     title: String,
@@ -51,6 +43,7 @@ fun InfoTooltip(
     modifier: Modifier = Modifier
 ) {
     var open by remember { mutableStateOf(false) }
+    val popupShape = RoundedCornerShape(12.dp)
 
     Box(modifier = modifier) {
         Icon(
@@ -70,15 +63,20 @@ fun InfoTooltip(
                 Surface(
                     modifier = Modifier
                         .padding(top = 22.dp)
-                        .shadow(12.dp, RoundedCornerShape(14.dp), ambientColor = CyanAccent, spotColor = SurfaceDark)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, CyanAccent.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                        .background(GlassSurface),
-                    color = GlassSurface
+                        .shadow(8.dp, popupShape)
+                        .clip(popupShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), popupShape),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = popupShape
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Info, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = CyanAccent,
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(Modifier.width(6.dp))
                             Text(title, color = TextPrimary, fontSize = 12.sp)
                         }

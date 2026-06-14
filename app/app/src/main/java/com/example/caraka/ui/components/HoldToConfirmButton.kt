@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Icon
@@ -39,21 +38,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.LocalStatusColors
+import com.example.caraka.ui.theme.SurfaceMid
 import com.example.caraka.ui.util.rememberHaptics
 import kotlinx.coroutines.delay
 
-/**
- * "Hold-to-confirm" primary button — the user must keep pressing for [holdDurationMs] ms
- * before [onConfirm] is fired. Lifting the finger early cancels the action and resets
- * the progress ring. Designed to prevent accidental emergency broadcasts (Nielsen #5:
- * Error Prevention).
- *
- * Visual feedback:
- *  • A circular progress arc draws around the label as the user holds.
- *  • Haptic tick at start, heavy pattern on completion.
- *  • Screen-reader users hear the state ("Holding 1 of 2 seconds…").
- */
 @Composable
 fun HoldToConfirmButton(
     label: String,
@@ -76,7 +66,6 @@ fun HoldToConfirmButton(
         label = "hold_progress"
     )
 
-    // Tick the timer while pressed.
     LaunchedEffect(pressed) {
         if (pressed && !completed) {
             haptics.tick()
@@ -89,7 +78,7 @@ fun HoldToConfirmButton(
                     onConfirm()
                     break
                 }
-                delay(16L) // ~60fps
+                delay(16L)
             }
             if (elapsed < holdDurationMs) elapsed = 0L
         } else if (!pressed) {
@@ -98,9 +87,10 @@ fun HoldToConfirmButton(
     }
 
     val onlineColor = LocalStatusColors.current.online
+    val shape = LocalCarakaShapes.current.xl
     val containerColor = when {
         completed -> onlineColor
-        !enabled  -> com.example.caraka.ui.theme.SurfaceMid
+        !enabled  -> SurfaceMid
         pressed   -> MaterialTheme.colorScheme.error
         else      -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
     }
@@ -115,13 +105,8 @@ fun HoldToConfirmButton(
         modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
-            .shadow(
-                elevation = if (enabled) 4.dp else 0.dp,
-                shape = RoundedCornerShape(24.dp),
-                ambientColor = if (completed) onlineColor else MaterialTheme.colorScheme.error,
-                spotColor = if (completed) onlineColor else MaterialTheme.colorScheme.error
-            )
-            .clip(RoundedCornerShape(24.dp))
+            .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape)
+            .clip(shape)
             .background(containerColor)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
@@ -138,7 +123,6 @@ fun HoldToConfirmButton(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Filling background bar that scales with progress
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -159,7 +143,6 @@ fun HoldToConfirmButton(
             }
         }
     }
-    // Static helper text below
     if (!completed && enabled) {
         Row(
             modifier = Modifier
