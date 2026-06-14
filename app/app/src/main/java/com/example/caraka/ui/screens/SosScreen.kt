@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,11 +46,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.annotation.DrawableRes
 import com.example.caraka.R
 import com.example.caraka.ui.components.HoldToConfirmButton
 import com.example.caraka.ui.components.LocalSnackbar
@@ -178,8 +178,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     Text(
                         text = stringResource(R.string.sos_title),
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        style = CarakaTextStyles.dialogTitle,
                         modifier = Modifier.fillMaxWidth().padding(end = 48.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -198,7 +197,19 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
         },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (selectedCategory == null && !sosSent) {
+                    Text(
+                        stringResource(R.string.sos_button_disabled_hint),
+                        style = CarakaTextStyles.statusSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
                 HoldToConfirmButton(
                     label = stringResource(R.string.sos_broadcast_btn),
                     holdingLabel = stringResource(R.string.sos_confirming),
@@ -206,6 +217,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     enabled = selectedCategory != null && !sosSent,
                     completed = sosSent,
                     holdDurationMs = 2000L,
+                    hintLabel = stringResource(R.string.sos_hold_hint),
                     onConfirm = {
                         selectedCategory?.let {
                             viewModel?.broadcastSos(category = it, description = description, lat = lat, lng = lng)
@@ -215,7 +227,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .height(56.dp)
                 )
             }
         }
@@ -224,7 +236,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp)
         ) {
@@ -232,15 +244,15 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
 
             Text(
                 "Pilih jenis keadaan darurat",
-                style = MaterialTheme.typography.titleLarge,
+                style = CarakaTextStyles.screenTitle,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 "Informasi ini membantu peer memprioritaskan respons.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = CarakaTextStyles.screenSubtitle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (sosSent) {
                 Box(
@@ -255,27 +267,28 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = statusColors.online, modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text(stringResource(R.string.sos_sent_title), color = statusColors.online, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(stringResource(R.string.sos_sent_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                        Text(stringResource(R.string.sos_sent_title), style = CarakaTextStyles.listTitle, color = statusColors.online)
+                        Text(stringResource(R.string.sos_sent_subtitle), style = CarakaTextStyles.bodyDefault, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(6.dp))
-                        Text(meshBannerMsg, color = statusColors.online.copy(alpha = 0.9f), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(meshBannerMsg, style = CarakaTextStyles.statusPrimary, color = statusColors.online.copy(alpha = 0.9f))
                         Spacer(Modifier.height(4.dp))
-                        Text(calmingMsg, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text(calmingMsg, style = CarakaTextStyles.statusSecondary, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             // 2x2 category grid
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SosCategoryCard(
                         modifier = Modifier.weight(1f),
                         title = medicalLabel,
                         icon = Icons.Default.LocalHospital,
+                        illustrationRes = R.drawable.ill_sos_medical,
                         accentColor = SosMedicalColor,
                         isSelected = selectedCategory == "Medical",
                         enabled = !sosSent,
@@ -285,6 +298,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = fireLabel,
                         icon = Icons.Default.LocalFireDepartment,
+                        illustrationRes = R.drawable.ill_sos_fire,
                         accentColor = SosFireColor,
                         isSelected = selectedCategory == "Fire",
                         enabled = !sosSent,
@@ -293,12 +307,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SosCategoryCard(
                         modifier = Modifier.weight(1f),
                         title = securityLabel,
                         icon = Icons.Default.Warning,
+                        illustrationRes = R.drawable.ill_sos_security,
                         accentColor = SosSecurityColor,
                         isSelected = selectedCategory == "Security",
                         enabled = !sosSent,
@@ -308,6 +323,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         modifier = Modifier.weight(1f),
                         title = disasterLabel,
                         icon = Icons.Default.Waves,
+                        illustrationRes = R.drawable.ill_sos_disaster,
                         accentColor = SosDisasterColor,
                         isSelected = selectedCategory == "Disaster",
                         enabled = !sosSent,
@@ -316,13 +332,13 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Description text field
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
+                    .height(88.dp)
                     .clip(shapes.md)
                     .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), shapes.md)
@@ -332,20 +348,20 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                     Text(
                         text = stringResource(R.string.sos_describe_hint),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp
+                        style = CarakaTextStyles.bodyDefault
                     )
                 }
                 BasicTextField(
                     value = description,
                     onValueChange = { if (!sosSent) description = it },
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp),
+                    textStyle = CarakaTextStyles.bodyDefault.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     enabled = !sosSent,
                     modifier = Modifier.fillMaxSize()
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Location widget
             Box(
@@ -373,9 +389,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                             Text(
                                 stringResource(R.string.sos_auto_location),
                                 color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
+                                style = CarakaTextStyles.statLabel
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -383,37 +397,34 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                             Text(
                                 "${String.format(Locale.US, "%.4f", lat)}, ${String.format(Locale.US, "%.4f", lng)}",
                                 color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = MonoFamily
+                                style = CarakaTextStyles.monoData.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                             )
                         } else {
                             Text(
                                 if (!locationPermissionGranted) "Akses Ditolak" else "Mencari...",
                                 color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                style = CarakaTextStyles.statusPrimary
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             stringResource(R.string.sos_coordinates),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
+                            style = CarakaTextStyles.listSubtitle
                         )
                     }
 
                     // Map placeholder with grid + position dot
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(72.dp)
                             .clip(shapes.sm)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                         val dotColor = MaterialTheme.colorScheme.primary
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            val gridSpacing = 20.dp.toPx()
+                            val gridSpacing = 18.dp.toPx()
                             for (i in 0..size.width.toInt() step gridSpacing.toInt()) {
                                 drawLine(gridColor, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height))
                             }
@@ -434,9 +445,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                         Text(
                             if (locationName.isNotEmpty()) locationName else "Unknown\nLocation",
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Medium,
-                            lineHeight = 11.sp,
+                            style = CarakaTextStyles.badge,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -452,6 +461,7 @@ fun SosCategoryCard(
     modifier: Modifier = Modifier,
     title: String,
     icon: ImageVector,
+    @DrawableRes illustrationRes: Int? = null,
     accentColor: Color,
     isSelected: Boolean,
     enabled: Boolean,
@@ -480,7 +490,7 @@ fun SosCategoryCard(
 
     Box(
         modifier = modifier
-            .aspectRatio(1.2f)
+            .heightIn(min = 104.dp)
             .scale(scale)
             .clip(shapes.md)
             .background(bgColor)
@@ -489,18 +499,25 @@ fun SosCategoryCard(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = accentColor,
-                modifier = Modifier.size(36.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            if (illustrationRes != null) {
+                Image(
+                    painter = painterResource(illustrationRes),
+                    contentDescription = title,
+                    modifier = Modifier.size(44.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = accentColor,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = title,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                style = CarakaTextStyles.sosCategoryTitle
             )
         }
 

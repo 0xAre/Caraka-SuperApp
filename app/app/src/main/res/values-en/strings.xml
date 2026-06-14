@@ -11,7 +11,7 @@
     <string name="nav_settings">Profile</string>
 
     <!-- ───── Profile Setup ───── -->
-    <string name="setup_title">PROFILE SETUP</string>
+    <string name="setup_title">Profile setup</string>
     <string name="setup_welcome">Welcome to CARAKA</string>
     <string name="setup_subtitle">Set up your identity before joining the network.</string>
     <string name="setup_select_role">Select Role:</string>
@@ -32,10 +32,10 @@
     <string name="setup_hide_password">Hide password</string>
 
     <!-- ───── Home Screen ───── -->
-    <string name="home_status_online">🟢 ONLINE — Mesh Standby</string>
-    <string name="home_status_hybrid">🟡 HYBRID — Internet + Mesh Active</string>
-    <string name="home_status_mesh_only">🔴 MESH ONLY — Grid Down, We Rise</string>
-    <string name="home_attack_active">⚠️ ATTACK SIMULATION ACTIVE</string>
+    <string name="home_status_online">Online · Mesh standby</string>
+    <string name="home_status_hybrid">Hybrid · Internet and mesh active</string>
+    <string name="home_status_mesh_only">Offline mesh · Still connected</string>
+    <string name="home_attack_active">Attack simulation active</string>
     <string name="home_nodes_label">nodes</string>
     <string name="home_stat_nodes">Nodes</string>
     <string name="home_stat_range">Range</string>
@@ -60,12 +60,20 @@
     <string name="mesh_status_reconnecting">Reconnecting…</string>
     <string name="mesh_status_searching">Searching for peers…</string>
     <string name="mesh_status_cd">Network status: %1$d nodes. %2$s</string>
+    <string name="connection_ready">Ready</string>
+    <string name="connection_searching">Scanning</string>
+    <string name="connection_connecting">Connecting</string>
+    <string name="connection_connected">Connected</string>
+    <string name="connection_no_peers">No peers</string>
+    <string name="connection_permission_required">Permission required</string>
+    <string name="connection_wifi_disabled">Wi-Fi Direct is off</string>
+    <string name="connection_failed">Connection failed</string>
 
     <!-- ───── Alerts Sheet / Screen ───── -->
     <string name="alerts_sheet_title">Emergency Alerts</string>
     <string name="alerts_sheet_subtitle">%1$d active alerts on mesh</string>
     <string name="alerts_view_all">View all alerts</string>
-    <string name="alerts_screen_title">EMERGENCY LOG</string>
+    <string name="alerts_screen_title">Emergency log</string>
     <string name="alerts_screen_subtitle">Active SOS signals on the mesh network</string>
     <string name="alerts_empty">No emergency alerts right now.</string>
     <string name="alerts_empty_title">No alerts yet</string>
@@ -77,37 +85,38 @@
     <string name="alerts_filter_disaster">Disaster</string>
 
     <!-- ───── SOS Screen ───── -->
-    <string name="sos_title">EMERGENCY SOS</string>
+    <string name="sos_title">Emergency SOS</string>
     <string name="sos_question">What is your emergency?</string>
     <string name="sos_describe_hint">Describe emergency... (Optional)</string>
-    <string name="sos_auto_location">AUTO-DETECTED LOCATION</string>
+    <string name="sos_auto_location">Auto-detected location</string>
     <string name="sos_coordinates">Coordinates</string>
     <string name="sos_mock_location">Jakarta,\nIndonesia</string>
-    <string name="sos_cat_medical">🚨 Medical</string>
-    <string name="sos_cat_fire">🔥 Fire</string>
-    <string name="sos_cat_security">⚠️ Security</string>
-    <string name="sos_cat_disaster">🌊 Disaster</string>
+    <string name="sos_cat_medical">Medical</string>
+    <string name="sos_cat_fire">Fire</string>
+    <string name="sos_cat_security">Security</string>
+    <string name="sos_cat_disaster">Disaster</string>
     <string name="sos_details_label">Any additional details?</string>
     <string name="sos_details_placeholder">E.g., 2 people injured, need ambulance…</string>
     <string name="sos_location_label">Your location</string>
     <string name="sos_gps_detected">GPS DETECTED</string>
-    <string name="sos_default_location">DEFAULT LOCATION</string>
+    <string name="sos_default_location">Default location</string>
     <string name="sos_gps_live">Live GPS position</string>
     <string name="sos_gps_default">Jakarta, Indonesia</string>
-    <string name="sos_broadcast_btn">BROADCAST SOS</string>
+    <string name="sos_broadcast_btn">Broadcast SOS</string>
     <string name="sos_hold_hint">Hold for 2 seconds to confirm</string>
     <string name="sos_confirming">Holding… release to cancel</string>
     <string name="sos_sent_title">SOS BROADCAST SENT</string>
     <string name="sos_sent_subtitle">Help is on the way. Stay calm.</string>
     <string name="sos_select_category_first">Select an emergency category first</string>
+    <string name="sos_button_disabled_hint">Select a category to enable the SOS button</string>
     <string name="sos_back">Back</string>
     <string name="sos_mesh_sent_banner">SOS sent to mesh network</string>
     <string name="sos_calming_message">Response teams will receive your signal. Stay calm.</string>
     <string name="sos_location_estimated">Estimated location — GPS unavailable</string>
-    <string name="sos_estimated_location">⚠ Estimated location</string>
+    <string name="sos_estimated_location">Estimated location</string>
 
     <!-- ───── Messages / Chat ───── -->
-    <string name="messages_title">MESSAGES</string>
+    <string name="messages_title">Messages</string>
     <string name="messages_no_peers">No peers connected</string>
     <string name="messages_no_peers_hint">Go to the Network tab to connect with nearby devices</string>
     <string name="messages_e2e_hint">E2E Encrypted · Tap to chat</string>
@@ -146,13 +155,13 @@
     <string name="msg_status_failed">Failed</string>
     <string name="chat_hold_to_flag">Hold to flag</string>
     <string name="chat_flag_title">Flag as Suspicious?</string>
-    <string name="chat_flag_desc">This message will be marked as potentially hoax. If 3+ users flag it, a ⚠️ warning will appear for everyone in the mesh.</string>
+    <string name="chat_flag_desc">This message will be marked as a potential hoax. If 3+ users flag it, a warning label will appear for everyone in the mesh.</string>
     <string name="chat_flag_confirm">Flag It</string>
     <string name="chat_flag_cancel">Cancel</string>
-    <string name="chat_flagged_by">⚠️ Flagged by %1$d users — possible hoax</string>
+    <string name="chat_flagged_by">Flagged by %1$d users — possible hoax</string>
 
     <!-- ───── Network Screen ───── -->
-    <string name="network_title">NETWORK MAP</string>
+    <string name="network_title">Network map</string>
     <string name="network_scan">Scan</string>
     <string name="network_legend_self">You</string>
     <string name="network_legend_authority">Authority</string>
@@ -230,7 +239,7 @@
     <string name="settings_cancel">Cancel</string>
 
     <!-- ───── Help Screen ───── -->
-    <string name="help_title">HELP</string>
+    <string name="help_title">Help</string>
     <string name="help_section_basics">CARAKA Basics</string>
     <string name="help_q_what_is_mesh">What is a mesh network?</string>
     <string name="help_a_what_is_mesh">A mesh is a decentralized network where every device acts as a node that can forward messages to other devices — without a central server or internet.</string>
@@ -243,12 +252,12 @@
     <string name="help_q_sos">When should I press SOS?</string>
     <string name="help_a_sos">Press SOS only for real emergencies (medical, fire, security, disaster). SOS messages carry top priority and are broadcast to all nearby nodes.</string>
     <string name="help_q_flag">How do I report a hoax?</string>
-    <string name="help_a_flag">Long-press the suspicious message and confirm. When 3+ users flag the same message, a ⚠️ warning appears for everyone in the mesh.</string>
+    <string name="help_a_flag">Long-press the suspicious message and confirm. When 3+ users flag the same message, a warning label appears for everyone in the mesh.</string>
 
     <string name="help_section_hci">HCI Principles Applied</string>
     <string name="help_hci_intro">CARAKA is designed against the 10 Nielsen usability heuristics and WCAG 2.1.</string>
     <string name="help_hci_visibility">Visibility of System Status — Connectivity banner + node stats always visible.</string>
-    <string name="help_hci_match">Match Real World — Icons 🚨🔥⚠️🌊 follow universal emergency conventions.</string>
+    <string name="help_hci_match">Match Real World — Emergency icons and labels follow familiar conventions.</string>
     <string name="help_hci_control">User Control &amp; Freedom — Back buttons, hold-to-confirm SOS, snackbar undo.</string>
     <string name="help_hci_consistency">Consistency — Material 3, color-coded roles (amber=authority, mint=verified, red=emergency).</string>
     <string name="help_hci_error_prev">Error Prevention — SOS requires 2-second hold; confirmation dialog before flag/reset.</string>
@@ -275,7 +284,7 @@
     <string name="tour_step1_title">Welcome to CARAKA</string>
     <string name="tour_step1_desc">Offline emergency comms when internet, power, and cellular are down. Let\'s tour the features.</string>
     <string name="tour_step2_title">Network Status Indicator</string>
-    <string name="tour_step2_desc">This banner always shows your connectivity mode: 🟢 Online, 🟡 Hybrid, or 🔴 Mesh Only.</string>
+    <string name="tour_step2_desc">This banner always shows your connectivity mode: Online, Hybrid, or Offline Mesh.</string>
     <string name="tour_step3_title">SOS Button</string>
     <string name="tour_step3_desc">Tap to open the emergency screen. To prevent mis-taps, you must hold the button for 2 seconds before broadcasting.</string>
     <string name="tour_step4_title">Live Mesh Stats</string>
@@ -302,4 +311,27 @@
     <string name="cd_settings_btn">Open settings</string>
     <string name="cd_info_tooltip">More info</string>
     <string name="cd_sos_hold_emergency">Emergency SOS button. Hold for emergency.</string>
+
+    <!-- Network discovery experience -->
+    <string name="network_discovery_subtitle">Find and connect with nearby peers</string>
+    <string name="network_searching_title">Searching for nearby peers</string>
+    <string name="network_found_count">%1$d peers detected</string>
+    <string name="network_radio_offline">Local radio range, works without internet</string>
+    <string name="network_self_label">YOU</string>
+    <string name="network_signal_estimate">Peer positions are signal estimates</string>
+    <string name="network_ready_count">%1$d peers ready to connect</string>
+    <string name="network_searching_devices">Searching for CARAKA devices…</string>
+    <string name="network_no_peer">No peers found yet</string>
+    <string name="network_scan_elapsed">Scanning %1$s</string>
+    <string name="network_peer_hint">Make sure CARAKA is active on the other device.</string>
+    <string name="network_scan_action">Scan</string>
+    <string name="network_transport_nearby">Nearby</string>
+    <string name="network_no_coordinates">Move the devices closer for the best result. CARAKA does not display peer coordinates because discovery uses local radio.</string>
+    <string name="network_peer_connected">Connected</string>
+    <string name="network_peer_detected">Detected</string>
+    <string name="network_mesh_connected">Connected to mesh</string>
+    <string name="network_device_found">Device found</string>
+    <string name="network_authority_verified">Verified authority identity</string>
+    <string name="network_connect_action">Connect</string>
+    <string name="network_connecting_action">Connecting…</string>
 </resources>

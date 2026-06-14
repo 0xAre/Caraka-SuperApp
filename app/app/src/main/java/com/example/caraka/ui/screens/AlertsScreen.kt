@@ -29,13 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.components.CarakaScreenTitle
 import com.example.caraka.ui.components.EmergencyAlertCard
 import com.example.caraka.ui.components.EmptyStateIllustration
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.viewmodel.MainViewModel
 
 private enum class AlertFilter { ALL, MEDICAL, FIRE, SECURITY, DISASTER }
@@ -63,11 +64,7 @@ fun AlertsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        stringResource(R.string.alerts_screen_title),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
-                    )
+                    CarakaScreenTitle(stringResource(R.string.alerts_screen_title))
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -92,11 +89,7 @@ fun AlertsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    stringResource(R.string.alerts_screen_subtitle),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 13.sp
-                )
+                CarakaBody(stringResource(R.string.alerts_screen_subtitle), muted = true)
                 Spacer(Modifier.height(8.dp))
                 AlertFilterRow(selected = filter, onSelect = { filter = it })
             }
@@ -137,7 +130,7 @@ private fun AlertFilterRow(selected: AlertFilter, onSelect: (AlertFilter) -> Uni
             FilterChip(
                 selected = selected == f,
                 onClick = { onSelect(f) },
-                label = { Text(stringResource(labelRes), fontSize = 11.sp) },
+                label = { Text(stringResource(labelRes), style = CarakaTextStyles.statLabel) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.primary

@@ -23,10 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
@@ -90,8 +87,7 @@ fun ChatScreen(
                             Text(
                                 peer?.displayName ?: stringResource(R.string.chat_unknown_peer),
                                 color = TextPrimary,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = CarakaTextStyles.dialogTitle
                             )
                             if (peer?.isAuthority == true) {
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -106,7 +102,11 @@ fun ChatScreen(
                                         .background(if (peer.isAuthority) LocalStatusColors.current.authority.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
                                         .padding(horizontal = 6.dp, vertical = 1.dp)
                                 ) {
-                                    Text(peer.role, color = if (peer.isAuthority) LocalStatusColors.current.authority else TextSecondary, fontSize = 10.sp)
+                                    Text(
+                                        peer.role,
+                                        color = if (peer.isAuthority) LocalStatusColors.current.authority else TextSecondary,
+                                        style = CarakaTextStyles.badge
+                                    )
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                             }
@@ -117,7 +117,7 @@ fun ChatScreen(
                                     .background(if (peer != null) LocalStatusColors.current.online else TextSecondary)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(meshSubtitle, color = TextSecondary, fontSize = 12.sp)
+                            Text(meshSubtitle, color = TextSecondary, style = CarakaTextStyles.statusSecondary)
                         }
                     }
                 },
@@ -166,7 +166,7 @@ fun ChatScreen(
                 Text(
                     stringResource(R.string.chat_e2e_banner),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontSize = 12.sp
+                    style = CarakaTextStyles.statusSecondary
                 )
             }
 
@@ -241,7 +241,7 @@ fun ChatScreen(
                         flagTargetId = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) { Text(stringResource(R.string.chat_flag_confirm), color = MaterialTheme.colorScheme.onTertiary, fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.chat_flag_confirm), color = MaterialTheme.colorScheme.onTertiary, style = CarakaTextStyles.buttonLabel) }
             },
             dismissButton = {
                 TextButton(onClick = { showFlagDialog = false }) {
@@ -275,7 +275,7 @@ private fun DateSeparator(timestamp: Long) {
         Text(
             label,
             color = TextSecondary,
-            fontSize = 11.sp,
+            style = CarakaTextStyles.chatTimestamp,
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
@@ -332,17 +332,17 @@ fun IncomingMessageBubble(
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(sender, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(sender, color = TextPrimary, style = CarakaTextStyles.chatSender)
                         if (isAuthority) {
                             Spacer(modifier = Modifier.width(4.dp))
                             VerifiedBadge(size = 14.dp)
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(message, color = TextPrimary, fontSize = 16.sp, lineHeight = 24.sp)
+                    Text(message, color = TextPrimary, style = CarakaTextStyles.chatMessage)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(time, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                        Text(time, color = TextSecondary, style = CarakaTextStyles.chatTimestamp, modifier = Modifier.weight(1f))
                         if (!isAuthority) {
                             Icon(
                                 Icons.Default.Flag,
@@ -368,7 +368,7 @@ fun IncomingMessageBubble(
                     Text(
                         String.format(stringResource(R.string.chat_flagged_by), flagCount),
                         color = WarningCyan,
-                        fontSize = 12.sp
+                        style = CarakaTextStyles.statusSecondary
                     )
                 }
             }
@@ -393,10 +393,10 @@ fun OutgoingMessageBubble(
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Column {
-                Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 16.sp, lineHeight = 24.sp)
+                Text(message, color = MaterialTheme.colorScheme.onPrimaryContainer, style = CarakaTextStyles.chatMessage)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.align(Alignment.End)) {
-                    Text(time, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f), fontSize = 11.sp)
+                    Text(time, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f), style = CarakaTextStyles.chatTimestamp)
                     Spacer(modifier = Modifier.width(6.dp))
                     MessageStatusIcon(status = deliveryStatus)
                 }

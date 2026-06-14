@@ -15,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
 import com.example.caraka.ui.components.EmptyStateIllustration
+import com.example.caraka.ui.components.EmptyStateVariant
+import com.example.caraka.ui.components.CarakaTopBarTitle
 import com.example.caraka.ui.components.MeshStatusBanner
 import com.example.caraka.ui.components.PeerListItem
 import com.example.caraka.ui.components.CarakaSearchField
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.style.TextAlign
 import com.example.caraka.ui.theme.*
+import com.example.caraka.ui.util.SosAlertText
 import com.example.caraka.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -68,18 +70,10 @@ fun MessagesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            stringResource(R.string.messages_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            "Percakapan terenkripsi di jaringan mesh",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    CarakaTopBarTitle(
+                        title = stringResource(R.string.messages_title),
+                        subtitle = "Percakapan terenkripsi di jaringan mesh"
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -115,8 +109,10 @@ fun MessagesScreen(
 
             if (connectedPeers.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 44.dp),
+                    contentAlignment = Alignment.TopCenter
                 ) {
                     MeshEmptyStateIllustration(
                         message = "Belum ada pesan di jaringan",
@@ -134,7 +130,7 @@ fun MessagesScreen(
                     Text(
                         stringResource(R.string.messages_search_empty),
                         color = TextSecondary,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             } else {
@@ -155,7 +151,13 @@ fun MessagesScreen(
                                 role = peer.role,
                                 isAuthority = peer.isAuthority,
                                 isConnected = true,
-                                lastMessagePreview = lastMsg?.content,
+                                lastMessagePreview = lastMsg?.let { msg ->
+                                    if (msg.type == "SOS") {
+                                        SosAlertText.headline(msg.sosCategory, msg.content)
+                                    } else {
+                                        msg.content
+                                    }
+                                },
                                 isOutgoingPreview = lastMsg?.isIncoming == false,
                                 timeLabel = timeStr,
                                 unreadCount = unreadCount,
@@ -194,6 +196,8 @@ fun MeshEmptyStateIllustration(
         subtitle = subtitle,
         actionLabel = actionLabel,
         onAction = onAction,
-        contentDescription = contentDescription
+        contentDescription = contentDescription,
+        illustrationRes = R.drawable.ill_empty_messages,
+        variant = EmptyStateVariant.Compact
     )
 }

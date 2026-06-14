@@ -1,35 +1,38 @@
 package com.example.caraka.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.caraka.ui.theme.CarakaTextStyles
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -38,7 +41,7 @@ import com.example.caraka.R
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
     object Home      : Screen("home",        R.string.nav_home,            Icons.Default.Home)
     object Messages  : Screen("messages",    R.string.nav_messages,        Icons.AutoMirrored.Filled.Message)
-    object Network   : Screen("network",     R.string.nav_network,         Icons.Default.Map)
+    object Network   : Screen("network",     R.string.nav_network,         Icons.Default.WifiTethering)
     object Sos       : Screen("sos",         R.string.nav_sos,             Icons.Default.Warning)
     object Settings  : Screen("settings",    R.string.nav_settings,        Icons.Default.Person)
     object Help      : Screen("help",        R.string.help_title,          Icons.Default.Settings)
@@ -67,11 +70,11 @@ fun BottomNavBar(
 ) {
     val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-            thickness = 1.dp
-        )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+    ) {
         NavigationBar(
             modifier = Modifier.fillMaxWidth(),
             containerColor = MaterialTheme.colorScheme.surface,
@@ -92,6 +95,21 @@ fun BottomNavBar(
 
                 NavigationBarItem(
                     icon = {
+                        val navIcon: @Composable () -> Unit = {
+                            Surface(
+                                modifier = Modifier.size(width = 42.dp, height = 30.dp),
+                                shape = MaterialTheme.shapes.extraLarge,
+                                color = if (isSelected) activeColor.copy(alpha = 0.12f) else Color.Transparent
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        screen.icon,
+                                        contentDescription = title,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
                         when {
                             screen == Screen.Sos && sosBadgeCount > 0 -> {
                                 BadgedBox(
@@ -100,11 +118,11 @@ fun BottomNavBar(
                                             containerColor = MaterialTheme.colorScheme.error,
                                             contentColor = Color.White
                                         ) {
-                                            Text("$sosBadgeCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                            Text("$sosBadgeCount", style = CarakaTextStyles.badge)
                                         }
                                     }
                                 ) {
-                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
+                                    navIcon()
                                 }
                             }
                             screen == Screen.Messages && messagesBadgeCount > 0 -> {
@@ -116,23 +134,21 @@ fun BottomNavBar(
                                         ) {
                                             Text(
                                                 if (messagesBadgeCount > 99) "99+" else "$messagesBadgeCount",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold
+                                                style = CarakaTextStyles.badge
                                             )
                                         }
                                     }
                                 ) {
-                                    Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
+                                    navIcon()
                                 }
                             }
-                            else -> Icon(screen.icon, contentDescription = title, modifier = Modifier.size(24.dp))
+                            else -> navIcon()
                         }
                     },
                     label = {
                         Text(
                             title,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                            style = if (isSelected) CarakaTextStyles.navLabelSelected else CarakaTextStyles.navLabel,
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Visible
@@ -155,7 +171,7 @@ fun BottomNavBar(
                         unselectedIconColor = unselectedColor,
                         selectedTextColor = activeColor,
                         unselectedTextColor = unselectedColor,
-                        indicatorColor = activeColor.copy(alpha = 0.16f)
+                        indicatorColor = Color.Transparent
                     )
                 )
             }

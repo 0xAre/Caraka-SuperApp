@@ -31,12 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.DangerRed
 import com.example.caraka.ui.theme.DisasterBlue
@@ -76,9 +75,7 @@ fun IdentityQrCard(
             Text(
                 stringResource(R.string.qr_my_identity_title),
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                letterSpacing = 1.sp
+                style = CarakaTextStyles.serviceLabel
             )
         }
 
@@ -126,8 +123,7 @@ fun IdentityQrCard(
         Text(
             displayName.ifBlank { "—" },
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            style = CarakaTextStyles.dialogTitle
         )
         Spacer(Modifier.height(4.dp))
         roleBadge(role)
@@ -135,33 +131,27 @@ fun IdentityQrCard(
         Text(
             peerId.take(24) + if (peerId.length > 24) "…" else "",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
+            style = CarakaTextStyles.monoData,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(4.dp))
         Text(
             stringResource(R.string.qr_verbal_fingerprint, fingerprint),
             color = MaterialTheme.colorScheme.primary,
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold
+            style = CarakaTextStyles.monoData.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         )
         Spacer(Modifier.height(8.dp))
-        Text(
+        CarakaBody(
             stringResource(R.string.qr_show_hint),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 16.sp
+            muted = true,
+            textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.qr_trust_warning),
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 14.sp
+            style = CarakaTextStyles.statLabel,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -182,6 +172,6 @@ private fun RoleBadgeDefault(role: String) {
             .border(1.dp, color.copy(alpha = 0.5f), shapes.sm)
             .padding(horizontal = 10.dp, vertical = 3.dp)
     ) {
-        Text(label, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(label, color = color, style = CarakaTextStyles.serviceLabel)
     }
 }

@@ -1,476 +1,329 @@
-# 📋 PRD — CARAKA
-# Offline Crisis Communication Network
+# 📐 PRD — CARAKA
 
-> **Version**: 2.0 | **Date**: 7 Juni 2026 | **Status**: Phase 0 Complete ✅  
-> **Track**: WRECK-IT 7.0 Hackathon — **IoT Resilience** ✅  
-> **Tema**: *"Cyber Warfare: Silent War on The Fifth Domain"*  
-> **Deadline Submission**: 14 Juni 2026 (7 hari lagi)  
-> **Finals**: 8 Juli 2026 (3 jam finalize + presentasi)  
-> **Tim**: 4 anggota (2 active devs + 2 support) + agentic AI  
-> **Nama Tim**: TBD  
-> **Test Devices**: 4 Android (2023+, termasuk Tecno Pova 5)  
+**Product & Technical Requirements Document**
+**Resilient Offline Mesh Communication for Android**
+
+> **Version**: 3.0 · **Last updated**: 14 Juni 2026 · **Status**: Aktif (build diverifikasi)
+> **Audience**: engineering, reviewer teknis, kontributor.
+> **Sumber kebenaran**: dokumen ini mengikuti kode pada branch `main`. Bila dokumen dan kode berbeda, **kode yang benar** — perbarui dokumen ini.
+> **Pendamping**: [`README.md`](README.md) memuat narasi produk & nilai bisnis; PRD ini memuat detail teknis.
 
 ---
 
-## 1. Executive Summary
+## 1. Ringkasan Produk
 
-**CARAKA** adalah aplikasi Android yang membangun **offline mesh communication network** via WiFi Direct, memungkinkan komunikasi darurat terenkripsi tanpa internet. Diposisikan sebagai **Zero Trust communication backbone untuk infrastruktur kritis saat cyber warfare**.
+**CARAKA** adalah aplikasi Android (Jetpack Compose) yang membentuk **mesh komunikasi lokal** antarperangkat tanpa server pusat dan tanpa internet. Perangkat di sekitar saling menemukan, bertukar identitas, dan meneruskan pesan multi-hop melalui transport lokal yang tersedia (Wi-Fi Aware, Wi-Fi Direct, Google Nearby Connections, dan LAN). Tujuan utamanya adalah **jalur komunikasi cadangan** ketika internet, BTS, atau layanan pusat tidak dapat diandalkan.
 
-**Tagline**: *"When The Grid Falls, We Rise."*
+CARAKA bukan pengganti internet. Ia adalah lapisan komunikasi *store-carry-forward* yang tetap berjalan saat kanal utama terputus, dengan enkripsi end-to-end untuk chat langsung, tanda tangan Ed25519 untuk autentikasi, dan penyimpanan lokal terenkripsi.
+
+**Tagline produk**: *"When The Grid Falls, We Rise."*
+**Konteks asal**: dibangun untuk **WRECK-IT 7.0** (track IoT Resilience, tema *Cyber Warfare: Silent War on The Fifth Domain*).
 
 ---
 
-## 2. Problem Statement
+## 2. Tujuan & Batasan
+
+### 2.1 Tujuan (Goals)
+- **G1** — Pertukaran pesan teks antar-perangkat tanpa internet/akun/backend.
+- **G2** — Penerusan multi-hop sehingga node di luar jangkauan langsung tetap terjangkau.
+- **G3** — Broadcast darurat (SOS) berprioritas tinggi yang dapat dibaca semua node penerima.
+- **G4** — Kerahasiaan & autentikasi: chat terenkripsi E2E, seluruh pesan dapat ditandatangani, data lokal terenkripsi at rest.
+- **G5** — Bertahan di latar belakang (foreground service) dan hemat daya melalui *duty cycling*.
+- **G6** — Dapat dipakai di lapangan: dua bahasa, aksesibilitas, anti-mistap, onboarding.
+
+### 2.2 Non-Goals (di luar cakupan saat ini)
+- iOS / lintas-platform.
+- Transport non-Wi-Fi/BT (LoRa, satelit, radio HF).
+- Pesan suara/video, peta offline, berbagi berkas besar.
+- Verifikasi identitas berbasis blockchain/PKI tersentralisasi atau CA online.
+- Deteksi deepfake / moderasi konten otomatis.
+- Sinkronisasi cloud (saat online, app tidak mengunggah riwayat ke server mana pun).
+
+---
+
+## 3. Persona & Skenario Inti
+
+| Persona | Kebutuhan lapangan | Jalur di CARAKA |
+|---|---|---|
+| **Responder** (BPBD, Polri, PMI) | Koordinasi saat infrastruktur tumbang | Identitas peran, chat terenkripsi, broadcast/SOS, peta node |
+| **Relawan** | Menemukan tim & melaporkan kondisi | Discovery lokal, QR identity, relay multi-hop |
+| **Warga** | Minta bantuan tanpa sinyal | SOS lokal, lokasi opsional, chat dengan kontak terdekat |
+| **Komunitas rawan bencana** | Kanal cadangan siap pakai | Mesh berbasis ponsel Android yang sudah dimiliki |
+
+**Skenario acuan**: gempa/banjir/serangan siber merusak konektivitas pusat → perangkat di lapangan membentuk mesh → SOS dan koordinasi tetap mengalir lewat node perantara hingga tujuan, lalu sinkron status saat sebagian internet pulih.
+
+---
+
+## 4. Arsitektur Sistem
+
+CARAKA memakai pola **MVVM + manual dependency injection**. Tidak menggunakan Hilt/Dagger; seluruh objek inti dirakit di `CarakaApp` dan dibagikan melalui `Application`.
 
 ```
-Hour 0: DDoS attack         → Internet down
-Hour 1: Power grid sabotage → Electricity down  
-Hour 2: Cell tower jamming   → Mobile network down
-Hour 3: Disinformation       → Chaos & panic
+┌───────────────────────────────────────────────────────────────┐
+│ PRESENTATION  — Jetpack Compose (Material 3), Navigation        │
+│   MainActivity · 10 screen · komponen UI · theme/tokens         │
+│   MainViewModel  (StateFlow → UI)                               │
+├───────────────────────────────────────────────────────────────┤
+│ DOMAIN/REPOSITORY                                               │
+│   MeshRepository  (single source of truth: DB + crypto + outbox)│
+│   MeshPolicy      (kuota, TTL, retry, drop-priority — D1/D4/D7) │
+├───────────────────────────────────────────────────────────────┤
+│ SECURITY & STORAGE                                              │
+│   CryptoManager (X25519 · Ed25519 · XSalsa20-Poly1305)          │
+│   IdentityManager (DataStore)                                   │
+│   DatabasePassphraseManager (Android Keystore + fallback)       │
+│   Room + SQLCipher  (messages · peers · relayed · outbox)       │
+├───────────────────────────────────────────────────────────────┤
+│ NETWORK / TRANSPORT (facade: MeshManager : MeshTransport)       │
+│   WifiDirectManager  ← "brain" + LAN backbone + fallback        │
+│   WifiAwareManager + MeshRouter + MeshSocketManager (primary)   │
+│   NearbyTransport    (overlay BT+Wi-Fi, butuh Play Services)    │
+├───────────────────────────────────────────────────────────────┤
+│ LIFECYCLE                                                       │
+│   MeshForegroundService (WifiLock+WakeLock, queue-processor)    │
+│   ConnectivityMonitor (ONLINE / HYBRID / MESH_ONLY)             │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-**Gap**: 99% tools komunikasi bergantung pada internet. Tidak ada solusi saat infrastruktur itu sendiri yang diserang.  
-**Solusi**: Decentralized, encrypted, offline mesh network yang tetap jalan saat semua infra lumpuh.
+**Perakitan dependency** (`CarakaApp.onCreate`):
+1. `SQLiteDatabase.loadLibs()` (SQLCipher native) → `CarakaDatabase.getDatabase()`.
+2. `CryptoManager` → `IdentityManager` → `MeshRepository` (menerima 4 DAO + crypto + identity).
+3. `MeshManager` (facade transport) dibuat, lalu `repository.transport = transport` untuk memutus dependensi sirkular.
+4. `ConnectivityMonitor` untuk status online/mesh.
 
 ---
 
-## 3. Target Users
+## 5. Lapisan Transport
 
-| User | Kebutuhan |
-|---|---|
-| **First Responders** (BPBD, Polri, PMI) | Koordinasi darurat tanpa internet |
-| **Tenaga Medis** | Broadcast SOS & terima permintaan bantuan |
-| **Masyarakat Umum** | Kirim pesan darurat, terima info terverifikasi |
-| **Pemerintah Daerah** | Distribusi informasi resmi saat krisis |
+`MeshManager` adalah facade yang mengimplementasikan `MeshTransport` dan memilih transport berdasarkan kemampuan perangkat. Semua transport menyalurkan pesan ke **satu "brain"** (`WifiDirectManager`) sehingga handler, crypto, persistensi Room, dan notifikasi dipakai ulang. Pengiriman ganda (mis. LAN + Aware) aman karena ada dedup anti-replay.
 
----
-
-## 4. Scope & Feature Matrix
-
-### ✅ IN SCOPE — IMPLEMENTED (Status: 7 Juni 2026)
-
-| # | Feature | Status | Deskripsi |
+| Transport | Peran | Syarat | Catatan |
 |---|---|---|---|
-| **F1** | WiFi Direct P2P Connection | ✅ **LIVE** | Device-to-device tanpa internet; auto-discovery ~100m; 5+ concurrent peers |
-| **F2** | Text Messaging | ✅ **LIVE** | Kirim/terima pesan; SQLCipher encrypted storage; offline queue |
-| **F3** | Multi-hop Relay | ✅ **LIVE** | TTL-based forwarding; message dedup; max 5 hops; relay count tracking |
-| **F4** | E2E Encryption | ✅ **LIVE** | X25519 (key exchange) + Ed25519 (signatures) + XChaCha20-Poly1305 (symmetric) |
-| **F5** | SOS Broadcast | ✅ **LIVE** | 4 kategori (Medical/Fire/Security/Disaster); hold-to-confirm 2s; GPS attach |
-| **F6** | Network Visualization | ✅ **LIVE** | Force-directed Canvas graph; real-time topology; node stats + legend |
-| **F7** | Verified Identity (QR) | ✅ **LIVE** | QR code identity scan (ZXing); in-person verification; authority badges |
-| **F8** | Message Flagging | ✅ **LIVE** | Long-press flag; ≥3 flags = warning label; consensus anti-hoax |
-| **F9** | Hybrid Mode | ✅ **LIVE** | ConnectivityMonitor; 🟢Online/🟡Hybrid/🔴MeshOnly status banner |
-| **F10** | Anti-replay Protection | ✅ **LIVE** | LRU seenIds (2000) + ±5min timestamp drift check; flood prevention |
-| **F11** | Database Encryption | ✅ **LIVE** | SQLCipher with AES-256-GCM; passphrase in Android Keystore (TEE) |
-| **F12** | Smart GO Election | ✅ **LIVE** | Battery-aware group owner selection; role + load based intent calculation |
-| **F13** | Attack Simulator | ✅ **LIVE** | Demo toggle for "grid down" scenario; shows mesh resilience |
-| **F14** | HCI/Accessibility | ✅ **LIVE** | Hold-to-confirm error prevention; High-Contrast mode; Big-Text (+25%); i18n (ID+EN) |
+| **Wi-Fi Direct + LAN** (`WifiDirectManager`) | Brain + backbone + fallback. Selalu aktif | API 26+ | Discovery via UDP, transfer via TCP length-prefixed; pemilihan Group Owner battery-aware (`GoIntentCalculator`) |
+| **Wi-Fi Aware / NAN** (`WifiAwareManager` + `MeshRouter` + `MeshSocketManager`) | **Primary** multi-hop any-to-any | `FEATURE_WIFI_AWARE` (HW) | PSK per-pasangan diturunkan dari `peerId`; data path IPv6 + socket TCP |
+| **Google Nearby Connections** (`NearbyTransport`) | **Primary overlay** di HP tanpa NAN | Google Play Services | `play-services-nearby:19.3.0`; auto medium upgrade BT→Wi-Fi; di-skip senyap pada perangkat de-Googled |
+| **LAN socket** (`MeshSocketManager`) | Jalur unicast/broadcast atas Aware/Direct | — | Framing length-prefixed; `isDuplicate()` dedup |
 
-### ❌ OUT OF SCOPE
+**Logika seleksi** (`MeshManager.init`): Wi-Fi Aware diaktifkan bila HW mendukung; Nearby diaktifkan bila Play Services tersedia; Wi-Fi Direct + LAN selalu hidup sebagai brain/fallback. Setiap transport dipasang sebagai *overlay sink* (`addOverlayBroadcastSink` / `addOverlayUnicastSink`) sehingga relay, handshake, dan gossip melintas di semua jalur aktif.
 
-iOS, LoRa/Satellite, voice messages, offline maps, blockchain verification, deepfake detection, video streaming.
+**Handshake**: saat tetangga baru tersambung, perangkat mengirim `HANDSHAKE` berisi `peerId`, nama, role, public key X25519, dan signing key Ed25519 — sehingga lawan menyimpan kunci kita untuk verifikasi & enkripsi.
 
 ---
 
-## 5. Fitur Baru Phase 0 (Implementasi Terbaru — 7 Juni 2026)
+## 6. Routing, Relay & DTN
 
-### F10: Anti-replay Protection
-- **LRU Cache**: `seenIds` LinkedHashSet (max 2000 entries) melacak message ID yang sudah diproses
-- **Timestamp Drift Check**: Menerima pesan jika timestamp ±5 menit dari waktu lokal
-- **Purpose**: Mencegah replay attacks dan message flooding di mesh
-- **Implementation**: `MeshSocketManager.kt` — dedup sebelum relay
+### 6.1 MeshRouter (ala BATMAN/OLSR)
+- **Routing table**: `destinationPeerId → nextHopPeerId`, diperbarui dari setiap pesan masuk dan dari isi *heartbeat*.
+- **Heartbeat/Originator**: tiap **10 dtk** broadcast `ROUTING_HEARTBEAT` berisi daftar peer yang dapat dijangkau; penerima belajar "jika X bisa capai Y, saya bisa capai Y lewat X".
+- **Route timeout**: rute kedaluwarsa setelah **35 dtk** tanpa pembaruan (`cleanupStaleRoutes`).
+- **Forwarding**: TTL di-*decrement* tiap hop; jika `ttl ≤ 1` pesan di-drop. Jika tidak ada rute ke tujuan, dilakukan **managed flood** (broadcast TTL-bounded, keputusan D16) alih-alih membuang pesan — dedup mencegah loop.
+- **Anti-replay router**: `seenIds` LRU (maks **2000**) mencegah pesan non-heartbeat diproses dua kali (jalur Aware tidak punya dedup dispatcher).
 
-### F11: Database Encryption (SQLCipher)
-- **Encryption**: AES-256-GCM via SQLCipher `SupportFactory`
-- **Key Management**: Passphrase 32-byte random, disimpan di Android Keystore (TEE hardware)
-- **New Class**: `DatabasePassphraseManager.kt` — generate/load/wipe passphrase
-- **Secure Wipe**: `CarakaDatabase.secureWipe()` untuk panic/reset
-- **Compliance**: NIST SP 800-175B, mencegah offline database access jika device dicuri
+### 6.2 Parameter pesan
+- **TTL**: TEXT = `5` hop, SOS = `10` hop.
+- **Priority**: `EMERGENCY` (SOS) > `HIGH`/`NORMAL` (chat). Dipetakan ke `DropPriority` (`STATUS < NORMAL < EMERGENCY`) untuk keputusan eviksi.
+- **Dedup**: persisten via `MessageDao.messageExists()` (bertahan setelah restart) + LRU in-memory.
 
-### F12: Smart GO Election (Battery-Aware)
-- **Dynamic Intent**: `groupOwnerIntent` (0–15) calculated berdasarkan:
-  - Battery level (kritis ≤10% → intent=0, normal ≥50% → intent=10-13)
-  - Role (authority → intent preference tinggi; civilian → lower)
-  - Current relay load (busy relay → defer GO selection)
-- **Implementation**: `GoIntentCalculator.kt` — menggantikan hardcoded intent value
-- **Benefit**: Memperpanjang battery life; authority devices lebih likely menjadi hub
-- **StateFlow**: Expose battery level ke Settings UI untuk transparansi user
+### 6.3 Store-Carry-Forward / Outbox (DTN)
+Outbox adalah tabel Room terpisah dari log chat (blocker B4). Kebijakan terpusat di `MeshPolicy`:
 
-### F13: Attack Simulator Button
-- **Demo Feature**: Toggle switch di HomeScreen → simulasi "grid down" scenario
-- **Visual Feedback**: Mesh network tetap aktif saat simulasi (no internet connectivity)
-- **Use Case**: Demo untuk menunjukkan resilience sistem saat semua infra lumpuh
-- **Judging Value**: Mendemonstrasikan tema hackathon ("Cyber Warfare")
-
-### F14: HCI & Accessibility Improvements
-- **Hold-to-Confirm SOS** (2 detik): Arc sweep 0→360° dari white, label "TAHAN…" (Nielsen Error Prevention #5)
-- **Haptic Feedback**: Semantic feedback (tick/light/heavy) pada interaksi kritis
-- **High-Contrast Mode**: WCAG AAA compliance untuk user dengan low vision
-- **Big-Text Mode**: Font size +25% untuk elderly/accessibility
-- **i18n Support**: Bahasa Indonesia (default) + English; 175 string per locale
-- **Accessibility Semantics**: Role/contentDescription/stateDescription di semua custom controls
-- **Onboarding Tour**: 5-step guided tour (replay dari Help screen)
-
----
-
-## 5A. Functional Requirements Detail (Original)
-
-### F1: WiFi Direct P2P (P0)
-- Auto-discovery device dalam radius ~100m
-- Establish connection tanpa internet
-- Auto-reconnect jika putus
-- Support minimal 5 concurrent peers
-- Status: connected/searching/disconnected
-
-### F2: Text Messaging (P0)
-- Kirim ke specific peer atau broadcast
-- Local encrypted storage (SQLCipher)
-- Timestamp + sender identity per pesan
-- Offline queue, max 4KB per message
-
-### F3: Multi-hop Relay (P0)
-- Relay via 1+ intermediate nodes
-- Message ID dedup (no duplicate relay)
-- TTL default: 5 hops
-- Priority: emergency > normal
-- Simplified flooding + gossip propagation
-
-### F4: E2E Encryption (P0)
-- X25519 keypair untuk key exchange
-- Ed25519 untuk digital signatures
-- XChaCha20-Poly1305 symmetric encryption
-- Keys di Android Keystore
-- Library: Lazysodium-Android
-
-### F5: SOS Broadcast (P0)
-- 4 kategori: 🚨 Medical, 🔥 Fire, ⚠️ Security, 🌊 Disaster
-- Short message (max 280 chars)
-- Auto-attach last known GPS
-- Highest relay priority, visual + audio alert
-- SOS = signed but NOT encrypted (semua harus bisa baca)
-- Studi kasus utama: **skenario perang/evakuasi korban**, komunikasi antar BPBD, Polri, PMI saat internet mati
-
-### F6: Network Visualization (P1)
-- Force-directed graph (Compose Canvas)
-- Color-coded nodes (active/SOS/authority)
-- Real-time update saat nodes join/leave
-- Stats: total nodes, estimated coverage
-
-### F7: Verified Identity (P1)
-- 3 pre-registered authority identities (hardcoded demo):
-  - 🛡️ **BPBD** — Koordinasi evakuasi & shelter
-  - 🚔 **Polri** — Keamanan & area restriction
-  - 🏥 **PMI** — Medis & distribusi logistik
-- ✓ Verified badge pada authority messages
-- QR code untuk in-person verification
-- Non-verified = "Civilian"
-
-### F8: Message Flagging (P1)
-- Flag pesan sebagai "suspicious"
-- 3+ flags = warning label
-- Verified authority messages tidak bisa di-flag
-
-### F9: Hybrid Mode (P1)
-- Auto-detect internet connectivity
-- Status: 🟢 Online, 🟡 Hybrid, 🔴 Mesh Only
-- Basic sync saat internet kembali
-
----
-
-## 6. Architecture
-
-```
-┌──────────────────────────────────────────────┐
-│               CARAKA                     │
-├──────────────────────────────────────────────┤
-│  Presentation    │  Domain        │  Data    │
-│  ─────────────   │  ──────────    │  ─────── │
-│  Compose UI      │  MessageSvc    │  Room DB │
-│  ViewModels      │  MeshRouter    │  Keystore│
-│  Navigation      │  CryptoMgr     │  Prefs   │
-│  Canvas (Graph)  │  IdentityMgr   │  Sockets │
-├──────────────────────────────────────────────┤
-│  Network Layer: WiFi P2P Manager + Sockets   │
-└──────────────────────────────────────────────┘
-```
-
----
-
-## 7. Tech Stack
-
-| Component | Technology | Status |
+| Parameter | Nilai | Sumber |
 |---|---|---|
-| Language | Kotlin | ✅ |
-| UI Framework | Jetpack Compose + Material 3 | ✅ |
-| Architecture | MVVM + Clean Architecture | ✅ |
-| Dependency Injection | Hilt | ✅ |
-| Networking | Android WiFi P2P API (P2P Manager) | ✅ |
-| **Encryption Core** | **Lazysodium-Android (libsodium)** | ✅ |
-| - Key Exchange | X25519 (ECDH) | ✅ |
-| - Signing | Ed25519 (EdDSA) | ✅ |
-| - Symmetric | XChaCha20-Poly1305 (AEAD) | ✅ |
-| Key Storage | Android Keystore (TEE hardware) | ✅ |
-| **Database** | **Room + SQLCipher (AES-256-GCM)** | ✅ **NEW** |
-| QR Code Generation/Scan | ZXing Library | ✅ **NEW** |
-| Async Runtime | Kotlin Coroutines + StateFlow | ✅ |
-| Graphics | Canvas (Force-directed graph physics) | ✅ |
-| Localization | i18n (ID + EN, 175+ strings) | ✅ **NEW** |
-| Min SDK | **API 26 (Android 8.0)** | ✅ |
-| Target SDK | API 34 (Android 14) | ✅ |
+| `OUTBOX_MAX_MESSAGES` | 500 | D7 |
+| `OUTBOX_MAX_TOTAL_BYTES` | ≈ 2 MB | D7 |
+| `MESSAGE_MAX_AGE_MS` | 24 jam (batas kasar; gate utama = hop/TTL) | D1 |
+| `UNICAST_MAX_ATTEMPTS` | 4 | D4 |
+| `UNICAST_RETRY_BASE_MS` | 10 dtk (backoff eksponensial) | D4 |
+| `UNICAST_RETRY_MAX_MS` | 90 dtk (cap) | D4 |
+| `RETRY_JITTER_MS` | 3 dtk | D4 |
+| `QUEUE_PROCESSOR_TICK_MS` | 15 dtk | D10 |
+| `IDLE_THRESHOLD_MS` | 60 dtk → interval ×4 | D14 |
+| `DEEP_IDLE_THRESHOLD_MS` | 5 mnt → suspend active discovery | D15 |
+
+**Alur retry & carry** (`MeshRepository.retryDueMessages`, dipanggil queue-processor tiap 15 dtk + saat kirim baru):
+1. Buang unit kedaluwarsa (`deleteExpired`).
+2. Untuk tiap unit jatuh tempo (`nextAttemptAt ≤ now`): kirim ulang, naikkan `attemptCount`, jadwalkan ulang dengan backoff+jitter.
+3. Saat `attemptCount` melewati cap: hanya **kontak terverifikasi** yang terus di-*carry* (cadence lambat hingga `ttlExpiry`); penerima non-verified → `FAILED` (membatasi penyalahgunaan & pertumbuhan storage).
+4. **Opportunistic flush** (`flushForPeer`): saat peer kembali terjangkau, langsung kirim antrian untuknya (di-debounce `PEER_FLUSH_DEBOUNCE_MS`).
+5. **Kuota** (`enforceOutboxQuota`): bila melebihi cap pesan/byte, eviksi worst-first (prioritas terendah → tertua → paling banyak direplikasi) dan tandai `FAILED` agar UI jujur.
+
+**Delivery status** (`MessageEntity.deliveryStatus`): `SENT | DELIVERED | EXPIRED | FAILED`. `DELIVERED` **hanya** di-set dari ACK end-to-end asli untuk pesan yang benar-benar kita kirim (`markUnicastDelivered` memverifikasi unit ada di outbox kita) — tidak pernah dari *overhearing*/implicit ACK (D5).
 
 ---
 
-## 8. Data Models
+## 7. Kriptografi & Model Trust
 
-### Message
-```kotlin
-data class Message(
-    val id: String,            // UUID for dedup
-    val type: MessageType,     // TEXT, SOS, SYSTEM, FLAG
-    val senderId: String,      // Public key fingerprint
-    val senderName: String,
-    val recipientId: String?,  // null = broadcast
-    val content: String,       // Encrypted payload
-    val timestamp: Long,
-    val location: Location?,   // For SOS
-    val ttl: Int,              // Default: 5
-    val priority: Priority,    // EMERGENCY, HIGH, NORMAL
-    val signature: ByteArray,  // Ed25519
-    val flagCount: Int,
-    val sosCategory: SosCategory?
-)
-```
+Implementasi via **Lazysodium (libsodium) 5.1.0** di `CryptoManager`.
 
-### Peer
-```kotlin
-data class Peer(
-    val id: String,
-    val displayName: String,
-    val publicKey: ByteArray,
-    val signingKey: ByteArray,
-    val isVerified: Boolean,
-    val role: PeerRole,        // CIVILIAN, AUTHORITY
-    val lastSeen: Long,
-    val isDirectPeer: Boolean
-)
-```
+| Lapisan | Algoritma / mekanisme | Implementasi |
+|---|---|---|
+| Enkripsi chat langsung | **X25519 + XSalsa20-Poly1305** via `crypto_box` (`cryptoBoxEasy`/`OpenEasy`) | Payload disimpan sebagai `nonceB64:ciphertext` |
+| Autentikasi pesan | **Ed25519** detached signature (`cryptoSignDetached`/`VerifyDetached`) | Ditandatangani pada payload terenkripsi (chat) atau plaintext (SOS) |
+| Peer ID / fingerprint | **BLAKE2b** generic hash dari public key, diambil 16 karakter hex | Dipakai sebagai ID peer di seluruh app |
+| Identitas kontak | QR berisi `peerId`, nama, role, encPub, signPub | Verifikasi tatap muka → `isVerified = true` |
+| Penyimpanan lokal | Room di atas **SQLCipher** (konten DB: AES-256-CBC + HMAC) | DB `caraka_secure.db` |
+| Passphrase DB | 32-byte acak, dibungkus **AES-256-GCM** dengan kunci di **Android Keystore** | Fallback ke SharedPreferences ter-obfuscate bila Keystore/TEE gagal |
+
+> **Catatan implementasi penting**
+> - **SOS tidak dienkripsi E2E** (agar semua node penerima bisa membaca) tetapi **tetap ditandatangani Ed25519** bila identitas pengirim tersedia.
+> - **Kunci identitas pengguna disimpan di Android DataStore**, *belum* di Android Keystore (`IdentityManager` punya TODO migrasi). Yang dilindungi Keystore saat ini adalah *passphrase database*, bukan kunci identitas.
+> - Identitas otoritas demo (BPBD/Polri/PMI) memakai **seed deterministik** (`GARUDA_MESH_AUTHORITY_<role>`) agar semua perangkat mengenali kunci otoritas yang sama — ini fitur demo, **bukan** PKI produksi.
+
+**Prinsip trust (Zero-Trust ringkas)**: jangan percaya tanpa verifikasi (tanda tangan per pesan), verifikasi eksplisit saat tatap muka (QR), relay tidak bisa membaca chat (E2E), serta dedup + anti-replay untuk membatasi flooding.
 
 ---
 
-## 9. Security Design (Zero Trust)
+## 8. Model Data
 
-| Principle | Implementation |
-|---|---|
-| Never Trust, Always Verify | Ed25519 signature on every message |
-| Least Privilege | Civilian cannot impersonate authority |
-| Assume Breach | E2E encryption, relay nodes can't read |
-| Verify Explicitly | QR code face-to-face verification |
+Database: **Room v3**, nama `caraka_secure.db`, dienkripsi SQLCipher. Migrasi: `1→2` (kolom state koneksi peer), `2→3` (kolom `deliveryStatus` + tabel `outbox`). `exportSchema = false`.
 
-### Crypto Flow
-```
-Sending Direct Message:
-  shared_secret = X25519(my_private, their_public)
-  msg_key = HKDF(shared_secret, message_id)
-  ciphertext = XChaCha20Poly1305(msg_key, plaintext)
-  signature = Ed25519_Sign(my_signing_key, ciphertext)
+**Entitas:**
+- `messages` (`MessageEntity`): id (UUID), type (`TEXT`/`SOS`/`SYSTEM`), sender/recipient + role, content (plaintext lokal), encryptedPayload, timestamp, ttl, priority, signature, sosCategory, lat/lng, isIncoming, isRead, flagCount, isRelayed, **deliveryStatus**.
+- `peers` (`PeerEntity`): id (fingerprint), deviceName, displayName, role, publicKey (X25519), signingKey (Ed25519), isVerified, isAuthority, macAddress, lastSeen, connectionId, **status** (`ConnectionStatus`), direction, lastAttempt, rejectionCount, hopCount.
+- `relayed_messages` (`RelayedMessageEntity`): cache dedup untuk mencegah loop relay.
+- `outbox` (`OutboxEntity`): unit transport DTN — id, recipientId, payloadJson, state, priority, attemptCount, nextAttemptAt, createdAt, ttlExpiry, replicaCount.
 
-Sending Broadcast/SOS:
-  plaintext (readable by all) + Ed25519 signature (authenticity)
-```
+**State machine koneksi peer** (`ConnectionStatus`): `DISCOVERED → PENDING_REQUEST → CONNECTED → ACTIVE_MESH`.
+
+**Wire protocol** (`MeshProtocol`, JSON via Gson, length-prefixed): tipe `HANDSHAKE | TEXT | SOS | FLAG | ACK | CONNECTION_REQUEST/ACCEPT/REJECT | PEER_LIST | ROUTING_HEARTBEAT`. Field mencakup id, sender/recipient, content, encryptedPayload, ttl, priority, signature, sosCategory, lat/lng, flagCount, publicKey/signingKey (handshake), targetId/lanIp/seenBy (routing), dan `peers: List<PeerShare>` (gossip full-mesh awareness).
 
 ---
 
-## 10. UI Screens
+## 9. Lifecycle, Background & Power
 
-```
-Onboarding → Home Dashboard → [Messages | Network | SOS | Settings]
-```
+### 9.1 MeshForegroundService
+- `foregroundServiceType="connectedDevice"`, `START_STICKY` (restart bila dibunuh sistem), notifikasi persisten dengan aksi **Stop Mesh**.
+- **Locks**: `WifiLock` (`FULL_LOW_LATENCY` di Q+, jika tidak `FULL_HIGH_PERF`) agar interface Wi-Fi tidak di-suspend; `WakeLock` partial dengan timeout **12 jam** (cukup untuk satu hari skenario darurat).
+- **Queue-processor**: coroutine timer tiap `QUEUE_PROCESSOR_TICK_MS` (15 dtk) memanggil `repository.retryDueMessages()` — driver DTN periodik (D10), idempotent.
 
-| Screen | Key Elements |
-|---|---|
-| **Onboarding** | Set name, generate keys, choose role |
-| **Home** | Status banner, 🆘 SOS button, alerts feed, stats |
-| **Messages** | Peer list, chat screen, flag indicators |
-| **Network Map** | Force-directed graph, node details, legend |
-| **SOS** | Category picker, message input, location, broadcast |
-| **Settings** | Profile, QR code, security info |
+### 9.2 ConnectivityMonitor
+- `NetworkCallback`-based, meng-emit `ONLINE` / `HYBRID` / `MESH_ONLY` untuk banner status di Home.
 
-**Design**: Dark mode, military/tactical aesthetic, navy `#0A1628` + amber `#F59E0B`.
+### 9.3 Duty cycling (hemat daya)
+- Tanpa aktivitas mesh selama `IDLE_THRESHOLD_MS` (60 dtk) → state IDLE, interval beacon/gossip/discovery dikalikan `IDLE_INTERVAL_MULTIPLIER` (×4).
+- `DEEP_IDLE_THRESHOLD_MS` (5 mnt) → suspend *active discovery/scanning* (paling boros), tetapi **receive path** (LAN listener) tetap hidup agar node tetap reachable; aktivitas masuk mengembalikan ke ACTIVE. (Power-down Wi-Fi penuh menunggu kanal presence BLE — D15, ditunda.)
 
 ---
 
-## 11. Timeline & Actual Progress
+## 10. Functional Requirements (status saat ini)
 
-| Sprint | Target Dates | Goals | Status |
+| ID | Fitur | Status | Implementasi inti |
 |---|---|---|---|
-| **Sprint 1** | 12-18 Mei | Project setup, WiFi Direct PoC, basic UI, key generation | ✅ Complete |
-| **Sprint 2** | 19-25 Mei | Multi-hop relay, E2E encryption, SOS system | ✅ Complete |
-| **Sprint 3** | 26 Mei-1 Jun | Network viz, PKI, flagging, hybrid mode, proposal draft | ✅ Complete |
-| **Sprint 4** | 2-7 Jun | **Phase 0**: SQLCipher, QR Identity, Smart GO, Anti-replay, Accessibility | ✅ **Complete (7 Juni)** |
-| **Sprint 5** | 8-14 Jun | GitHub cleanup, README, demo video, proposal finalize, submit | 🔄 **IN PROGRESS** |
-| **Finals Prep** | 8 Juli | 3 jam: final polish, rehearsal, presentation | ⏳ Pending |
+| F1 | Discovery & koneksi P2P lokal | ✅ | Wi-Fi Direct/LAN + Aware + Nearby; state machine peer |
+| F2 | Chat teks (direct & broadcast) | ✅ | `sendDirectMessage` (E2E) / broadcast; persist Room |
+| F3 | Relay multi-hop berbasis TTL | ✅ | `MeshRouter` + brain re-broadcast; TTL decrement, dedup |
+| F4 | Enkripsi E2E + tanda tangan | ✅ | X25519 + XSalsa20-Poly1305; Ed25519 |
+| F5 | SOS broadcast (4 kategori) | ✅ | `broadcastSos` (Medical/Fire/Security/Disaster), TTL 10, EMERGENCY |
+| F6 | Visualisasi jaringan | ✅ | `NetworkScreen` force-directed Canvas, node/relay stats |
+| F7 | QR identity & verifikasi | ✅ | `QrIdentityManager` + ZXing; `saveVerifiedPeer` |
+| F8 | Community flagging anti-hoax | ✅ | `flagAndBroadcast`; konsensus ≥3 flag → label peringatan |
+| F9 | Hybrid/connectivity mode | ✅ | `ConnectivityMonitor` → banner ONLINE/HYBRID/MESH_ONLY |
+| F10 | Anti-replay & dedup | ✅ | LRU `seenIds` (2000) + drift waktu ±5 mnt + dedup persisten |
+| F11 | DTN outbox: retry/carry/quota | ✅ | `MeshPolicy` + `retryDueMessages`/`enforceOutboxQuota` |
+| F12 | DB terenkripsi + secure wipe | ✅ | SQLCipher + `DatabasePassphraseManager` + `secureWipe` |
+| F13 | Battery-aware GO election | ✅ | `GoIntentCalculator` (battery + role + load) |
+| F14 | Background mesh + power saving | ✅ | `MeshForegroundService` + duty cycling |
+| F15 | ACK end-to-end & delivery status | ✅ | `markUnicastDelivered`; status SENT/DELIVERED/EXPIRED/FAILED |
+| F16 | HCI & aksesibilitas | ✅ | hold-to-confirm, haptics, high-contrast, big-text, onboarding |
+| F17 | i18n (ID + EN) | ✅ | 280 string per locale |
 
 ---
 
-## 11A. Key Differentiators (Competitive Advantage)
+## 11. Non-Functional Requirements
 
-Mengapa CARAKA menang di WRECK-IT 7.0 IoT Resilience track:
+- **Keamanan**: enkripsi E2E untuk chat, tanda tangan per pesan, DB terenkripsi at rest, secure wipe, anti-replay + dedup. Caveat keamanan didokumentasikan (§7, §15).
+- **Ketahanan**: relay multi-hop, managed flood saat tanpa rute, retry berbatas + carry untuk kontak terverifikasi, kuota outbox.
+- **Daya**: duty cycling IDLE/DEEP_IDLE; WakeLock/WifiLock hanya saat service aktif.
+- **Kinerja**: target discovery & pembentukan mesh dalam orde detik di 4 perangkat uji; pengiriman ganda aman karena dedup.
+- **Aksesibilitas**: WCAG-oriented — high-contrast mode, big-text (+25%), semantics (role/contentDescription/stateDescription), haptic, hold-to-confirm (Nielsen #5 error prevention).
+- **Lokalisasi**: Bahasa Indonesia (default) + English, 280 string per locale (`values/`, `values-en/`).
+- **Kompatibilitas**: `minSdk 26` (Android 8.0) — degradasi anggun bila Wi-Fi Aware/Play Services tidak ada.
 
-| Aspek | CARAKA | Kompetitor Standar |
+---
+
+## 12. UI/UX & Design System
+
+**Estetika saat ini: light enterprise "super app"** (migrasi dari tema dark navy lama).
+
+- **Palet** (`ui/theme/Color.kt`): canvas terang `#F5F7FA`, surface putih, brand **Telegram Blue `#229ED9`**, semantik success `#168A4B` / warning `#D98200` / danger `#D93025`. Alias kompatibilitas dipertahankan selama migrasi layar ke role M3 semantik.
+- **Tipografi** (`ui/theme/Type.kt`): **Manrope** (display/judul/metrik), **Inter** (body/chat), **JetBrains Mono** (peer ID/koordinat/hash). Bundled sebagai font lokal (`res/font/`) — bukan lagi Rajdhani/Downloadable Fonts. Token semantik di `CarakaTextStyles`.
+- **Token**: `Dimens.kt`, `Shape.kt`, `StatusColors.kt`.
+
+**Navigasi** (`MainActivity`, Navigation Compose, start = Home, bottom nav + badge): **10 layar** —
+`Home` (status, SOS, statistik, shortcut), `Messages`, `Chat` (per-peer, long-press flag, indikator "✓✓ Mesh"), `Network` (graph force-directed), `Sos` (4 kategori + hold-to-confirm), `Settings`, `Help` (FAQ + replay tour), `QrIdentity` (tampil + scan), `Alerts`, `ProfileSetup` (onboarding identitas/role).
+
+**HCI**: hold-to-confirm SOS 2 dtk (arc sweep), haptic semantic (tick/light/heavy/SOS-waveform), onboarding tour 5 langkah replay-able, snackbar feedback bus, tooltip, badge unread/SOS.
+
+---
+
+## 13. Permissions (AndroidManifest)
+
+- **Wi-Fi/Network**: `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `INTERNET`, `ACCESS_NETWORK_STATE`, `CHANGE_NETWORK_STATE`, `NEARBY_WIFI_DEVICES` (API 33+, `neverForLocation`).
+- **Location**: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` (syarat discovery Wi-Fi Direct di Android 8+).
+- **Bluetooth** (Nearby Connections): `BLUETOOTH`/`BLUETOOTH_ADMIN` (≤API 30), `BLUETOOTH_ADVERTISE`/`CONNECT`/`SCAN` (API 31+).
+- **Background**: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `WAKE_LOCK`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (kritis untuk HiOS/MIUI/XOS).
+- **Lainnya**: `VIBRATE`, `POST_NOTIFICATIONS`, `CAMERA` (scan QR).
+- **Features (optional)**: `android.hardware.wifi.aware` (`required=false`), `android.hardware.camera` (`required=false`).
+
+---
+
+## 14. Tech Stack & Versi
+
+| Area | Teknologi | Versi |
 |---|---|---|
-| **Threat Model** | Cyber warfare (DDoS + infrastructure sabotage) | Generic offline comm |
-| **Encryption** | E2E + signature per-pesan + anti-replay | Single cipher, no signing |
-| **Identity Trust** | QR code in-person verification + authority verification | No PKI |
-| **Anti-hoax** | Community consensus flagging (≥3 flags) | No hoax protection |
-| **Security at Rest** | SQLCipher AES-256-GCM in TEE | Plain SQLite |
-| **Resilience** | Multi-hop relay + smart battery-aware GO election | Single-hop only |
-| **Accessibility** | WCAG AAA (high-contrast, big-text, hold-to-confirm) | Tidak ada a11y |
-| **Localization** | i18n Indonesian + English, cultural context | English-only |
-| **Demo Drama** | Attack Simulator toggle (grid down scenario) | Static screenshot |
+| Bahasa | Kotlin | 2.0.21 |
+| Build | Android Gradle Plugin / Gradle | 8.13.2 |
+| SDK | minSdk **26** · target/compile **36** | — |
+| UI | Jetpack Compose (BOM) + Material 3 + Navigation Compose | BOM 2024.09.00 · nav 2.8.4 |
+| State | ViewModel · Coroutines · StateFlow | coroutines 1.9.0 |
+| DB | Room + SQLCipher | 2.6.1 + 4.5.4 |
+| Crypto | Lazysodium-Android (libsodium) | 5.1.0 |
+| Identity/QR | ZXing (core 3.5.3 + embedded) | 4.3.0 |
+| Transport | Google Nearby Connections | 19.3.0 |
+| Serialisasi | Gson + kotlinx.serialization | 2.11.0 · 1.7.3 |
+| Prefs | DataStore Preferences | 1.1.1 |
+| Build tools | KSP | 2.0.21-1.0.27 |
+| DI | **Manual** (`CarakaApp`) — bukan Hilt/Dagger | — |
+
+Kode Kotlin: ~13.5k baris (`app/app/src/main/java`).
 
 ---
 
-## 12. Submission Deliverables (14 Juni)
+## 15. Keterbatasan & Caveat yang Diketahui
 
-| Deliverable | Format |
-|---|---|
-| Proposal | PDF, 10-15 pages |
-| Demo Video | MP4, 3-5 minutes |
-| GitHub Repository | Public, clean code + docs |
-| APK | Debug/release build |
+1. **Kunci identitas di DataStore**, belum di Android Keystore (`IdentityManager` TODO). Hanya passphrase DB yang dibungkus Keystore.
+2. **Identitas otoritas demo deterministik** (seed `GARUDA_MESH_AUTHORITY_*`) — tidak aman untuk produksi; perlu PKI/atestasi nyata.
+3. **SOS tidak terenkripsi** (by design, dapat dibaca semua node) — hanya ditandatangani.
+4. **Carry untuk stranger ditunda** (D8): pesan transit tanpa rute hanya di-managed-flood, tidak disimpan; carry persisten dibatasi ke kontak terverifikasi.
+5. **Power-down Wi-Fi penuh ditunda** (D15) hingga ada kanal presence BLE; saat ini hanya suspend active scanning.
+6. **Nearby butuh Google Play Services**; perangkat de-Googled jatuh ke Wi-Fi Direct + LAN saja.
+7. **Pengujian multi-device** sebagian belum diverifikasi pada 3+ perangkat fisik secara menyeluruh.
+8. **Lisensi belum dideklarasikan** (tidak ada file `LICENSE`).
 
 ---
 
-## 13. Demo Scenario (Finals — 8 Juli)
+## 16. Roadmap / Open Items
 
-**Skenario**: Konflik bersenjata / serangan siber terkoordinasi → evakuasi korban sipil
+- [ ] Migrasi kunci identitas ke Android Keystore.
+- [ ] Presence channel BLE → deep-idle Wi-Fi power-down penuh (D15).
+- [ ] Carry persisten terbatas untuk transit non-kontak dengan kontrol abuse (D8).
+- [ ] PKI/atestasi otoritas yang sesungguhnya (gantikan seed demo).
+- [ ] QA TalkBack & uji-pengguna think-aloud (5 partisipan).
+- [ ] Palet color-blind (deuteranopia/protanopia), voice input SOS, locale tambahan (Jawa/Sunda).
+- [ ] Verifikasi end-to-end menyeluruh di ≥3 perangkat fisik + tambah unit/instrumented test.
+- [ ] Tambahkan file `LICENSE`.
 
-**Devices**: 4 HP tim → role-play sebagai BPBD, Polri, PMI, dan Warga
+---
 
+## 17. Build & Verifikasi
+
+```powershell
+git clone https://github.com/Fatihmaull/cakra-mesh.git
+cd cakra-mesh/app
+.\gradlew.bat assembleDebug
+# APK: app/app/build/outputs/apk/debug/app-debug.apk
 ```
-Scene 1: "Serangan Terkoordinasi" (2 min)
-  → Narasi: DDoS + infrastructure sabotage, semua internet mati
-  → Show: 4 devices offline, no connectivity
 
-Scene 2: "CARAKA Aktif" (2 min)
-  → Buka app di semua device, mesh auto-connects
-  → Show: network visualization — 4 nodes terhubung
+**Uji dua perangkat**: instal di ≥2 ponsel fisik → buat identitas → beri izin nearby/lokasi/Bluetooth/notifikasi → buka **Network** dan tunggu node muncul → verifikasi via QR → kirim chat/SOS dan amati relay count.
 
-Scene 3: "Evakuasi Darurat" (3 min)
-  → Device 1 (Warga): SOS Medical — "Korban luka di lokasi X"
-  → Device 2-3 relay otomatis
-  → Device 4 (PMI): Terima SOS, respond "Tim medis menuju lokasi"
-
-Scene 4: "Koordinasi Otoritas" (3 min)
-  → BPBD broadcast: "Shelter evakuasi di Gedung Y" [✓ Verified]
-  → Polri broadcast: "Hindari area Z, aktif konflik" [✓ Verified]
-  → Fake message dari unknown: "Semua gedung runtuh!" → community flags → ⚠️ Warning
-
-Scene 5: "Pemulihan" (1 min)
-  → Internet kembali → app auto-sync
-  → Dashboard: "X pesan terkirim, Y SOS ditangani"
-```
-
----
-
-## 14. Risks
-
-| Risk | Mitigation |
-|---|---|
-| WiFi Direct unstable | Test early di 4 device tim (termasuk Tecno Pova 5); BLE fallback |
-| Multi-hop packet loss | Retry + ACK mechanism |
-| Scope creep | Strict P0 first, NO P2 |
-| Hanya 2 active devs | Leverage agentic AI untuk boilerplate, docs, testing |
-| Weak proposal | Start writing Week 3, AI-assisted |
-
----
-
-## 15. Resolved Decisions
-
-| # | Question | Decision |
-|---|---|---|
-| 1 | Test devices | ✅ 4 Android devices tersedia (4 anggota tim, termasuk Tecno Pova 5) |
-| 2 | Authority accounts | ✅ 3 identitas: BPBD, Polri, PMI — skenario perang/evakuasi |
-| 3 | Nama tim | ⏳ TBD — belum ditentukan |
-| 4 | Track | ✅ **IoT Resilience** confirmed |
-| 5 | Min SDK | ✅ **API 26 (Android 8.0)** — semua device 2023+, aman |
-
----
-
-## 16. Team Structure
-
-| Role | Person | Responsibility |
-|---|---|---|
-| **Dev 1 (Networking Lead)** | Anggota 1 | WiFi Direct, mesh protocol, encryption, relay |
-| **Dev 2 (Frontend Lead)** | Anggota 2 | UI/UX, SOS system, visualization, integration |
-| **Support 1** | Anggota 3 | Proposal writing, video editing, testing |
-| **Support 2** | Anggota 4 | Presentation, demo rehearsal, documentation |
-| **Agentic AI** | — | Boilerplate, docs, proposal draft, UI components |
-
----
-
-## 17. Implementation Summary (Status: 7 Juni 2026)
-
-### ✅ What's Complete & Live
-
-**Core Network:**
-- ✅ WiFi Direct P2P (auto-discovery, 5+ concurrent peers)
-- ✅ Multi-hop relay with TTL (max 5 hops, message dedup)
-- ✅ Anti-replay: LRU cache + timestamp drift check (±5min)
-
-**Security:**
-- ✅ E2E encryption: X25519 + Ed25519 + XChaCha20-Poly1305
-- ✅ Database encryption: SQLCipher with AES-256-GCM in TEE
-- ✅ QR identity: ZXing-based peer verification
-
-**Features:**
-- ✅ Text messaging (peer + broadcast)
-- ✅ SOS with 4 categories (Medical/Fire/Security/Disaster)
-- ✅ Message flagging (hoax consensus ≥3 flags)
-- ✅ Hybrid mode (🟢Online / 🟡Hybrid / 🔴MeshOnly)
-- ✅ Network visualization (force-directed Canvas graph)
-- ✅ Attack Simulator (demo grid-down scenario)
-
-**UX/Accessibility:**
-- ✅ Hold-to-confirm SOS (2 second arc sweep)
-- ✅ High-Contrast mode (WCAG AAA)
-- ✅ Big-Text mode (+25% font size)
-- ✅ i18n: Indonesian + English
-- ✅ Onboarding tour (5-step replay)
-
-**Build Quality:**
-- ✅ Build: 0 errors, clean warnings (1 pre-existing deprecated API)
-- ✅ App running on Tecno Pova 5 (device connected)
-
-### ⏳ Next Steps (Before 14 Juni Submission)
-
-**Critical (Wajib):**
-1. Update proposal PDF dengan fitur-fitur baru (Phase 0 features)
-2. Finalize tim name (replace `[NAMA TIM]` everywhere)
-3. Record demo video (4 menit, WiFi Direct mesh active)
-4. Submit ke portal WRECK-IT 7.0 sebelum deadline
-
-**High Priority (Rekomendasi):**
-1. GitHub cleanup + push all code + README update
-2. Test end-to-end di 3+ devices
-3. Record backup demo video (contingency)
-
-**Optional (Nambah Poin):**
-1. Write technical whitepaper (Best Write-up prize Rp 1jt)
-2. Create architecture diagram di README
-3. Extended security analysis document
-
-### 🎯 Hackathon Strategy
-
-**For Judges:**
-- **Innovation**: E2E encryption + anti-replay + SQLCipher = comprehensive security
-- **Resilience**: Multi-hop relay + smart GO election = network stability
-- **Usability**: Accessibility features + i18n = real-world deployment readiness
-- **Context**: Cyber warfare theme → disinformation protection (message flagging)
-- **Drama**: Attack Simulator button makes "grid down" scenario tangible
-
-**For Demo Day (8 Juli):**
-- 4 devices, 3-scene scenario: Grid down → Mesh active → Emergency response
-- Live network graph showing relay count in real-time
-- QR code verification + SOS flagging demonstration
-- Accessibility feature walkthrough (for judges with a11y concerns)
+**Dokumentasi pendukung**: [`docs/architecture/`](docs/architecture/) (baseline, gap analysis, migration review — referensi keputusan D1–D16), [`docs/implementation/`](docs/implementation/), [`docs/TECHNICAL_WRITEUP.md`](docs/TECHNICAL_WRITEUP.md), [`docs/TEST_CHECKLIST.md`](docs/TEST_CHECKLIST.md), [`docs/HCI_EVALUATION.md`](docs/HCI_EVALUATION.md).

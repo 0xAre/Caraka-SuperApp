@@ -21,13 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.example.caraka.R
 import com.example.caraka.network.ChatAlert
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.NeonMint
 import com.example.caraka.ui.theme.TextPrimary
@@ -85,8 +84,7 @@ fun FloatingChatAlert(
                     Text(
                         current.senderName,
                         color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        style = CarakaTextStyles.chatSender,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -95,15 +93,14 @@ fun FloatingChatAlert(
                     Text(
                         "· ${stringResource(R.string.alert_new_message)}",
                         color = accent,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        style = CarakaTextStyles.statLabel
                     )
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     current.content,
                     color = TextSecondary,
-                    fontSize = 13.sp,
+                    style = CarakaTextStyles.listSubtitle,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -112,8 +109,7 @@ fun FloatingChatAlert(
             Text(
                 stringResource(R.string.alert_tap_to_open),
                 color = accent,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                style = CarakaTextStyles.serviceLabel,
                 modifier = Modifier.clickable { onDismiss() }
             )
         }

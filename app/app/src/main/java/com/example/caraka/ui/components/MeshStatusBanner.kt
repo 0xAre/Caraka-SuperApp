@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,11 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.caraka.R
 import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.ui.theme.LocalStatusColors
+import com.example.caraka.ui.theme.CarakaTextStyles
+import com.example.caraka.ui.util.toConnectionActivityUi
 
 @Composable
 fun MeshStatusBanner(
@@ -42,7 +43,8 @@ fun MeshStatusBanner(
         ConnectivityStatus.HYBRID -> statusColors.hybrid to R.string.home_status_hybrid
         ConnectivityStatus.MESH_ONLY -> statusColors.meshOnly to R.string.home_status_mesh_only
     }
-    val statusCd = stringResource(R.string.mesh_status_cd, nodeCount, connectionState)
+    val activityLabel = stringResource(connectionState.toConnectionActivityUi().labelRes)
+    val statusCd = stringResource(R.string.mesh_status_cd, nodeCount, activityLabel)
 
     CarakaCard(
         modifier = modifier.semantics { contentDescription = statusCd },
@@ -64,13 +66,12 @@ fun MeshStatusBanner(
             Spacer(Modifier.width(10.dp))
             Text(
                 text = stringResource(labelRes),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold
+                style = CarakaTextStyles.statusPrimary,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.weight(1f))
             Icon(
-                imageVector = if (isAttackSim) Icons.Default.Bolt else Icons.Default.Hub,
+                imageVector = if (isAttackSim) Icons.Default.Bolt else Icons.Default.WifiTethering,
                 contentDescription = null,
                 tint = statusColor,
                 modifier = Modifier.size(18.dp)
@@ -78,9 +79,8 @@ fun MeshStatusBanner(
             Spacer(Modifier.width(6.dp))
             Text(
                 text = "$nodeCount node",
-                style = MaterialTheme.typography.labelMedium,
-                color = statusColor,
-                fontWeight = FontWeight.SemiBold
+                style = CarakaTextStyles.statusSecondary,
+                color = statusColor
             )
         }
     }

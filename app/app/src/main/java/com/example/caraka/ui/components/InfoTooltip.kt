@@ -28,7 +28,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.caraka.ui.theme.CarakaTextStyles
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.example.caraka.ui.theme.CyanAccent
@@ -78,10 +78,10 @@ fun InfoTooltip(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(Modifier.width(6.dp))
-                            Text(title, color = TextPrimary, fontSize = 12.sp)
+                            Text(title, color = TextPrimary, style = CarakaTextStyles.statLabel)
                         }
                         Spacer(Modifier.size(4.dp))
-                        Text(description, color = TextSecondary, fontSize = 11.sp)
+                        Text(description, color = TextSecondary, style = CarakaTextStyles.statLabel)
                     }
                 }
             }

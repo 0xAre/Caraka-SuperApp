@@ -10,18 +10,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.caraka.ui.components.CarakaBody
 import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaGlassSurface
+import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.CoralError
 import com.example.caraka.ui.theme.TealPrimary
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextMuted
-import com.example.caraka.ui.theme.SkyInfo
 
 @Composable
 fun ConnectionRequestDialog(
@@ -53,8 +54,7 @@ fun ConnectionRequestDialog(
             ) {
                 Text(
                     text = "Permintaan Koneksi Masuk",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = CarakaTextStyles.dialogTitle,
                     color = TextPrimary
                 )
 
@@ -76,12 +76,7 @@ fun ConnectionRequestDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = peerName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
+                CarakaListTitle(peerName)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -101,7 +96,7 @@ fun ConnectionRequestDialog(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = peerRole,
-                        fontSize = 13.sp,
+                        style = CarakaTextStyles.listSubtitle,
                         color = TextMuted
                     )
                 }
@@ -112,11 +107,10 @@ fun ConnectionRequestDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
+                CarakaBody(
                     text = "Terima permintaan koneksi dari perangkat ini?",
-                    fontSize = 14.sp,
-                    color = TextMuted,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    muted = true,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -137,7 +131,7 @@ fun ConnectionRequestDialog(
                             contentColor = CoralError
                         )
                     ) {
-                        Text("TOLAK", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text("TOLAK", style = CarakaTextStyles.buttonLabel)
                     }
 
                     Button(
@@ -153,7 +147,7 @@ fun ConnectionRequestDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("TERIMA", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text("TERIMA", style = CarakaTextStyles.buttonLabel)
                     }
                 }
             }

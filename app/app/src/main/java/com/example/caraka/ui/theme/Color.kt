@@ -3,10 +3,10 @@ package com.example.caraka.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // CARAKA Super App light surfaces.
-val CanvasLight = Color(0xFFF4F5F7)
+val CanvasLight = Color(0xFFF5F7FA)
 val SurfaceLow = Color(0xFFFFFFFF)
 val SurfaceMid = Color(0xFFF8FAFC)
-val SurfaceHigh = Color(0xFFEEF2F6)
+val SurfaceHigh = Color(0xFFEDF2F7)
 
 // Brand and semantic palette.
 val TelegramBlue = Color(0xFF229ED9)
@@ -17,11 +17,11 @@ val WarningAmber = Color(0xFFD98200)
 val DangerRed = Color(0xFFD93025)
 val InfoBlue = Color(0xFF3478F6)
 
-val TextPrimary = Color(0xFF1C1C1E)
-val TextSecondary = Color(0xFF667085)
-val TextTertiary = Color(0xFF98A2B3)
-val BorderSubtle = Color(0xFFE3E7EC)
-val DividerSubtle = Color(0xFFEAECF0)
+val TextPrimary = Color(0xFF111827)
+val TextSecondary = Color(0xFF64748B)
+val TextTertiary = Color(0xFF8792A2)
+val BorderSubtle = Color(0xFFDDE3EA)
+val DividerSubtle = Color(0xFFE8ECF1)
 
 // Compatibility aliases retained while screens migrate to semantic M3 roles.
 val CanvasDark = CanvasLight

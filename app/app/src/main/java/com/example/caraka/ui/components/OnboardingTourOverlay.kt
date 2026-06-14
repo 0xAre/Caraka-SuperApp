@@ -38,11 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
@@ -124,16 +123,14 @@ fun OnboardingTourOverlay(
                 Text(
                     stringResource(current.titleRes),
                     color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp
+                    style = CarakaTextStyles.screenTitle
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
                     stringResource(current.descRes),
                     color = TextSecondary,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
+                    style = CarakaTextStyles.bodyDefault,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -158,7 +155,7 @@ fun OnboardingTourOverlay(
                             if (stepIndex < tourSteps.lastIndex) stringResource(R.string.tour_next)
                             else stringResource(R.string.tour_done),
                             color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
+                            style = CarakaTextStyles.buttonLabel
                         )
                         Spacer(Modifier.width(6.dp))
                         Icon(

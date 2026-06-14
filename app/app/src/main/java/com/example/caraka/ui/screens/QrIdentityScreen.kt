@@ -17,13 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.crypto.QrIdentityManager
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.components.CarakaScreenTitle
 import com.example.caraka.ui.components.IdentityQrCard
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.theme.*
@@ -91,11 +91,7 @@ fun QrIdentityScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Identitas QR",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold
-                    )
+                    CarakaScreenTitle("Identitas QR")
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -141,16 +137,14 @@ fun QrIdentityScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Scan QR peer", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    CarakaListTitle("Scan QR peer")
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text(
+                CarakaBody(
                     "Scan QR dari device lain untuk memverifikasi identitas mereka secara tatap muka",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 16.sp
+                    muted = true,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
 
@@ -171,7 +165,7 @@ fun QrIdentityScreen(
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Buka kamera & scan", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
+                    Text("Buka kamera & scan", color = MaterialTheme.colorScheme.onPrimary, style = CarakaTextStyles.buttonLabel)
                 }
 
                 scanError?.let { err ->
@@ -187,7 +181,7 @@ fun QrIdentityScreen(
                     ) {
                         Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(err, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                        Text(err, color = MaterialTheme.colorScheme.error, style = CarakaTextStyles.bodyDefault)
                     }
                 }
             }

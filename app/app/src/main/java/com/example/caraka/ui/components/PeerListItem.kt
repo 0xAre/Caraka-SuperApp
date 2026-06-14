@@ -27,15 +27,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalStatusColors
 
 @Composable
@@ -73,8 +72,7 @@ fun PeerListItem(
                         Badge(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
                             Text(
                                 if (unreadCount > 99) "99+" else "$unreadCount",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                style = CarakaTextStyles.badge
                             )
                         }
                     }
@@ -111,9 +109,8 @@ fun PeerListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         displayName,
+                        style = CarakaTextStyles.listTitle,
                         color = MaterialTheme.colorScheme.onBackground,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -121,9 +118,10 @@ fun PeerListItem(
                     if (timeLabel != null) {
                         Text(
                             timeLabel,
-                            color = if (unreadCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
-                            fontWeight = if (unreadCount > 0) FontWeight.Bold else FontWeight.Normal
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (unreadCount > 0) FontWeight.SemiBold else FontWeight.Normal
+                            ),
+                            color = if (unreadCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -135,15 +133,16 @@ fun PeerListItem(
                         if (isOutgoingPreview) {
                             Text(
                                 stringResource(R.string.messages_you_prefix),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                fontSize = 13.sp
+                                style = CarakaTextStyles.listSubtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Text(
                             lastMessagePreview,
-                            color = if (unreadCount > 0) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            fontSize = 13.sp,
-                            fontWeight = if (unreadCount > 0) FontWeight.Medium else FontWeight.Normal,
+                            style = CarakaTextStyles.listSubtitle.copy(
+                                fontWeight = if (unreadCount > 0) FontWeight.Medium else FontWeight.Normal
+                            ),
+                            color = if (unreadCount > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -153,14 +152,14 @@ fun PeerListItem(
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 stringResource(R.string.messages_e2e_hint),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                fontSize = 13.sp
+                                style = CarakaTextStyles.listSubtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -171,14 +170,13 @@ fun PeerListItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                                        .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (isAuthority) LocalStatusColors.current.online.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 6.dp, vertical = 1.dp)
                     ) {
                         Text(
                             role,
-                            color = if (isAuthority) LocalStatusColors.current.online else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isAuthority) LocalStatusColors.current.online else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (isConnected) {
@@ -192,8 +190,8 @@ fun PeerListItem(
                         Spacer(Modifier.width(3.dp))
                         Text(
                             stringResource(R.string.messages_connected),
-                            color = LocalStatusColors.current.online,
-                            fontSize = 10.sp
+                            style = MaterialTheme.typography.labelSmall,
+                            color = LocalStatusColors.current.online
                         )
                     }
                 }

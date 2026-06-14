@@ -35,13 +35,13 @@
 
 ## 🛰️ Mengapa CARAKA?
 
-**CARAKA** adalah aplikasi komunikasi mesh untuk Android yang membantu warga, relawan, dan tim tanggap darurat tetap bertukar informasi tanpa bergantung pada server pusat CARAKA. Perangkat di sekitar menjadi node yang dapat menemukan, menerima, dan meneruskan pesan melalui koneksi lokal.
+**CARAKA** adalah aplikasi komunikasi mesh untuk Android yang membantu warga, relawan, dan tim tanggap darurat tetap bertukar informasi tanpa bergantung pada server pusat mana pun. Perangkat di sekitar menjadi node yang dapat menemukan, menerima, dan meneruskan pesan melalui koneksi lokal.
 
 CARAKA tidak dimaksudkan untuk menggantikan internet. Ia hadir sebagai **jalur komunikasi cadangan** ketika jaringan utama terganggu, terputus, atau tidak dapat dipercaya.
 
 <table>
   <tr>
-    <td width="25%" align="center"><strong>Tanpa Cloud</strong><br><sub>Tidak membutuhkan akun atau backend CARAKA</sub></td>
+    <td width="25%" align="center"><strong>Tanpa Cloud</strong><br><sub>Tidak membutuhkan akun atau backend terpusat</sub></td>
     <td width="25%" align="center"><strong>Multi-Transport</strong><br><sub>Memilih jalur lokal yang tersedia</sub></td>
     <td width="25%" align="center"><strong>Security by Design</strong><br><sub>Enkripsi, tanda tangan, dan database terlindungi</sub></td>
     <td width="25%" align="center"><strong>Emergency First</strong><br><sub>SOS prioritas tinggi untuk kondisi lapangan</sub></td>
@@ -99,7 +99,7 @@ CARAKA tidak dimaksudkan untuk menggantikan internet. Ia hadir sebagai **jalur k
 ### Pengalaman pengguna
 
 - Home, Messages, Chat, Network, SOS, Alerts, Settings, Help, dan QR Identity.
-- Bahasa Indonesia dan English dengan **271 string UI per bahasa**.
+- Bahasa Indonesia dan English dengan **280 string UI per bahasa**.
 - Teks besar +25%, palet kontras tinggi, haptic feedback, dan onboarding tour.
 - Status **ONLINE**, **HYBRID**, atau **MESH_ONLY** sesuai kondisi perangkat.
 - Visualisasi node, koneksi, hop, dan statistik relay pada layar Network.
@@ -205,6 +205,8 @@ sequenceDiagram
 
 CARAKA menggunakan pertahanan berlapis, bukan klaim keamanan absolut. Kunci identitas saat ini disimpan melalui Android DataStore, dan penyimpanan passphrase database memiliki fallback pada perangkat yang tidak dapat menggunakan Android Keystore.
 
+> 🔧 Rincian algoritma, kebijakan DTN, model data, dan caveat keamanan ada di **[PRD teknis](PRD.md)**.
+
 ---
 
 ## 🧰 Tech Stack
@@ -231,6 +233,8 @@ CARAKA menggunakan pertahanan berlapis, bukan klaim keamanan absolut. Kunci iden
 | **Identity** | ZXing QR generation/scanning, Kotlin Serialization |
 | **Dependency wiring** | Manual dependency injection melalui `CarakaApp` |
 
+<sub>Daftar versi lengkap dan rasionalnya ada di [PRD §14 — Tech Stack & Versi](PRD.md#14-tech-stack--versi).</sub>
+
 ---
 
 ## 🚨 Skenario Nyata
@@ -239,7 +243,7 @@ CARAKA menggunakan pertahanan berlapis, bukan klaim keamanan absolut. Kunci iden
 |---|---|---|
 | **Gempa merusak BTS** | Aplikasi internet kehilangan jalur | Perangkat sekitar membentuk komunikasi lokal |
 | **Banjir memisahkan tim** | Informasi berhenti pada satu kelompok | Node perantara meneruskan pesan dengan TTL |
-| **Layanan pusat terkena serangan** | Koordinasi bergantung pada sistem terdampak | Chat dan SOS berjalan tanpa backend CARAKA |
+| **Layanan pusat terkena serangan** | Koordinasi bergantung pada sistem terdampak | Chat dan SOS berjalan tanpa backend terpusat |
 | **Evakuasi lintas organisasi** | Identitas digital sulit dicocokkan | QR membantu menyimpan identitas dan kunci publik |
 
 ---
@@ -283,11 +287,14 @@ Build `assembleDebug` terakhir diverifikasi berhasil pada **13 Juni 2026** mengg
 
 ## 📚 Dokumentasi
 
-README ini berfungsi sebagai landing page publik. Detail engineering dipisahkan agar pembaca produk tidak harus melewati log migrasi atau matriks pengujian.
+**README ini adalah landing page produk** — fokus pada nilai, kemampuan, dan cara mulai. Detail rekayasa dipisah agar pembaca produk tidak harus melewati log migrasi atau matriks pengujian.
+
+> 📐 **Mencari detail teknis?** Lihat **[`PRD.md`](PRD.md)** — spesifikasi lengkap arsitektur, transport, routing/DTN, kriptografi, model data, lifecycle, permissions, dan tech stack. README menjawab *"kenapa & untuk siapa"*; PRD menjawab *"bagaimana"*.
 
 | Dokumen | Cakupan |
 |---|---|
-| [`docs/architecture/`](docs/architecture/) | Baseline, gap analysis, dan review arsitektur internal |
+| [`PRD.md`](PRD.md) | **Spesifikasi teknis utama** — arsitektur, transport, DTN, crypto, data model, roadmap |
+| [`docs/architecture/`](docs/architecture/) | Baseline, gap analysis, dan review arsitektur internal (referensi keputusan D1–D16) |
 | [`docs/implementation/`](docs/implementation/) | Program implementasi dan rencana uji perangkat internal |
 | [`docs/TECHNICAL_WRITEUP.md`](docs/TECHNICAL_WRITEUP.md) | Ringkasan teknis |
 | [`docs/TEST_CHECKLIST.md`](docs/TEST_CHECKLIST.md) | Checklist pengujian mesh |

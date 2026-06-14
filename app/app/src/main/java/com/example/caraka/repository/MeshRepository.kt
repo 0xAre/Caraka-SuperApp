@@ -12,6 +12,7 @@ import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.network.MeshPolicy
 import com.example.caraka.network.MeshProtocol
 import com.example.caraka.network.MeshTransport
+import com.example.caraka.ui.util.SosAlertText
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -363,7 +364,7 @@ class MeshRepository(
         val myRole = identityManager.getRole()
         val mySignKeys = identityManager.getSigningKeyPair()
 
-        val fullContent = if (description.isNotBlank()) "[$category] $description" else "[$category] EMERGENCY SOS!"
+        val fullContent = SosAlertText.storageContent(category, description)
 
         // SOS is unencrypted, we sign the plaintext
         val signature = cryptoManager.signMessage(fullContent, mySignKeys.secretKey)

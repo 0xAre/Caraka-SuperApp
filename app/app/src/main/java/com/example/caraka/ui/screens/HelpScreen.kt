@@ -36,10 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.components.CarakaScreenTitle
+import com.example.caraka.ui.components.CarakaSectionHeader
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.LocalStatusColors
 
@@ -59,7 +62,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.help_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+                        CarakaScreenTitle(stringResource(R.string.help_title))
                     }
                 },
                 navigationIcon = {
@@ -96,12 +99,12 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.padding(end = 12.dp)) {
-                        Text("Tur Interaktif", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        Text("Putar ulang panduan 5 langkah", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        CarakaListTitle("Tur Interaktif")
+                        CarakaBody("Putar ulang panduan 5 langkah", muted = true)
                     }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onLaunchTour) {
-                        Text("Mulai", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text("Mulai", color = MaterialTheme.colorScheme.primary, style = CarakaTextStyles.buttonLabel)
                     }
                 }
             }
@@ -123,7 +126,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
             // ── HCI Heuristics ────────────────────────────────────────────
             item { SectionHeader(R.string.help_section_hci) }
             item {
-                Text(stringResource(R.string.help_hci_intro), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                CarakaBody(stringResource(R.string.help_hci_intro), muted = true)
             }
             item { HciItem(1, R.string.help_hci_visibility) }
             item { HciItem(2, R.string.help_hci_match) }
@@ -150,7 +153,7 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Accessibility, contentDescription = null, tint = LocalStatusColors.current.authority, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(stringResource(R.string.help_a11y_a), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
+                    CarakaBody(stringResource(R.string.help_a11y_a), muted = true)
                 }
             }
             item { Spacer(Modifier.height(40.dp)) }
@@ -160,12 +163,10 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
 
 @Composable
 private fun SectionHeader(textRes: Int) {
-    Text(
+    CarakaSectionHeader(
         stringResource(textRes),
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier.padding(vertical = 4.dp),
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -184,9 +185,9 @@ private fun QaCard(qRes: Int, aRes: Int) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.QuestionMark, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(qRes), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            CarakaListTitle(stringResource(qRes))
         }
-        Text(stringResource(aRes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 19.sp)
+        CarakaBody(stringResource(aRes), muted = true)
     }
 }
 
@@ -207,10 +208,10 @@ private fun HciItem(index: Int, textRes: Int) {
             .background(LocalStatusColors.current.authority.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center
         ) {
-            Text("$index", color = LocalStatusColors.current.authority, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text("$index", color = LocalStatusColors.current.authority, style = CarakaTextStyles.badge)
         }
         Spacer(Modifier.width(10.dp))
-        Text(stringResource(textRes), color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 2.dp))
+        CarakaBody(stringResource(textRes), modifier = Modifier.padding(top = 2.dp))
         Spacer(Modifier.width(6.dp))
     }
 }

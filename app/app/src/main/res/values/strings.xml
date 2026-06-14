@@ -11,7 +11,7 @@
     <string name="nav_settings">Profil</string>
 
     <!-- ───── Profile Setup ───── -->
-    <string name="setup_title">PENGATURAN PROFIL</string>
+    <string name="setup_title">Pengaturan profil</string>
     <string name="setup_welcome">Selamat Datang di CARAKA</string>
     <string name="setup_subtitle">Atur identitas Anda sebelum bergabung ke jaringan.</string>
     <string name="setup_select_role">Pilih Peran:</string>
@@ -32,10 +32,10 @@
     <string name="setup_hide_password">Sembunyikan kata sandi</string>
 
     <!-- ───── Home Screen ───── -->
-    <string name="home_status_online">🟢 ONLINE — Mesh Siaga</string>
-    <string name="home_status_hybrid">🟡 HYBRID — Internet + Mesh Aktif</string>
-    <string name="home_status_mesh_only">🔴 MESH ONLY — Jaringan Runtuh, Kita Bangkit</string>
-    <string name="home_attack_active">⚠️ SIMULASI SERANGAN AKTIF</string>
+    <string name="home_status_online">Online · Mesh siaga</string>
+    <string name="home_status_hybrid">Hybrid · Internet dan mesh aktif</string>
+    <string name="home_status_mesh_only">Mesh offline · Tetap terhubung</string>
+    <string name="home_attack_active">Simulasi serangan aktif</string>
     <string name="home_nodes_label">node</string>
     <string name="home_stat_nodes">Node</string>
     <string name="home_stat_range">Jangkauan</string>
@@ -60,12 +60,20 @@
     <string name="mesh_status_reconnecting">Menyambung ulang…</string>
     <string name="mesh_status_searching">Mencari peer…</string>
     <string name="mesh_status_cd">Status jaringan: %1$d node. %2$s</string>
+    <string name="connection_ready">Siap</string>
+    <string name="connection_searching">Memindai</string>
+    <string name="connection_connecting">Menghubungkan</string>
+    <string name="connection_connected">Terhubung</string>
+    <string name="connection_no_peers">Belum ada</string>
+    <string name="connection_permission_required">Perlu izin</string>
+    <string name="connection_wifi_disabled">Wi-Fi Direct mati</string>
+    <string name="connection_failed">Gagal terhubung</string>
 
     <!-- ───── Alerts Sheet / Screen ───── -->
     <string name="alerts_sheet_title">Alarm Darurat</string>
     <string name="alerts_sheet_subtitle">%1$d alarm aktif di mesh</string>
     <string name="alerts_view_all">Lihat semua alarm</string>
-    <string name="alerts_screen_title">LOG DARURAT</string>
+    <string name="alerts_screen_title">Log darurat</string>
     <string name="alerts_screen_subtitle">Riwayat sinyal SOS aktif di jaringan mesh</string>
     <string name="alerts_empty">Tidak ada alarm darurat saat ini.</string>
     <string name="alerts_empty_title">Belum ada alarm</string>
@@ -77,37 +85,38 @@
     <string name="alerts_filter_disaster">Bencana</string>
 
     <!-- ───── SOS Screen ───── -->
-    <string name="sos_title">SOS DARURAT</string>
+    <string name="sos_title">SOS darurat</string>
     <string name="sos_question">Apa keadaan darurat Anda?</string>
     <string name="sos_describe_hint">Jelaskan situasi darurat... (Opsional)</string>
-    <string name="sos_auto_location">LOKASI TERDETEKSI OTOMATIS</string>
+    <string name="sos_auto_location">Lokasi terdeteksi otomatis</string>
     <string name="sos_coordinates">Koordinat</string>
     <string name="sos_mock_location">Jakarta,\nIndonesia</string>
-    <string name="sos_cat_medical">🚨 Medis</string>
-    <string name="sos_cat_fire">🔥 Kebakaran</string>
-    <string name="sos_cat_security">⚠️ Keamanan</string>
-    <string name="sos_cat_disaster">🌊 Bencana</string>
+    <string name="sos_cat_medical">Medis</string>
+    <string name="sos_cat_fire">Kebakaran</string>
+    <string name="sos_cat_security">Keamanan</string>
+    <string name="sos_cat_disaster">Bencana</string>
     <string name="sos_details_label">Detail tambahan?</string>
     <string name="sos_details_placeholder">Contoh: 2 orang terluka, butuh ambulans…</string>
     <string name="sos_location_label">Lokasi Anda</string>
     <string name="sos_gps_detected">GPS TERDETEKSI</string>
-    <string name="sos_default_location">LOKASI DEFAULT</string>
+    <string name="sos_default_location">Lokasi default</string>
     <string name="sos_gps_live">Posisi GPS aktif</string>
     <string name="sos_gps_default">Jakarta, Indonesia</string>
-    <string name="sos_broadcast_btn">SIARKAN SOS</string>
+    <string name="sos_broadcast_btn">Siarkan SOS</string>
     <string name="sos_hold_hint">Tahan tombol 2 detik untuk konfirmasi</string>
     <string name="sos_confirming">Menahan… lepas untuk membatalkan</string>
     <string name="sos_sent_title">SIARAN SOS TERKIRIM</string>
     <string name="sos_sent_subtitle">Bantuan menuju Anda. Tetap tenang.</string>
     <string name="sos_select_category_first">Pilih kategori darurat terlebih dahulu</string>
+    <string name="sos_button_disabled_hint">Pilih satu kategori untuk mengaktifkan tombol SOS</string>
     <string name="sos_back">Kembali</string>
     <string name="sos_mesh_sent_banner">SOS terkirim ke jaringan mesh</string>
     <string name="sos_calming_message">Tim koordinasi akan menerima sinyal Anda. Tetap tenang.</string>
     <string name="sos_location_estimated">Lokasi estimasi — GPS tidak tersedia</string>
-    <string name="sos_estimated_location">⚠ Lokasi estimasi</string>
+    <string name="sos_estimated_location">Lokasi estimasi</string>
 
     <!-- ───── Messages / Chat ───── -->
-    <string name="messages_title">PESAN</string>
+    <string name="messages_title">Pesan</string>
     <string name="messages_no_peers">Tidak ada peer terhubung</string>
     <string name="messages_no_peers_hint">Buka tab Jaringan untuk terhubung dengan perangkat di sekitar</string>
     <string name="messages_e2e_hint">Terenkripsi E2E · Ketuk untuk chat</string>
@@ -146,13 +155,13 @@
     <string name="msg_status_failed">Gagal</string>
     <string name="chat_hold_to_flag">Tahan untuk menandai</string>
     <string name="chat_flag_title">Tandai sebagai Mencurigakan?</string>
-    <string name="chat_flag_desc">Pesan ini akan ditandai sebagai potensial hoaks. Jika 3+ pengguna menandai, label ⚠️ peringatan akan muncul untuk semua orang di mesh.</string>
+    <string name="chat_flag_desc">Pesan ini akan ditandai sebagai potensial hoaks. Jika 3+ pengguna menandai, label peringatan akan muncul untuk semua orang di mesh.</string>
     <string name="chat_flag_confirm">Tandai</string>
     <string name="chat_flag_cancel">Batal</string>
-    <string name="chat_flagged_by">⚠️ Ditandai oleh %1$d pengguna — kemungkinan hoaks</string>
+    <string name="chat_flagged_by">Ditandai oleh %1$d pengguna — kemungkinan hoaks</string>
 
     <!-- ───── Network Screen ───── -->
-    <string name="network_title">PETA JARINGAN</string>
+    <string name="network_title">Peta jaringan</string>
     <string name="network_scan">Pindai</string>
     <string name="network_legend_self">Anda</string>
     <string name="network_legend_authority">Otoritas</string>
@@ -230,7 +239,7 @@
     <string name="settings_cancel">Batal</string>
 
     <!-- ───── Help Screen ───── -->
-    <string name="help_title">BANTUAN</string>
+    <string name="help_title">Bantuan</string>
     <string name="help_section_basics">Dasar-dasar CARAKA</string>
     <string name="help_q_what_is_mesh">Apa itu jaringan mesh?</string>
     <string name="help_a_what_is_mesh">Mesh adalah jaringan terdesentralisasi di mana setiap perangkat menjadi titik (node) yang bisa meneruskan pesan ke perangkat lain — tanpa server pusat atau internet.</string>
@@ -243,12 +252,12 @@
     <string name="help_q_sos">Kapan harus tekan SOS?</string>
     <string name="help_a_sos">Tekan SOS hanya saat darurat nyata (medis, kebakaran, keamanan, bencana). Pesan SOS punya prioritas tertinggi dan disiarkan ke semua node sekitar.</string>
     <string name="help_q_flag">Bagaimana cara melaporkan hoaks?</string>
-    <string name="help_a_flag">Tahan (long-press) pesan yang mencurigakan, lalu konfirmasi. Jika 3+ pengguna menandai pesan yang sama, label ⚠️ peringatan muncul untuk semua orang di mesh.</string>
+    <string name="help_a_flag">Tahan (long-press) pesan yang mencurigakan, lalu konfirmasi. Jika 3+ pengguna menandai pesan yang sama, label peringatan muncul untuk semua orang di mesh.</string>
 
     <string name="help_section_hci">Prinsip HCI yang Diterapkan</string>
     <string name="help_hci_intro">CARAKA dirancang berdasarkan 10 heuristik usability Nielsen dan WCAG 2.1 (Pedoman Aksesibilitas Web).</string>
     <string name="help_hci_visibility">Visibility of System Status — Banner konektivitas + statistik node selalu terlihat.</string>
-    <string name="help_hci_match">Match Real World — Ikon 🚨🔥⚠️🌊 mengikuti konvensi darurat yang universal.</string>
+    <string name="help_hci_match">Match Real World — Ikon dan label darurat mengikuti konvensi yang mudah dikenali.</string>
     <string name="help_hci_control">User Control &amp; Freedom — Tombol kembali, tahan-untuk-konfirmasi SOS, undo via snackbar.</string>
     <string name="help_hci_consistency">Consistency — Material 3, warna konsisten per peran (amber=otoritas, mint=verified, merah=darurat).</string>
     <string name="help_hci_error_prev">Error Prevention — SOS perlu ditahan 2 detik; dialog konfirmasi sebelum flag/reset.</string>
@@ -275,7 +284,7 @@
     <string name="tour_step1_title">Selamat Datang di CARAKA</string>
     <string name="tour_step1_desc">Komunikasi darurat offline saat internet, listrik, dan jaringan seluler mati. Mari kenali fiturnya dulu.</string>
     <string name="tour_step2_title">Indikator Status Jaringan</string>
-    <string name="tour_step2_desc">Banner ini selalu menampilkan mode konektivitas Anda: 🟢 Online, 🟡 Hybrid, atau 🔴 Mesh Only.</string>
+    <string name="tour_step2_desc">Banner ini selalu menampilkan mode konektivitas Anda: Online, Hybrid, atau Mesh Offline.</string>
     <string name="tour_step3_title">Tombol SOS</string>
     <string name="tour_step3_desc">Tekan untuk membuka layar darurat. Untuk mencegah salah tekan, Anda harus menahan tombol 2 detik sebelum disiarkan.</string>
     <string name="tour_step4_title">Statistik Mesh Langsung</string>
@@ -302,4 +311,27 @@
     <string name="cd_settings_btn">Buka pengaturan</string>
     <string name="cd_info_tooltip">Info tambahan</string>
     <string name="cd_sos_hold_emergency">Tombol SOS darurat. Tahan untuk darurat.</string>
+
+    <!-- Network discovery experience -->
+    <string name="network_discovery_subtitle">Temukan dan hubungkan peer di sekitar</string>
+    <string name="network_searching_title">Mencari peer di sekitar</string>
+    <string name="network_found_count">%1$d peer terdeteksi</string>
+    <string name="network_radio_offline">Jangkauan radio lokal, tetap bekerja tanpa internet</string>
+    <string name="network_self_label">ANDA</string>
+    <string name="network_signal_estimate">Posisi peer adalah estimasi sinyal</string>
+    <string name="network_ready_count">%1$d peer siap dihubungkan</string>
+    <string name="network_searching_devices">Mencari perangkat CARAKA…</string>
+    <string name="network_no_peer">Belum menemukan peer</string>
+    <string name="network_scan_elapsed">Pemindaian %1$s</string>
+    <string name="network_peer_hint">Pastikan CARAKA aktif pada perangkat lain.</string>
+    <string name="network_scan_action">Pindai</string>
+    <string name="network_transport_nearby">Nearby</string>
+    <string name="network_no_coordinates">Dekatkan perangkat untuk hasil terbaik. CARAKA tidak menampilkan koordinat peer karena penemuan dilakukan melalui radio lokal.</string>
+    <string name="network_peer_connected">Terhubung</string>
+    <string name="network_peer_detected">Terdeteksi</string>
+    <string name="network_mesh_connected">Terhubung ke mesh</string>
+    <string name="network_device_found">Perangkat ditemukan</string>
+    <string name="network_authority_verified">Identitas otoritas terverifikasi</string>
+    <string name="network_connect_action">Hubungkan</string>
+    <string name="network_connecting_action">Menghubungkan…</string>
 </resources>

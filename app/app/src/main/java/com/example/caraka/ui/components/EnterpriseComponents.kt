@@ -1,12 +1,15 @@
 package com.example.caraka.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,18 +26,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.caraka.ui.theme.CarakaTextStyles
+import com.example.caraka.ui.theme.LocalCarakaDimens
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(
+    val dimens = LocalCarakaDimens.current
+    CarakaSectionHeader(
         text = text,
-        modifier = modifier,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.Bold
+        modifier = modifier.padding(top = dimens.sectionHeaderTop, bottom = dimens.sectionHeaderBottom)
     )
 }
 
@@ -44,30 +48,43 @@ fun ServiceTile(
     label: String,
     color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    @DrawableRes illustrationRes: Int? = null
 ) {
     Column(
         modifier = modifier
+            .heightIn(min = 92.dp)
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.Center
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = color.copy(alpha = 0.12f),
-            modifier = Modifier.size(52.dp)
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.padding(13.dp)
-            )
+        Box(modifier = Modifier.size(58.dp), contentAlignment = Alignment.Center) {
+            if (illustrationRes != null) {
+                Image(
+                    painter = painterResource(illustrationRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(58.dp)
+                )
+            } else {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = color.copy(alpha = 0.12f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
         }
+        Spacer(Modifier.height(6.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = CarakaTextStyles.serviceLabel,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -89,9 +106,9 @@ fun EnterpriseMenuRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 64.dp)
+                .heightIn(min = 56.dp)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -103,15 +120,9 @@ fun EnterpriseMenuRow(
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                CarakaListTitle(title)
                 if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    CarakaBody(subtitle, muted = true, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
             when {

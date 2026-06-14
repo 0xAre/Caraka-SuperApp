@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,15 +31,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.crypto.IdentityManager
+import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.components.CarakaScreenTitle
 import com.example.caraka.ui.theme.*
 import com.example.caraka.ui.util.rememberHaptics
 
@@ -79,7 +81,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.setup_title), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
+                title = { CarakaScreenTitle(stringResource(R.string.setup_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -95,17 +97,21 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
         ) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Image(
+                    painter = painterResource(R.drawable.ill_profile_identity),
+                    contentDescription = null,
+                    modifier = Modifier.size(72.dp)
+                )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(stringResource(R.string.setup_welcome), color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.setup_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    Text(stringResource(R.string.setup_welcome), color = MaterialTheme.colorScheme.onBackground, style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.setup_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Text(stringResource(R.string.setup_select_role), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+            CarakaListTitle(stringResource(R.string.setup_select_role), modifier = Modifier.padding(bottom = 8.dp))
 
             val requiresPwdText = stringResource(R.string.setup_requires_password)
             val unselectedBorder = MaterialTheme.colorScheme.outline
@@ -162,13 +168,13 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                         Text(
                             roleLabel,
                             color = if (isSelected) TextPrimary else TextSecondary,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            style = if (isSelected) CarakaTextStyles.listTitle else CarakaTextStyles.bodyDefault
                         )
                         if (isAuth) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Lock, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(11.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text(requiresPwdText, color = TextSecondary, fontSize = 11.sp)
+                                Text(requiresPwdText, color = TextSecondary, style = CarakaTextStyles.statLabel)
                             }
                         }
                     }
@@ -184,7 +190,8 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             if (isAuthority) {
                 Text(
                     text = stringResource(R.string.setup_password_label),
-                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = CarakaTextStyles.listTitle,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
@@ -221,7 +228,8 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
             } else {
                 Text(
                     text = stringResource(R.string.setup_display_name),
-                    color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = CarakaTextStyles.listTitle,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
@@ -243,7 +251,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
 
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, style = CarakaTextStyles.listSubtitle)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -282,8 +290,7 @@ fun ProfileSetupScreen(onSetupComplete: (String, String) -> Unit) {
                     if (isAuthority) stringResource(R.string.setup_btn_authorize)
                     else stringResource(R.string.setup_btn_join),
                     color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    style = CarakaTextStyles.buttonLabel
                 )
             }
         }

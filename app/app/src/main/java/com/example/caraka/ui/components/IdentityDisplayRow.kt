@@ -29,11 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.CyanAccent
 import com.example.caraka.ui.theme.GlassSurface
 import com.example.caraka.ui.theme.TextPrimary
@@ -60,9 +58,9 @@ fun IdentityDisplayRow(
             .clip(RoundedCornerShape(12.dp))
             .background(GlassSurface)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .padding(10.dp)
     ) {
-        Text(label, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = TextSecondary, style = CarakaTextStyles.statLabel)
         Spacer(Modifier.height(6.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -72,16 +70,13 @@ fun IdentityDisplayRow(
                 Text(
                     displayId,
                     color = TextPrimary.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace
+                    style = CarakaTextStyles.monoData
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.identity_fingerprint, fingerprint),
                     color = CyanAccent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
+                    style = CarakaTextStyles.monoData.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 )
             }
             IconButton(

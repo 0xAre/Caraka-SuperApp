@@ -34,9 +34,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.LocalStatusColors
 import com.example.caraka.ui.util.rememberHaptics
@@ -50,6 +49,7 @@ fun HoldToConfirmButton(
     enabled: Boolean = true,
     completed: Boolean = false,
     holdDurationMs: Long = 2000L,
+    hintLabel: String? = null,
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -134,18 +134,18 @@ fun HoldToConfirmButton(
             Icon(Icons.Default.WifiTethering, contentDescription = null, tint = contentColor)
             Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(state, color = contentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(state, color = contentColor, style = CarakaTextStyles.sosButtonLabel)
                 if (pressed && !completed) {
                     Text(
                         "${"%.1f".format(elapsed / 1000f)} / ${"%.1f".format(holdDurationMs / 1000f)} s",
                         color = contentColor.copy(alpha = 0.85f),
-                        fontSize = 11.sp
+                        style = CarakaTextStyles.statLabel
                     )
                 }
             }
         }
     }
-    if (!completed && enabled) {
+    if (!completed && enabled && hintLabel != null) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -153,9 +153,9 @@ fun HoldToConfirmButton(
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                if (pressed) holdingLabel else "Hold to send",
+                if (pressed) holdingLabel else hintLabel,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                fontSize = 11.sp
+                style = CarakaTextStyles.statusSecondary
             )
         }
     }

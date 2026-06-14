@@ -28,12 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.crypto.QrIdentityManager
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.DangerRed
 import com.example.caraka.ui.theme.NavyBackground
 import com.example.caraka.ui.theme.NeonMint
@@ -71,16 +69,14 @@ fun ConfirmTrustSheet(
                 Text(
                     stringResource(R.string.trust_sheet_title),
                     color = NeonMint,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    style = CarakaTextStyles.listTitle
                 )
             }
             Spacer(Modifier.height(12.dp))
             Text(
                 stringResource(R.string.trust_sheet_warning),
                 color = DangerRed.copy(alpha = 0.9f),
-                fontSize = 12.sp,
-                lineHeight = 16.sp
+                style = CarakaTextStyles.statusSecondary
             )
             Spacer(Modifier.height(16.dp))
 
@@ -119,7 +115,7 @@ fun ConfirmTrustSheet(
                 Text(
                     stringResource(R.string.trust_confirm_save),
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    style = CarakaTextStyles.buttonLabel
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -138,13 +134,11 @@ private fun TrustInfoRow(label: String, value: String, monospace: Boolean = fals
             .padding(vertical = 3.dp),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
     ) {
-        Text(label, color = TextSecondary, fontSize = 12.sp)
+        Text(label, color = TextSecondary, style = CarakaTextStyles.statusSecondary)
         Text(
             value,
             color = TextPrimary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default
+            style = if (monospace) CarakaTextStyles.monoData else CarakaTextStyles.statusSecondary
         )
     }
 }

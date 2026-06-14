@@ -3,6 +3,7 @@ package com.example.caraka.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +30,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.R
 import com.example.caraka.ui.components.CarakaCard
+import com.example.caraka.ui.components.CarakaMetricColumn
+import com.example.caraka.ui.components.CarakaTopBarTitle
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.components.CarakaListTitle
 import com.example.caraka.ui.components.IdentityDisplayRow
+import com.example.caraka.ui.components.SectionTitle
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.components.VerifiedBadge
 import com.example.caraka.ui.prefs.LocalUiPrefs
@@ -36,17 +43,6 @@ import com.example.caraka.ui.theme.*
 import com.example.caraka.ui.util.rememberHaptics
 import com.example.caraka.viewmodel.MainViewModel
 
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title.lowercase().replaceFirstChar { it.uppercase() },
-        color = MaterialTheme.colorScheme.onBackground,
-        fontSize = 16.sp,
-        letterSpacing = 0.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,14 +85,10 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Profil", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "Identitas, keamanan, dan preferensi CARAKA",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    CarakaTopBarTitle(
+                        title = "Profil",
+                        subtitle = "Identitas, keamanan, dan preferensi CARAKA"
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -109,40 +101,29 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(8.dp))
-            SectionHeader("IDENTITAS")
+            SectionTitle("Identitas")
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
                 hasSubtleBorder = true,
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(roleColor.copy(alpha = 0.15f))
-                                .border(2.dp, roleColor.copy(alpha = 0.6f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isAuthority) Icons.Default.Shield else Icons.Default.Person,
-                                contentDescription = null,
-                                tint = roleColor,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
+                        Image(
+                            painter = painterResource(R.drawable.ill_profile_identity),
+                            contentDescription = null,
+                            modifier = Modifier.size(60.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = displayName.ifBlank { "—" },
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
+                                text = displayName.ifBlank { "—" }.replaceFirstChar { it.titlecase() },
+                                style = CarakaTextStyles.profileName,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -152,7 +133,11 @@ fun SettingsScreen(
                                         .clickable { showRoleSheet = true }
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
-                                    Text(myRole.ifBlank { "CIVILIAN" }, color = roleColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        myRole.ifBlank { "CIVILIAN" },
+                                        color = roleColor,
+                                        style = CarakaTextStyles.badge
+                                    )
                                 }
                                 if (isAuthority) {
                                     Spacer(Modifier.width(6.dp))
@@ -163,32 +148,36 @@ fun SettingsScreen(
                     }
 
                     if (myPeerId.isNotBlank()) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(10.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         IdentityDisplayRow(
                             peerId = myPeerId,
                             onQrClick = { haptics.tick(); onOpenQr() },
                             onCopied = { snackbar.tryEmit(copiedMsg) }
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         Button(
                             onClick = { haptics.tick(); onOpenQr() },
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            modifier = Modifier.fillMaxWidth().height(40.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                             shape = LocalCarakaShapes.current.md,
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                         ) {
                             Icon(Icons.Default.QrCode2, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.settings_qr_btn), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Text(
+                                stringResource(R.string.settings_qr_btn),
+                                style = CarakaTextStyles.buttonLabel,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("JARINGAN")
+            SectionTitle("Jaringan")
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsStatChip(stringResource(R.string.settings_stat_nodes), "$meshNodeCount", Icons.Default.Hub, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 SettingsStatChip(stringResource(R.string.settings_stat_peers), "$connectedPeerCount", Icons.Default.People, statusColors.online, Modifier.weight(1f))
@@ -214,7 +203,7 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("TAMPILAN & AKSESIBILITAS")
+            SectionTitle("Tampilan & aksesibilitas")
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -225,7 +214,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
-                        Text(stringResource(R.string.settings_language), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        CarakaListTitle(stringResource(R.string.settings_language))
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(
@@ -274,7 +263,7 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("BANTUAN & INFO")
+            SectionTitle("Bantuan & info")
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth().clickable { haptics.tick(); onOpenHelp() }.semantics { contentDescription = helpCd },
@@ -287,7 +276,10 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.settings_help), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    CarakaListTitle(
+                        stringResource(R.string.settings_help),
+                        modifier = Modifier.weight(1f)
+                    )
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -309,7 +301,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("Zona berbahaya")
+            SectionTitle("Zona berbahaya")
             Button(
                 onClick = { showResetDialog = true },
                 modifier = Modifier
@@ -321,11 +313,15 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(8.dp))
-                        Text("Hapus data darurat", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Hapus data darurat",
+                    style = CarakaTextStyles.buttonLabel,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionHeader("Mode demo")
+            SectionTitle("Mode demo")
             AttackSimulatorCard(
                 isActive = attackSimActive,
                 onToggle = { 
@@ -352,7 +348,13 @@ fun SettingsScreen(
                         showResetDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("WIPE SEKARANG", color = MaterialTheme.colorScheme.onError, fontWeight = FontWeight.Bold) }
+                ) {
+                    Text(
+                        "WIPE SEKARANG",
+                        style = CarakaTextStyles.buttonLabel.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showResetDialog = false }) {
@@ -369,7 +371,11 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("Pilih Role Jaringan", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 16.dp))
+                Text(
+                    "Pilih Role Jaringan",
+                    style = CarakaTextStyles.dialogTitle,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
                 
                 val roles = listOf(
                     Triple("CIVILIAN", Icons.Default.Person, "Pengguna umum jaringan mesh"),
@@ -392,14 +398,20 @@ fun SettingsScreen(
                         },
                         headlineContent = { 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(roleName, fontWeight = FontWeight.Bold)
+                                CarakaListTitle(roleName)
                                 if (isAuthorityItem) {
                                     Spacer(Modifier.width(6.dp))
-                                    Text("(Perlu Verifikasi QR)", fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
+                                    Text(
+                                        "(Perlu Verifikasi QR)",
+                                        style = CarakaTextStyles.statLabel,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         },
-                        supportingContent = { Text(desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        supportingContent = {
+                            CarakaBody(desc, muted = true)
+                        },
                         leadingContent = { Icon(icon, contentDescription = null, tint = if (isAuthorityItem) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
@@ -419,7 +431,13 @@ fun SettingsScreen(
                     selectedPendingRole?.let { viewModel?.updateRole(it) }
                     showRoleConfirmDialog = false
                     showRoleSheet = false
-                }) { Text("Lanjutkan", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) }
+                }) {
+                    Text(
+                        "Lanjutkan",
+                        style = CarakaTextStyles.buttonLabel.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showRoleConfirmDialog = false }) { Text("Batal", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -441,9 +459,10 @@ private fun LanguagePill(label: String, selected: Boolean, onClick: () -> Unit, 
     ) {
         Text(
             label,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 13.sp
+            style = CarakaTextStyles.buttonLabel.copy(
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            ),
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -468,8 +487,8 @@ private fun ToggleRow(
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, lineHeight = 14.sp)
+                CarakaListTitle(title)
+                CarakaBody(subtitle, muted = true)
             }
             Switch(
                 checked = checked,
@@ -497,29 +516,31 @@ private fun SettingsStatChip(
     CarakaCard(
         modifier = modifier,
         hasSubtleBorder = true,
-            containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-            Text(value, color = color, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-                if (onInfoClick != null) {
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(12.dp).clickable { onInfoClick() }
-                    )
-                }
-            }
-            if (subLabel != null) {
-                Text(subLabel, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 9.sp)
+            CarakaMetricColumn(
+                value = value,
+                label = label,
+                color = color,
+                icon = icon,
+                subLabel = subLabel
+            )
+            if (onInfoClick != null) {
+                Spacer(Modifier.height(4.dp))
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clickable { onInfoClick() }
+                )
             }
         }
     }
@@ -531,8 +552,8 @@ private fun SettingsInfoRow(icon: ImageVector, label: String, value: String) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
         Column {
-            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-            Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(label, style = CarakaTextStyles.statLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = CarakaTextStyles.listSubtitle.copy(fontWeight = FontWeight.Medium), color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -549,23 +570,22 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
     ) {
         Column {
             ListItem(
-                headlineContent = { 
+                headlineContent = {
                     Text(
                         text = if (isActive) stringResource(R.string.home_attack_sim_active_title)
                                else stringResource(R.string.home_attack_sim_title),
-                        color = if (isActive) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    ) 
+                        style = CarakaTextStyles.listTitle,
+                        color = if (isActive) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 },
-                supportingContent = { 
+                supportingContent = {
                     Text(
                         text = if (isActive) stringResource(R.string.home_attack_sim_active_subtitle)
                                else stringResource(R.string.home_attack_sim_subtitle),
+                        style = CarakaTextStyles.listSubtitle,
                         color = if (isActive) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
-                        else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
-                        fontSize = 12.sp
-                    ) 
+                        else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                    )
                 },
                 leadingContent = {
                     Icon(
@@ -589,9 +609,9 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
             )
             Text(
                 text = "Fitur khusus demonstrasi — jangan aktifkan saat operasi nyata",
+                style = CarakaTextStyles.statLabel,
                 color = if (isActive) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
                 else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
-                fontSize = 10.sp,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             )
         }

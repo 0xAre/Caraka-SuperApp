@@ -2,6 +2,7 @@
 
 package com.example.caraka.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -22,16 +24,14 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,8 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,10 +57,14 @@ import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.ui.components.AlertsBottomSheet
 import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaStatTile
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.components.CarakaTopBarTitle
 import com.example.caraka.ui.components.EmergencyAlertCard
 import com.example.caraka.ui.components.MeshStatusBanner
 import com.example.caraka.ui.components.SectionTitle
 import com.example.caraka.ui.components.ServiceTile
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.CarakaTheme
 import com.example.caraka.ui.theme.LocalCarakaDimens
 import com.example.caraka.ui.theme.LocalStatusColors
@@ -109,39 +113,25 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Icon(
-                                Icons.Default.Shield,
-                                contentDescription = stringResource(R.string.cd_app_logo),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
-                        Spacer(Modifier.size(10.dp))
-                        Column {
-                            Text(
-                                stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                "Pusat komunikasi darurat",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Image(
+                            painter = painterResource(R.drawable.ic_caraka_logo),
+                            contentDescription = stringResource(R.string.cd_app_logo),
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        CarakaTopBarTitle(
+                            title = stringResource(R.string.app_name),
+                            subtitle = "Pusat komunikasi darurat"
+                        )
                     }
                 },
                 actions = {
                     BadgedBox(
+                        modifier = Modifier.padding(end = dimens.screenPadding),
                         badge = {
                             if (activeAlerts.isNotEmpty()) {
                                 Badge(containerColor = MaterialTheme.colorScheme.error) {
-                                    Text("${activeAlerts.size}")
+                                    Text("${activeAlerts.size}", style = CarakaTextStyles.badge)
                                 }
                             }
                         }
@@ -199,29 +189,20 @@ fun HomeScreen(
             item { SectionTitle("Layanan cepat") }
 
             item {
-                CarakaCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(horizontal = 8.dp, vertical = 12.dp)) {
-                        Row(Modifier.fillMaxWidth()) {
-                            ServiceTile(Icons.Default.Warning, "SOS", MaterialTheme.colorScheme.error, { onNavigateToSos?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.AutoMirrored.Filled.Message, "Pesan", MaterialTheme.colorScheme.primary, { onNavigateToMessages?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.Default.Map, "Jaringan", MaterialTheme.colorScheme.secondary, { onNavigateToNetwork?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.Default.QrCodeScanner, "Scan QR", statusColors.online, { onNavigateToQr?.invoke() }, Modifier.weight(1f))
-                        }
-                        Row(Modifier.fillMaxWidth()) {
-                            ServiceTile(Icons.Default.Notifications, "Alarm", MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.Default.Shield, "Identitas", statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.Default.HelpOutline, "Bantuan", MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f))
-                            ServiceTile(Icons.Default.Bolt, "Simulator", MaterialTheme.colorScheme.error, { onNavigateToProfile?.invoke() }, Modifier.weight(1f))
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ServiceTile(Icons.Default.Warning, "SOS", MaterialTheme.colorScheme.error, { onNavigateToSos?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_sos)
+                        ServiceTile(Icons.AutoMirrored.Filled.Message, "Pesan", MaterialTheme.colorScheme.primary, { onNavigateToMessages?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_message)
+                        ServiceTile(Icons.Default.WifiTethering, "Jaringan", MaterialTheme.colorScheme.primary, { onNavigateToNetwork?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_network)
+                        ServiceTile(Icons.Default.QrCodeScanner, "Scan QR", MaterialTheme.colorScheme.primary, { onNavigateToQr?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_qr)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ServiceTile(Icons.Default.Notifications, "Alarm", MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_alarm)
+                        ServiceTile(Icons.Default.Shield, "Identitas", statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_identity)
+                        ServiceTile(Icons.Default.HelpOutline, "Bantuan", MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_help)
+                        ServiceTile(Icons.Default.Bolt, "Simulator", MaterialTheme.colorScheme.primary, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
                     }
                 }
-            }
-
-            item {
-                EmergencyActionCard(onClick = {
-                    haptics.heavy()
-                    onNavigateToSos?.invoke()
-                })
             }
 
             item {
@@ -231,10 +212,22 @@ fun HomeScreen(
                 ) {
                     SectionTitle("Alarm aktif", modifier = Modifier.weight(1f))
                     if (activeAlerts.isNotEmpty()) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Text(
+                                "${activeAlerts.size}",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = CarakaTextStyles.badge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             "Lihat semua",
                             modifier = Modifier.clickable { onNavigateToAlerts?.invoke() },
-                            style = MaterialTheme.typography.labelLarge,
+                            style = CarakaTextStyles.buttonLabel,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -262,14 +255,10 @@ fun HomeScreen(
                             }
                             Spacer(Modifier.size(12.dp))
                             Column {
-                                Text(
-                                    "Tidak ada alarm aktif",
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                Text(
+                                CarakaListTitle("Tidak ada alarm aktif")
+                                CarakaBody(
                                     "Jaringan akan menampilkan siaran darurat di sini.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    muted = true
                                 )
                             }
                         }
@@ -279,54 +268,6 @@ fun HomeScreen(
                 items(activeAlerts.take(3), key = { it.id }) { alert ->
                     EmergencyAlertCard(alert)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmergencyActionCard(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.errorContainer
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(52.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.error
-            ) {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onError,
-                    modifier = Modifier.padding(13.dp)
-                )
-            }
-            Spacer(Modifier.size(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Kirim SOS darurat",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-                Text(
-                    "Pilih kategori, sertakan lokasi, lalu tahan untuk menyiarkan.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.78f)
-                )
-            }
-            Button(
-                onClick = onClick,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Buka")
             }
         }
     }

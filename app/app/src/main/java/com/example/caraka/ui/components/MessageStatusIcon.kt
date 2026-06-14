@@ -18,10 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.NeonMint
 import com.example.caraka.ui.theme.TextSecondary
 import com.example.caraka.ui.theme.WarningCyan
@@ -68,7 +67,7 @@ fun MessageStatusIcon(
         )
         if (showLabel) {
             Spacer(Modifier.width(3.dp))
-            Text(label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = tint, style = CarakaTextStyles.badge)
         }
     }
 }

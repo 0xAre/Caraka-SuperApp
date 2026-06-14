@@ -18,11 +18,11 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
+import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.ui.theme.CarakaTextStyles
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,22 +51,19 @@ fun AlertsBottomSheet(
             Text(
                 stringResource(R.string.alerts_sheet_title),
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                style = CarakaTextStyles.dialogTitle
             )
             Spacer(Modifier.height(4.dp))
-            Text(
+            CarakaBody(
                 stringResource(R.string.alerts_sheet_subtitle, alerts.size),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp
+                muted = true
             )
             Spacer(Modifier.height(16.dp))
 
             if (alerts.isEmpty()) {
-                Text(
+                CarakaBody(
                     stringResource(R.string.home_no_alerts),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
+                    muted = true,
                     modifier = Modifier.padding(vertical = 24.dp)
                 )
             } else {
@@ -91,7 +88,7 @@ fun AlertsBottomSheet(
                     Text(
                         stringResource(R.string.alerts_view_all),
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        style = CarakaTextStyles.listTitle
                     )
                 }
             }

@@ -16,11 +16,10 @@ import com.example.caraka.ui.components.CarakaCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.caraka.data.local.entity.ConnectionStatus
 import com.example.caraka.data.local.entity.PeerEntity
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalStatusColors
 
 /**
@@ -44,7 +43,7 @@ fun PeerListView(
             Text(
                 "No peers discovered yet",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp
+                style = CarakaTextStyles.listSubtitle
             )
         }
         return
@@ -91,13 +90,12 @@ private fun PeerItemCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = peer.displayName,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
+                        style = CarakaTextStyles.chatSender,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = peer.role,
-                        fontSize = 12.sp,
+                        style = CarakaTextStyles.statusSecondary,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -116,7 +114,7 @@ private fun PeerItemCard(
                             containerColor = LocalStatusColors.current.hybrid
                         )
                     ) {
-                        Text("CONNECT", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("CONNECT", style = CarakaTextStyles.buttonLabel)
                     }
                 }
 
@@ -132,16 +130,15 @@ private fun PeerItemCard(
                             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Menunggu...", fontSize = 13.sp)
+                        Text("Menunggu...", style = CarakaTextStyles.buttonLabel)
                     }
                 }
 
                 ConnectionStatus.CONNECTED, ConnectionStatus.ACTIVE_MESH -> {
                     Text(
                         text = "Terhubung",
-                        fontSize = 13.sp,
-                        color = LocalStatusColors.current.online,
-                        fontWeight = FontWeight.SemiBold
+                        style = CarakaTextStyles.buttonLabel,
+                        color = LocalStatusColors.current.online
                     )
                 }
             }
@@ -171,9 +168,8 @@ private fun StatusBadge(status: ConnectionStatus) {
         )
         Text(
             text = statusLabel(status),
-            fontSize = 10.sp,
-            color = statusColor(status),
-            fontWeight = FontWeight.SemiBold
+            style = CarakaTextStyles.badge,
+            color = statusColor(status)
         )
     }
 }
