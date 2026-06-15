@@ -15,7 +15,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.net.Inet6Address
 import java.util.UUID
@@ -220,6 +223,22 @@ class MeshManager(
     override val incomingChatAlert: SharedFlow<ChatAlert> get() = wifiDirectManager.incomingChatAlert
     override val isAwareActive: StateFlow<Boolean>
         get() = wifiAwareManager?.isAwareAvailable ?: awareActiveFallback
+    override val localTransportStatus: StateFlow<LocalTransportStatus> =
+        combine(isWifiP2pEnabled, isAwareActive) { wifiDirectEnabled, awareAvailable ->
+            LocalTransportStatus(
+                wifiDirectEnabled = wifiDirectEnabled,
+                nearbyAvailable = nearbySupported,
+                wifiAwareAvailable = awareAvailable
+            )
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = LocalTransportStatus(
+                wifiDirectEnabled = isWifiP2pEnabled.value,
+                nearbyAvailable = nearbySupported,
+                wifiAwareAvailable = isAwareActive.value
+            )
+        )
 
     // ========== MeshTransport: lifecycle / actions (brain delegated, Aware layered) ==========
 

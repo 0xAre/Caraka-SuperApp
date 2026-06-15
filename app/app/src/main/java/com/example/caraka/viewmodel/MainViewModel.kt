@@ -12,6 +12,8 @@ import com.example.caraka.network.ConnectivityMonitor
 import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.network.MeshTransport
 import com.example.caraka.repository.MeshRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -71,6 +73,11 @@ class MainViewModel(
     val availablePeers: StateFlow<List<WifiP2pDevice>> = transport.availablePeers
 
     val connectionState: StateFlow<String> = transport.connectionState
+    val localTransportStatus = transport.localTransportStatus
+
+    private val _scanStartedAtMillis = MutableStateFlow<Long?>(null)
+    private val _scanPresentationActive = MutableStateFlow(false)
+    private var scanPresentationJob: Job? = null
 
     // NEW: Connection request dialog state
     private val _incomingConnectionRequest = MutableStateFlow<String?>(null)
@@ -114,6 +121,31 @@ class MainViewModel(
     val meshNodeCount: StateFlow<Int> = meshNodes
         .map { nodes -> nodes.size + 1 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
+
+    val networkDiscoveryUiState: StateFlow<NetworkDiscoveryUiState> = combine(
+        meshNodes,
+        connectionState,
+        localTransportStatus,
+        _scanStartedAtMillis,
+        _scanPresentationActive
+    ) { nodes, rawState, transportStatus, scanStartedAt, scanPresentationActive ->
+        NetworkDiscoveryUiState(
+            phase = mapNetworkDiscoveryPhase(
+                rawConnectionState = rawState,
+                hasPeers = nodes.isNotEmpty(),
+                hasActiveMedium = transportStatus.hasActiveMedium,
+                isScanPresentationActive = scanPresentationActive
+            ),
+            peers = nodes,
+            rawConnectionState = rawState,
+            transportStatus = transportStatus,
+            scanStartedAtMillis = scanStartedAt
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        NetworkDiscoveryUiState()
+    )
 
     // ========== STATE FLOWS (Connectivity) ==========
 
@@ -233,9 +265,19 @@ class MainViewModel(
         transport.stopListening()
     }
 
-    fun discoverPeers() {
+    fun startPeerScan() {
+        if (!canStartPeerScan(connectionState.value)) return
+        _scanStartedAtMillis.value = System.currentTimeMillis()
+        _scanPresentationActive.value = true
+        scanPresentationJob?.cancel()
+        scanPresentationJob = viewModelScope.launch {
+            delay(MinimumScanPresentationMs)
+            _scanPresentationActive.value = false
+        }
         transport.discoverPeers()
     }
+
+    fun discoverPeers() = startPeerScan()
 
     fun connectToPeer(device: WifiP2pDevice) {
         transport.connectToPeer(device)
@@ -385,6 +427,8 @@ class MainViewModel(
         connectivityMonitor.cleanup()
     }
 }
+
+private const val MinimumScanPresentationMs = 15_000L
 
 class MainViewModelFactory(
     private val repository: MeshRepository,

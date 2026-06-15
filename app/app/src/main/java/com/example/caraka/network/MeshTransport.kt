@@ -29,6 +29,7 @@ interface MeshTransport {
 
     /** true when a Wi-Fi Aware (NAN) data path is the active primary transport. */
     val isAwareActive: StateFlow<Boolean>
+    val localTransportStatus: StateFlow<LocalTransportStatus>
 
     // ========== LIFECYCLE / DISCOVERY ==========
 

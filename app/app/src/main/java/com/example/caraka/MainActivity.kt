@@ -292,7 +292,37 @@ private fun CarakaNav(
                         onBack = { navController.popBackStack() }
                     )
                 }
-                composable(Screen.Network.route) { NetworkScreen(viewModel) }
+                composable(Screen.Network.route) {
+                    NetworkScreen(
+                        viewModel = viewModel,
+                        onRequestPermissions = {
+                            val permissions = mutableListOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+                                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+                                permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+                            }
+                            val missingPermissions = permissions.filter {
+                                ContextCompat.checkSelfPermission(ctx, it) !=
+                                    PackageManager.PERMISSION_GRANTED
+                            }
+                            if (missingPermissions.isEmpty()) {
+                                viewModel.startPeerScan()
+                            } else {
+                                permissionLauncher.launch(missingPermissions.toTypedArray())
+                            }
+                        },
+                        onOpenWifiSettings = {
+                            ctx.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                        }
+                    )
+                }
                 composable(Screen.Sos.route) {
                     SosScreen(viewModel, onBack = { navController.popBackStack() })
                 }

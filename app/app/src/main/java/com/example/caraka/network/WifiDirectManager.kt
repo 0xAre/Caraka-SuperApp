@@ -35,8 +35,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -128,6 +131,15 @@ class WifiDirectManager(
 
     private val _connectionState = MutableStateFlow("IDLE")
     override val connectionState: StateFlow<String> = _connectionState
+
+    override val localTransportStatus: StateFlow<LocalTransportStatus> =
+        isWifiP2pEnabled
+            .map { enabled -> LocalTransportStatus(wifiDirectEnabled = enabled) }
+            .stateIn(
+                scope = scope,
+                started = SharingStarted.Eagerly,
+                initialValue = LocalTransportStatus(wifiDirectEnabled = isWifiP2pEnabled.value)
+            )
 
     private val socketManager = MeshSocketManager(this)
     private var pendingWifiDirectMac: String? = null

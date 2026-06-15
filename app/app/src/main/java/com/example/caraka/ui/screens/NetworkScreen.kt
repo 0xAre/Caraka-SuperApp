@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -39,41 +37,44 @@ import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalStatusColors
 import com.example.caraka.viewmodel.MainViewModel
 import com.example.caraka.viewmodel.MeshNodeUi
+import com.example.caraka.viewmodel.NetworkDiscoveryPhase
 import kotlinx.coroutines.delay
 
 @Composable
-fun NetworkScreen(viewModel: MainViewModel? = null) {
-    val meshNodes by viewModel?.meshNodes?.collectAsStateWithLifecycle(initialValue = emptyList())
-        ?: remember { mutableStateOf(emptyList()) }
-    val connectionState by viewModel?.connectionState?.collectAsStateWithLifecycle(initialValue = "IDLE")
-        ?: remember { mutableStateOf("IDLE") }
+fun NetworkScreen(
+    viewModel: MainViewModel,
+    onRequestPermissions: () -> Unit = {},
+    onOpenWifiSettings: () -> Unit = {}
+) {
+    val uiState by viewModel.networkDiscoveryUiState.collectAsStateWithLifecycle()
     var selectedNode by remember { mutableStateOf<MeshNodeUi?>(null) }
-    var scanSession by remember { mutableIntStateOf(0) }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(viewModel, scanSession) {
+    LaunchedEffect(viewModel) {
+        viewModel.startPeerScan()
+    }
+
+    LaunchedEffect(uiState.phase, uiState.scanStartedAtMillis) {
         elapsedSeconds = 0
-        viewModel?.discoverPeers()
+        if (uiState.phase != NetworkDiscoveryPhase.Scanning) return@LaunchedEffect
+        val startedAt = uiState.scanStartedAtMillis ?: System.currentTimeMillis()
         while (true) {
-            delay(1_000)
-            elapsedSeconds++
-            if (elapsedSeconds % 12 == 0 && meshNodes.isEmpty()) {
-                viewModel?.discoverPeers()
-            }
+            elapsedSeconds = ((System.currentTimeMillis() - startedAt) / 1_000L)
+                .coerceAtLeast(0L)
+                .toInt()
+            delay(1_000L)
         }
     }
 
-    selectedNode?.let { node ->
+    selectedNode?.let { selected ->
+        val currentNode = uiState.peers.firstOrNull { it.id == selected.id } ?: selected
         NodeDetailBottomSheet(
-            node = node,
-            onConnect = { viewModel?.connectToNode(it) },
+            node = currentNode,
+            connectionInProgress = uiState.phase == NetworkDiscoveryPhase.Connecting,
+            onConnect = viewModel::connectToNode,
             onDismiss = { selectedNode = null }
         )
     }
-
-    val isSearching = connectionState == "DISCOVERING" ||
-        connectionState == "IDLE" ||
-        connectionState == "NO_PEERS"
 
     Scaffold(
         topBar = {
@@ -92,10 +93,11 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         PeerDiscoveryExperience(
-            peers = meshNodes,
-            isSearching = isSearching && meshNodes.isEmpty(),
+            uiState = uiState,
             elapsedSeconds = elapsedSeconds,
-            onScanAgain = { scanSession++ },
+            onScanAgain = viewModel::startPeerScan,
+            onRequestPermission = onRequestPermissions,
+            onOpenWifiSettings = onOpenWifiSettings,
             onPeerClick = { selectedNode = it },
             modifier = Modifier.padding(padding)
         )
@@ -105,11 +107,13 @@ fun NetworkScreen(viewModel: MainViewModel? = null) {
 @Composable
 private fun NodeDetailBottomSheet(
     node: MeshNodeUi,
+    connectionInProgress: Boolean,
     onConnect: (MeshNodeUi) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var requested by remember(node.id) { mutableStateOf(false) }
+    val connecting = requested || connectionInProgress
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -124,7 +128,10 @@ private fun NodeDetailBottomSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CarakaListTitle(node.name)
-            CarakaBody("${node.role} · ${node.hopCount} hop", muted = true)
+            CarakaBody(
+                stringResource(R.string.network_peer_metadata, node.role, node.hopCount),
+                muted = true
+            )
             Text(
                 if (node.isConnected) {
                     stringResource(R.string.network_mesh_connected)
@@ -153,7 +160,7 @@ private fun NodeDetailBottomSheet(
                         requested = true
                         onConnect(node)
                     },
-                    enabled = !requested,
+                    enabled = !connecting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -162,7 +169,7 @@ private fun NodeDetailBottomSheet(
                     )
                 ) {
                     Text(
-                        if (requested) {
+                        if (connecting) {
                             stringResource(R.string.network_connecting_action)
                         } else {
                             stringResource(R.string.network_connect_action)
