@@ -7,4 +7,12 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="caraka_qr_scanner_background">#050A12</color>
+    <color name="caraka_qr_scanner_scrim">#A6050A12</color>
+    <color name="caraka_qr_scanner_surface">#E6111827</color>
+    <color name="caraka_qr_scanner_surface_border">#3DE5F4FB</color>
+    <color name="caraka_qr_scanner_primary">#229ED9</color>
+    <color name="caraka_qr_scanner_primary_soft">#66229ED9</color>
+    <color name="caraka_qr_scanner_text">#FFFFFFFF</color>
+    <color name="caraka_qr_scanner_text_muted">#D9E5F4FB</color>
 </resources>

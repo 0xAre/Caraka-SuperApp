@@ -387,4 +387,106 @@
     <string name="hotspot_pass">Password: %1$s</string>
     <string name="hotspot_start">Create Emergency Hotspot</string>
     <string name="hotspot_stop">Stop Hotspot</string>
+
+    <!-- ───── Settings (additional) ───── -->
+    <string name="settings_profile_subtitle">Identity, security, and CARAKA preferences</string>
+    <string name="settings_section_identity">Identity</string>
+    <string name="settings_section_network">Network</string>
+    <string name="settings_go_priority_label">GO Priority</string>
+    <string name="settings_go_priority_sublabel">Higher = more often the primary relay</string>
+    <string name="settings_go_priority_info">The higher the value, the more priority for becoming the mesh network Group Owner</string>
+    <string name="settings_section_appearance">Display &amp; accessibility</string>
+    <string name="settings_section_help">Help &amp; info</string>
+    <string name="settings_section_danger">Danger zone</string>
+    <string name="settings_wipe_data_btn">Wipe emergency data</string>
+    <string name="settings_section_demo">Demo mode</string>
+    <string name="settings_wipe_dialog_title">Erase all CARAKA data?</string>
+    <string name="settings_wipe_dialog_desc">This will PERMANENTLY DELETE all mesh data, message history, and your identity from this device. Continue?</string>
+    <string name="settings_wipe_now">WIPE NOW</string>
+    <string name="settings_role_sheet_title">Choose Network Role</string>
+    <string name="settings_role_civilian_desc">General mesh network user</string>
+    <string name="settings_role_bpbd_desc">Regional Disaster Management Agency</string>
+    <string name="settings_role_polri_desc">Indonesian National Police</string>
+    <string name="settings_role_pmi_desc">Indonesian Red Cross</string>
+    <string name="settings_role_verify_required">(QR Verification Required)</string>
+    <string name="settings_role_confirm_title">Confirm Role</string>
+    <string name="settings_role_confirm_desc">This role requires identity verification from the relevant authority. Continue?</string>
+    <string name="settings_continue">Continue</string>
+    <string name="settings_demo_warning">Demonstration-only feature — do not enable during a real operation</string>
+    <string name="settings_toggle_enabled">Enabled</string>
+    <string name="settings_toggle_disabled">Disabled</string>
+
+    <!-- ───── Home Screen (additional) ───── -->
+    <string name="home_subtitle">Emergency communication hub</string>
+    <string name="home_section_quick_services">Quick services</string>
+    <string name="home_view_all">View all</string>
+    <string name="home_no_alerts_title">No active alerts</string>
+    <string name="home_no_alerts_subtitle">Emergency broadcasts on the network will appear here.</string>
+    <string name="service_label_sos">SOS</string>
+    <string name="service_label_messages">Messages</string>
+    <string name="service_label_network">Network</string>
+    <string name="service_label_qr">Scan QR</string>
+    <string name="service_label_alerts">Alerts</string>
+    <string name="service_label_identity">Identity</string>
+    <string name="service_label_help">Help</string>
+    <string name="service_label_simulator">Simulator</string>
+    <string name="service_label_courier">Courier</string>
+
+    <!-- ───── Help Screen (additional) ───── -->
+    <string name="help_tour_title">Interactive Tour</string>
+    <string name="help_tour_subtitle">Replay the 5-step guide</string>
+    <string name="help_tour_start">Start</string>
+
+    <!-- ───── QR Identity (additional) ───── -->
+    <string name="qr_scan_cancelled">Scan cancelled</string>
+    <string name="qr_scan_invalid">Invalid QR — not a CARAKA identity</string>
+    <string name="qr_scan_peer_title">Scan peer QR</string>
+    <string name="qr_scan_instructions">Hold your phone upright, then aim the camera until the peer\'s QR is inside the box.</string>
+    <string name="qr_hint_portrait">Portrait mode</string>
+    <string name="qr_hint_fill_box">Fill the box</string>
+    <string name="qr_scan_prompt">Aim the camera at a CARAKA identity QR</string>
+    <string name="qr_scan_now_btn">Scan QR now</string>
+    <string name="qr_connected_toast">Connected with %1$s ✓</string>
+
+    <!-- ───── SOS Screen (additional) ───── -->
+    <string name="sos_select_emergency_title">Select the type of emergency</string>
+    <string name="sos_select_emergency_subtitle">This information helps peers prioritize their response.</string>
+    <string name="sos_access_denied">Access Denied</string>
+    <string name="sos_searching">Searching…</string>
+    <string name="sos_unknown_location">Unknown\nLocation</string>
+    <string name="sos_category_selected_cd">Selected</string>
+
+    <!-- ───── Messages Screen (additional) ───── -->
+    <string name="messages_subtitle">Encrypted conversations on the mesh network</string>
+    <string name="messages_empty_network_title">No messages on the network yet</string>
+    <string name="messages_empty_network_subtitle">Connect to nearby peers to start communicating</string>
+
+    <!-- ───── Connection Request Dialog ───── -->
+    <string name="connection_request_title">Incoming Connection Request</string>
+    <string name="connection_request_question">Accept the connection request from this device?</string>
+    <string name="connection_request_reject">REJECT</string>
+    <string name="connection_request_accept">ACCEPT</string>
+
+    <!-- ───── QR Capture Activity (View-based) ───── -->
+    <string name="qr_flash_on">Flash on</string>
+    <string name="qr_flash_off">Flash</string>
+    <string name="qr_flash_turn_off_cd">Turn off flash</string>
+    <string name="qr_flash_turn_on_cd">Turn on flash</string>
+
+    <!-- ───── Chat date separators ───── -->
+    <string name="chat_date_today">Today</string>
+    <string name="chat_date_yesterday">Yesterday</string>
+
+    <!-- ───── Emergency alert card ───── -->
+    <string name="alert_unknown_sender">Unknown</string>
+    <string name="alert_minutes_ago">%1$d min</string>
+    <string name="alert_needs_help">Needs immediate help</string>
+    <string name="alert_cd_template">Alert from %1$s: %2$s</string>
+
+    <!-- ───── Peer list (legacy view) ───── -->
+    <string name="peer_list_empty">No peers discovered yet</string>
+    <string name="peer_list_connect">CONNECT</string>
+    <string name="peer_list_pending">Pending…</string>
+    <string name="peer_status_found">Found</string>
+    <string name="peer_status_active">Active</string>
 </resources>

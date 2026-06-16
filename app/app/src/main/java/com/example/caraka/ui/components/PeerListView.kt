@@ -16,7 +16,9 @@ import com.example.caraka.ui.components.CarakaCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.caraka.R
 import com.example.caraka.data.local.entity.ConnectionStatus
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.ui.theme.CarakaTextStyles
@@ -41,7 +43,7 @@ fun PeerListView(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "No peers discovered yet",
+                stringResource(R.string.peer_list_empty),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = CarakaTextStyles.listSubtitle
             )
@@ -114,7 +116,7 @@ private fun PeerItemCard(
                             containerColor = LocalStatusColors.current.hybrid
                         )
                     ) {
-                        Text("CONNECT", style = CarakaTextStyles.buttonLabel)
+                        Text(stringResource(R.string.peer_list_connect), style = CarakaTextStyles.buttonLabel)
                     }
                 }
 
@@ -130,13 +132,13 @@ private fun PeerItemCard(
                             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Menunggu...", style = CarakaTextStyles.buttonLabel)
+                        Text(stringResource(R.string.peer_list_pending), style = CarakaTextStyles.buttonLabel)
                     }
                 }
 
                 ConnectionStatus.CONNECTED, ConnectionStatus.ACTIVE_MESH -> {
                     Text(
-                        text = "Terhubung",
+                        text = stringResource(R.string.connection_connected),
                         style = CarakaTextStyles.buttonLabel,
                         color = LocalStatusColors.current.online
                     )
@@ -167,7 +169,7 @@ private fun StatusBadge(status: ConnectionStatus) {
             tint = statusColor(status)
         )
         Text(
-            text = statusLabel(status),
+            text = statusLabelText(status),
             style = CarakaTextStyles.badge,
             color = statusColor(status)
         )
@@ -185,9 +187,10 @@ private fun statusColor(status: ConnectionStatus): Color {
     }
 }
 
-private fun statusLabel(status: ConnectionStatus): String = when (status) {
-    ConnectionStatus.DISCOVERED -> "Found"
-    ConnectionStatus.PENDING_REQUEST -> "Pending"
-    ConnectionStatus.CONNECTED -> "Connected"
-    ConnectionStatus.ACTIVE_MESH -> "Active"
+@Composable
+private fun statusLabelText(status: ConnectionStatus): String = when (status) {
+    ConnectionStatus.DISCOVERED -> stringResource(R.string.peer_status_found)
+    ConnectionStatus.PENDING_REQUEST -> stringResource(R.string.peer_list_pending)
+    ConnectionStatus.CONNECTED -> stringResource(R.string.connection_connected)
+    ConnectionStatus.ACTIVE_MESH -> stringResource(R.string.peer_status_active)
 }

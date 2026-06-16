@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.caraka.R
 import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.DangerRed
@@ -50,16 +52,20 @@ fun EmergencyAlertCard(
 ) {
     val resolvedCategory = SosAlertText.resolveCategory(alert.sosCategory, alert.content)
     val (icon, iconTint) = alertCategoryVisual(resolvedCategory)
-    val categoryLabel = SosAlertText.categoryLabel(resolvedCategory, alert.content)
+    val categoryLabel = localizedCategoryLabel(resolvedCategory)
     val headline = SosAlertText.headline(resolvedCategory, alert.content)
-    val time = timeLabel ?: formatAlertTime(alert.timestamp)
-    val sender = formatSenderLine(alert.senderName, alert.senderRole)
+    val unknownSenderLabel = stringResource(R.string.alert_unknown_sender)
+    val minutesAgoTpl = stringResource(R.string.alert_minutes_ago)
+    val time = timeLabel ?: formatAlertTime(alert.timestamp, stringResource(R.string.messages_just_now), minutesAgoTpl)
+    val sender = formatSenderLine(alert.senderName, alert.senderRole, unknownSenderLabel)
     val hasUserDetail = headline != SosAlertText.defaultHeadline()
+    val defaultSosLabel = stringResource(R.string.nav_sos)
+    val alertCd = stringResource(R.string.alert_cd_template, sender, headline)
 
     CarakaCard(
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "Alarm dari $sender: $headline" },
+            .semantics { contentDescription = alertCd },
         hasSubtleBorder = true
     ) {
         Row(
@@ -86,7 +92,7 @@ fun EmergencyAlertCard(
                 ) {
                     Icon(
                         icon,
-                        contentDescription = categoryLabel.ifBlank { "SOS" },
+                        contentDescription = categoryLabel.ifBlank { defaultSosLabel },
                         tint = iconTint,
                         modifier = Modifier.padding(9.dp)
                     )
@@ -137,7 +143,7 @@ fun EmergencyAlertCard(
                     if (!hasUserDetail) {
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Membutuhkan bantuan segera",
+                            text = stringResource(R.string.alert_needs_help),
                             style = CarakaTextStyles.statusSecondary,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                             maxLines = 1
@@ -161,18 +167,29 @@ private fun alertCategoryVisual(category: String?): AlertVisual {
     }
 }
 
-private fun formatSenderLine(name: String, role: String): String {
-    val displayName = name.ifBlank { "Tidak dikenal" }
+@Composable
+private fun localizedCategoryLabel(category: String?): String {
+    return when (category?.uppercase(Locale.ROOT)) {
+        "MEDICAL" -> stringResource(R.string.sos_cat_medical)
+        "FIRE" -> stringResource(R.string.sos_cat_fire)
+        "SECURITY" -> stringResource(R.string.sos_cat_security)
+        "DISASTER" -> stringResource(R.string.sos_cat_disaster)
+        else -> ""
+    }
+}
+
+private fun formatSenderLine(name: String, role: String, unknownLabel: String): String {
+    val displayName = name.ifBlank { unknownLabel }
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     val roleLabel = role.ifBlank { "CIVILIAN" }
     return "$displayName · $roleLabel"
 }
 
-private fun formatAlertTime(timestamp: Long): String {
+private fun formatAlertTime(timestamp: Long, justNowLabel: String, minutesAgoTpl: String): String {
     val diff = System.currentTimeMillis() - timestamp
     return when {
-        diff < 60_000 -> "Baru saja"
-        diff < 3_600_000 -> "${diff / 60_000} mnt"
+        diff < 60_000 -> justNowLabel
+        diff < 3_600_000 -> String.format(minutesAgoTpl, diff / 60_000)
         else -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
     }
 }

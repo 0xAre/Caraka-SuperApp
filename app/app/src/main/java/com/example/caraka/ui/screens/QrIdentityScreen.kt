@@ -17,8 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.caraka.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.caraka.crypto.QrIdentityManager
 import com.example.caraka.ui.components.CarakaBody
@@ -26,6 +28,7 @@ import com.example.caraka.ui.components.CarakaListTitle
 import com.example.caraka.ui.components.CarakaScreenTitle
 import com.example.caraka.ui.components.IdentityQrCard
 import com.example.caraka.ui.components.LocalSnackbar
+import com.example.caraka.ui.scanner.CarakaQrCaptureActivity
 import com.example.caraka.ui.theme.*
 import com.example.caraka.viewmodel.MainViewModel
 import com.journeyapps.barcodescanner.ScanContract
@@ -53,6 +56,10 @@ fun QrIdentityScreen(
     var qrVisible by remember { mutableStateOf(false) }
 
     var scanError by remember { mutableStateOf<String?>(null) }
+    val scanCancelledMsg = stringResource(R.string.qr_scan_cancelled)
+    val scanInvalidMsg = stringResource(R.string.qr_scan_invalid)
+    val scanPrompt = stringResource(R.string.qr_scan_prompt)
+    val connectedToastTpl = stringResource(R.string.qr_connected_toast)
 
     LaunchedEffect(myPeerId, displayName, myRole) {
         if (myPeerId.isBlank()) return@LaunchedEffect
@@ -68,12 +75,12 @@ fun QrIdentityScreen(
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result: ScanIntentResult ->
         val raw = result.contents
         if (raw == null) {
-            scanError = "Scan dibatalkan"
+            scanError = scanCancelledMsg
             return@rememberLauncherForActivityResult
         }
         val parsed = QrIdentityManager.parseQrPayload(raw)
         if (parsed == null) {
-            scanError = "QR tidak valid — bukan identitas CARAKA"
+            scanError = scanInvalidMsg
             return@rememberLauncherForActivityResult
         }
         // Scan QR in person = consent. Verify + connect + jump straight into chat — no extra taps.
@@ -82,7 +89,7 @@ fun QrIdentityScreen(
             viewModel.saveVerifiedPeer(parsed)               // trust + store their public keys
             viewModel.requestConnectionToPeer(parsed.peerId, autoAccept = true) // proactively link
             viewModel.triggerPriorityConnect(parsed.peerId)  // fast-track WiFi-Direct fallback path
-            snackbar.tryEmit("Terhubung dengan ${parsed.name} ✓")
+            snackbar.tryEmit(String.format(connectedToastTpl, parsed.name))
             onNavigateToChat(parsed.peerId)                  // land in the conversation
         }
     }
@@ -91,13 +98,13 @@ fun QrIdentityScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    CarakaScreenTitle("Identitas QR")
+                    CarakaScreenTitle(stringResource(R.string.qr_screen_title))
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
+                            contentDescription = stringResource(R.string.help_back),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -137,24 +144,36 @@ fun QrIdentityScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    CarakaListTitle("Scan QR peer")
+                    CarakaListTitle(stringResource(R.string.qr_scan_peer_title))
                 }
 
                 Spacer(Modifier.height(16.dp))
                 CarakaBody(
-                    "Scan QR dari device lain untuk memverifikasi identitas mereka secara tatap muka",
+                    stringResource(R.string.qr_scan_instructions),
                     muted = true,
                     textAlign = TextAlign.Center
                 )
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                ) {
+                    ScanHintChip(icon = Icons.Default.StayCurrentPortrait, text = stringResource(R.string.qr_hint_portrait))
+                    ScanHintChip(icon = Icons.Default.CenterFocusStrong, text = stringResource(R.string.qr_hint_fill_box))
+                }
+
                 Spacer(Modifier.height(16.dp))
 
                 Button(
                     onClick = {
                         scanError = null
                         val options = ScanOptions().apply {
-                            setPrompt("Arahkan kamera ke QR identitas CARAKA peer")
+                            setCaptureActivity(CarakaQrCaptureActivity::class.java)
+                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            setPrompt(scanPrompt)
                             setBeepEnabled(true)
-                            setOrientationLocked(false)
+                            setOrientationLocked(true)
                             setBarcodeImageEnabled(false)
                         }
                         scanLauncher.launch(options)
@@ -165,7 +184,7 @@ fun QrIdentityScreen(
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Buka kamera & scan", color = MaterialTheme.colorScheme.onPrimary, style = CarakaTextStyles.buttonLabel)
+                    Text(stringResource(R.string.qr_scan_now_btn), color = MaterialTheme.colorScheme.onPrimary, style = CarakaTextStyles.buttonLabel)
                 }
 
                 scanError?.let { err ->
@@ -188,5 +207,33 @@ fun QrIdentityScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun ScanHintChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String
+) {
+    Row(
+        modifier = Modifier
+            .clip(LocalCarakaShapes.current.full)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), LocalCarakaShapes.current.full)
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = CarakaTextStyles.statValueCompact
+        )
     }
 }

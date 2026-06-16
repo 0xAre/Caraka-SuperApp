@@ -268,14 +268,16 @@ fun ChatScreen(
 
 @Composable
 private fun DateSeparator(timestamp: Long) {
-    val label = remember(timestamp) {
+    val todayLabel = stringResource(R.string.chat_date_today)
+    val yesterdayLabel = stringResource(R.string.chat_date_yesterday)
+    val label = remember(timestamp, todayLabel, yesterdayLabel) {
         val cal = Calendar.getInstance()
         val today = cal.get(Calendar.DAY_OF_YEAR)
         cal.timeInMillis = timestamp
         val msgDay = cal.get(Calendar.DAY_OF_YEAR)
         when {
-            today == msgDay -> "Today"
-            today - msgDay == 1 -> "Yesterday"
+            today == msgDay -> todayLabel
+            today - msgDay == 1 -> yesterdayLabel
             else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(timestamp))
         }
     }

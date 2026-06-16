@@ -8,4 +8,13 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_caraka_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.GarudaMesh</item>
     </style>
+
+    <style name="Theme.Caraka.Scanner" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/caraka_qr_scanner_background</item>
+        <item name="android:colorAccent">@color/caraka_qr_scanner_primary</item>
+    </style>
 </resources>

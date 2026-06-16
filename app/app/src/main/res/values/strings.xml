@@ -387,4 +387,106 @@
     <string name="hotspot_pass">Sandi: %1$s</string>
     <string name="hotspot_start">Buat Hotspot Darurat</string>
     <string name="hotspot_stop">Hentikan Hotspot</string>
+
+    <!-- ───── Settings (additional) ───── -->
+    <string name="settings_profile_subtitle">Identitas, keamanan, dan preferensi CARAKA</string>
+    <string name="settings_section_identity">Identitas</string>
+    <string name="settings_section_network">Jaringan</string>
+    <string name="settings_go_priority_label">Prioritas GO</string>
+    <string name="settings_go_priority_sublabel">Tinggi = lebih sering jadi relay utama</string>
+    <string name="settings_go_priority_info">Semakin tinggi nilai, semakin diprioritaskan menjadi Group Owner jaringan mesh</string>
+    <string name="settings_section_appearance">Tampilan &amp; aksesibilitas</string>
+    <string name="settings_section_help">Bantuan &amp; info</string>
+    <string name="settings_section_danger">Zona berbahaya</string>
+    <string name="settings_wipe_data_btn">Hapus data darurat</string>
+    <string name="settings_section_demo">Mode demo</string>
+    <string name="settings_wipe_dialog_title">Hapus seluruh data CARAKA?</string>
+    <string name="settings_wipe_dialog_desc">Tindakan ini akan MENGHAPUS SEMUA DATA mesh, riwayat pesan, dan identitas Anda dari perangkat secara permanen. Lanjutkan?</string>
+    <string name="settings_wipe_now">WIPE SEKARANG</string>
+    <string name="settings_role_sheet_title">Pilih Role Jaringan</string>
+    <string name="settings_role_civilian_desc">Pengguna umum jaringan mesh</string>
+    <string name="settings_role_bpbd_desc">Badan Penanggulangan Bencana Daerah</string>
+    <string name="settings_role_polri_desc">Kepolisian Negara Republik Indonesia</string>
+    <string name="settings_role_pmi_desc">Palang Merah Indonesia</string>
+    <string name="settings_role_verify_required">(Perlu Verifikasi QR)</string>
+    <string name="settings_role_confirm_title">Konfirmasi Role</string>
+    <string name="settings_role_confirm_desc">Role ini memerlukan verifikasi identitas dari otoritas terkait. Lanjutkan?</string>
+    <string name="settings_continue">Lanjutkan</string>
+    <string name="settings_demo_warning">Fitur khusus demonstrasi — jangan aktifkan saat operasi nyata</string>
+    <string name="settings_toggle_enabled">Diaktifkan</string>
+    <string name="settings_toggle_disabled">Dinonaktifkan</string>
+
+    <!-- ───── Home Screen (additional) ───── -->
+    <string name="home_subtitle">Pusat komunikasi darurat</string>
+    <string name="home_section_quick_services">Layanan cepat</string>
+    <string name="home_view_all">Lihat semua</string>
+    <string name="home_no_alerts_title">Tidak ada alarm aktif</string>
+    <string name="home_no_alerts_subtitle">Jaringan akan menampilkan siaran darurat di sini.</string>
+    <string name="service_label_sos">SOS</string>
+    <string name="service_label_messages">Pesan</string>
+    <string name="service_label_network">Jaringan</string>
+    <string name="service_label_qr">Scan QR</string>
+    <string name="service_label_alerts">Alarm</string>
+    <string name="service_label_identity">Identitas</string>
+    <string name="service_label_help">Bantuan</string>
+    <string name="service_label_simulator">Simulator</string>
+    <string name="service_label_courier">Kurir</string>
+
+    <!-- ───── Help Screen (additional) ───── -->
+    <string name="help_tour_title">Tur Interaktif</string>
+    <string name="help_tour_subtitle">Putar ulang panduan 5 langkah</string>
+    <string name="help_tour_start">Mulai</string>
+
+    <!-- ───── QR Identity (additional) ───── -->
+    <string name="qr_scan_cancelled">Scan dibatalkan</string>
+    <string name="qr_scan_invalid">QR tidak valid — bukan identitas CARAKA</string>
+    <string name="qr_scan_peer_title">Pindai QR peer</string>
+    <string name="qr_scan_instructions">Pegang HP tetap tegak, lalu arahkan kamera sampai QR peer berada di dalam kotak.</string>
+    <string name="qr_hint_portrait">Mode tegak</string>
+    <string name="qr_hint_fill_box">Isi kotak</string>
+    <string name="qr_scan_prompt">Arahkan kamera ke QR identitas CARAKA</string>
+    <string name="qr_scan_now_btn">Scan QR sekarang</string>
+    <string name="qr_connected_toast">Terhubung dengan %1$s ✓</string>
+
+    <!-- ───── SOS Screen (additional) ───── -->
+    <string name="sos_select_emergency_title">Pilih jenis keadaan darurat</string>
+    <string name="sos_select_emergency_subtitle">Informasi ini membantu peer memprioritaskan respons.</string>
+    <string name="sos_access_denied">Akses Ditolak</string>
+    <string name="sos_searching">Mencari…</string>
+    <string name="sos_unknown_location">Lokasi\nTidak Diketahui</string>
+    <string name="sos_category_selected_cd">Terpilih</string>
+
+    <!-- ───── Messages Screen (additional) ───── -->
+    <string name="messages_subtitle">Percakapan terenkripsi di jaringan mesh</string>
+    <string name="messages_empty_network_title">Belum ada pesan di jaringan</string>
+    <string name="messages_empty_network_subtitle">Hubungkan ke peer di sekitar untuk mulai berkomunikasi</string>
+
+    <!-- ───── Connection Request Dialog ───── -->
+    <string name="connection_request_title">Permintaan Koneksi Masuk</string>
+    <string name="connection_request_question">Terima permintaan koneksi dari perangkat ini?</string>
+    <string name="connection_request_reject">TOLAK</string>
+    <string name="connection_request_accept">TERIMA</string>
+
+    <!-- ───── QR Capture Activity (View-based) ───── -->
+    <string name="qr_flash_on">Flash menyala</string>
+    <string name="qr_flash_off">Flash</string>
+    <string name="qr_flash_turn_off_cd">Matikan flash</string>
+    <string name="qr_flash_turn_on_cd">Nyalakan flash</string>
+
+    <!-- ───── Chat date separators ───── -->
+    <string name="chat_date_today">Hari ini</string>
+    <string name="chat_date_yesterday">Kemarin</string>
+
+    <!-- ───── Emergency alert card ───── -->
+    <string name="alert_unknown_sender">Tidak dikenal</string>
+    <string name="alert_minutes_ago">%1$d mnt</string>
+    <string name="alert_needs_help">Membutuhkan bantuan segera</string>
+    <string name="alert_cd_template">Alarm dari %1$s: %2$s</string>
+
+    <!-- ───── Peer list (legacy view) ───── -->
+    <string name="peer_list_empty">Belum ada peer terdeteksi</string>
+    <string name="peer_list_connect">HUBUNGKAN</string>
+    <string name="peer_list_pending">Menunggu…</string>
+    <string name="peer_status_found">Ditemukan</string>
+    <string name="peer_status_active">Aktif</string>
 </resources>

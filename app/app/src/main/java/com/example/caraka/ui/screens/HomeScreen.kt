@@ -123,7 +123,7 @@ fun HomeScreen(
                         Spacer(Modifier.width(10.dp))
                         CarakaTopBarTitle(
                             title = stringResource(R.string.app_name),
-                            subtitle = "Pusat komunikasi darurat"
+                            subtitle = stringResource(R.string.home_subtitle)
                         )
                     }
                 },
@@ -188,21 +188,21 @@ fun HomeScreen(
                 )
             }
 
-            item { SectionTitle("Layanan cepat") }
+            item { SectionTitle(stringResource(R.string.home_section_quick_services)) }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ServiceTile(Icons.Default.Warning, "SOS", MaterialTheme.colorScheme.error, { onNavigateToSos?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_sos)
-                        ServiceTile(Icons.AutoMirrored.Filled.Message, "Pesan", MaterialTheme.colorScheme.primary, { onNavigateToMessages?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_message)
-                        ServiceTile(Icons.Default.WifiTethering, "Jaringan", MaterialTheme.colorScheme.primary, { onNavigateToNetwork?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_network)
-                        ServiceTile(Icons.Default.QrCodeScanner, "Scan QR", MaterialTheme.colorScheme.primary, { onNavigateToQr?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_qr)
+                        ServiceTile(Icons.Default.Warning, stringResource(R.string.service_label_sos), MaterialTheme.colorScheme.error, { onNavigateToSos?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_sos)
+                        ServiceTile(Icons.AutoMirrored.Filled.Message, stringResource(R.string.service_label_messages), MaterialTheme.colorScheme.primary, { onNavigateToMessages?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_message)
+                        ServiceTile(Icons.Default.WifiTethering, stringResource(R.string.service_label_network), MaterialTheme.colorScheme.primary, { onNavigateToNetwork?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_network)
+                        ServiceTile(Icons.Default.QrCodeScanner, stringResource(R.string.service_label_qr), MaterialTheme.colorScheme.primary, { onNavigateToQr?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_qr)
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ServiceTile(Icons.Default.Notifications, "Alarm", MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_alarm)
-                        ServiceTile(Icons.Default.Shield, "Identitas", statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_identity)
-                        ServiceTile(Icons.Default.HelpOutline, "Bantuan", MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_help)
-                        ServiceTile(Icons.Default.DirectionsBike, "Kurir", MaterialTheme.colorScheme.secondary, { onNavigateToCourier?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
+                        ServiceTile(Icons.Default.Notifications, stringResource(R.string.service_label_alerts), MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_alarm)
+                        ServiceTile(Icons.Default.Shield, stringResource(R.string.service_label_identity), statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_identity)
+                        ServiceTile(Icons.Default.HelpOutline, stringResource(R.string.service_label_help), MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_help)
+                        ServiceTile(Icons.Default.DirectionsBike, stringResource(R.string.service_label_courier), MaterialTheme.colorScheme.secondary, { onNavigateToCourier?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
                     }
                 }
             }
@@ -212,7 +212,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SectionTitle("Alarm aktif", modifier = Modifier.weight(1f))
+                    SectionTitle(stringResource(R.string.home_active_alerts), modifier = Modifier.weight(1f))
                     if (activeAlerts.isNotEmpty()) {
                         Surface(
                             shape = MaterialTheme.shapes.small,
@@ -227,7 +227,7 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Lihat semua",
+                            stringResource(R.string.home_view_all),
                             modifier = Modifier.clickable { onNavigateToAlerts?.invoke() },
                             style = CarakaTextStyles.buttonLabel,
                             color = MaterialTheme.colorScheme.primary
@@ -257,9 +257,9 @@ fun HomeScreen(
                             }
                             Spacer(Modifier.size(12.dp))
                             Column {
-                                CarakaListTitle("Tidak ada alarm aktif")
+                                CarakaListTitle(stringResource(R.string.home_no_alerts_title))
                                 CarakaBody(
-                                    "Jaringan akan menampilkan siaran darurat di sini.",
+                                    stringResource(R.string.home_no_alerts_subtitle),
                                     muted = true
                                 )
                             }
