@@ -221,6 +221,8 @@ class MeshManager(
     override val relayedMessageCount: StateFlow<Int> get() = wifiDirectManager.relayedMessageCount
     override val batteryLevel: StateFlow<Int> get() = wifiDirectManager.batteryLevel
     override val incomingChatAlert: SharedFlow<ChatAlert> get() = wifiDirectManager.incomingChatAlert
+    override val peerDiscoverySession: StateFlow<PeerDiscoverySession>
+        get() = wifiDirectManager.peerDiscoverySession
     override val isAwareActive: StateFlow<Boolean>
         get() = wifiAwareManager?.isAwareAvailable ?: awareActiveFallback
     override val localTransportStatus: StateFlow<LocalTransportStatus> =
@@ -268,6 +270,7 @@ class MeshManager(
 
     override fun startFallbackDiscovery() = wifiDirectManager.startFallbackDiscovery()
     override fun discoverPeers() = wifiDirectManager.discoverPeers()
+    override fun startPeerDiscoverySession() = wifiDirectManager.startPeerDiscoverySession()
     override fun updateDeviceName(name: String) = wifiDirectManager.updateDeviceName(name)
     override fun connectToPeer(device: WifiP2pDevice) = wifiDirectManager.connectToPeer(device)
     override fun connectToWifiDeviceByMac(mac: String) = wifiDirectManager.connectToWifiDeviceByMac(mac)

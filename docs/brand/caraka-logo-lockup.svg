@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 132" role="img" aria-labelledby="title desc">
+  <title id="title">CARAKA logo lockup</title>
+  <desc id="desc">CARAKA network symbol paired with its uppercase wordmark.</desc>
+  <g transform="translate(4 4) scale(1.12)">
+    <g fill="none" stroke="#0B2145" stroke-linejoin="round">
+      <path d="M25 40C31 20 49 13 64 14C71 14 77 17 82 21" stroke-width="11"/>
+      <path d="M25 68C31 88 49 95 64 94C72 94 78 91 83 87" stroke-width="11"/>
+      <path d="M38 54H26M65 43L77 31M65 65L77 77" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="54" cy="54" r="15" stroke-width="5"/>
+    </g>
+    <g fill="#0B2145">
+      <circle cx="54" cy="54" r="8"/>
+      <circle cx="25" cy="54" r="8"/>
+      <circle cx="79" cy="31" r="8"/>
+      <circle cx="79" cy="77" r="8"/>
+    </g>
+  </g>
+  <text x="132" y="82" fill="#0B2145" font-family="Manrope, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="8">CARAKA</text>
+</svg>

@@ -49,3 +49,18 @@ val DisasterBlue = InfoBlue
 val OutgoingChat = TelegramBlueContainer
 val IncomingChat = SurfaceLow
 val TextMuted = TextSecondary
+
+// Discovery coverage waves and location marker.
+val DiscoveryRippleColor = Color(0xFF006FC8)
+val DiscoveryCoreGlowColor = Color(0xFF159FE2)
+val DiscoveryConnectedHaloColor = SuccessGreen
+
+const val DiscoveryRippleDurationMs = 5_400L
+const val DiscoveryRippleMinRadiusRatio = 0.09f
+const val DiscoveryRippleMaxRadiusRatio = 0.49f
+const val DiscoveryRippleMaxAlpha = 0.24f
+const val DiscoveryStaticHaloAlpha = 0.17f
+
+// Legacy aliases kept for any remaining references.
+val RadarCoreCyan = Color(0xFF65D5FA)
+val RadarBloomBlue = TelegramBlue

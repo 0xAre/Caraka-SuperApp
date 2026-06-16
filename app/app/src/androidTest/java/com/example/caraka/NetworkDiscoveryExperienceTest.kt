@@ -4,9 +4,11 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -30,8 +32,38 @@ class NetworkDiscoveryExperienceTest {
         setDiscoveryContent(NetworkDiscoveryPhase.Scanning)
 
         composeRule.onNodeWithTag("network_phase_Scanning").assertExists()
+        composeRule.onNodeWithTag("network_radar_searching").assertExists()
+        composeRule.onNodeWithTag("network_self_marker").assertExists()
+        composeRule.onNodeWithTag("network_scan_progress").assertExists()
         composeRule.onNodeWithTag("network_primary_action").assertIsNotEnabled()
         composeRule.onNodeWithTag("network_marker_disclaimer").assertExists()
+    }
+
+    @Test
+    fun scanningStatusAdvancesThroughDiscoveryStages() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var elapsedSeconds by mutableStateOf(0)
+        composeRule.setContent {
+            CarakaTheme {
+                PeerDiscoveryExperience(
+                    uiState = NetworkDiscoveryUiState(
+                        phase = NetworkDiscoveryPhase.Scanning,
+                        transportStatus = LocalTransportStatus(wifiDirectEnabled = true)
+                    ),
+                    elapsedSeconds = elapsedSeconds,
+                    onScanAgain = {},
+                    onRequestPermission = {},
+                    onOpenWifiSettings = {},
+                    onPeerClick = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.network_scan_stage_preparing)).assertExists()
+        composeRule.runOnIdle { elapsedSeconds = 5 }
+        composeRule.onNodeWithText(context.getString(R.string.network_scan_stage_sweeping)).assertExists()
+        composeRule.runOnIdle { elapsedSeconds = 12 }
+        composeRule.onNodeWithText(context.getString(R.string.network_scan_stage_waiting)).assertExists()
     }
 
     @Test
@@ -126,6 +158,7 @@ class NetworkDiscoveryExperienceTest {
 
         composeRule.runOnIdle { phase = NetworkDiscoveryPhase.NoPeers }
         composeRule.onNodeWithTag("network_phase_NoPeers").assertExists()
+        composeRule.onNodeWithTag("network_radar_static").assertExists()
         composeRule.onNodeWithTag("network_primary_action").assertIsEnabled()
     }
 

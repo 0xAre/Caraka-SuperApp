@@ -3,14 +3,10 @@
 package com.example.caraka.ui.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,9 +37,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -51,7 +49,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,12 +59,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -76,11 +75,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.caraka.R
 import com.example.caraka.network.LocalTransportStatus
+import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.CarakaTheme
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.LocalStatusColors
-import com.example.caraka.ui.theme.TelegramBlue
-import com.example.caraka.ui.theme.TelegramBlueStrong
 import com.example.caraka.viewmodel.MeshNodeUi
 import com.example.caraka.viewmodel.NetworkDiscoveryPhase
 import com.example.caraka.viewmodel.NetworkDiscoveryUiState
@@ -90,10 +88,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 private val DiscoverySheetPeekHeight = 184.dp
-private val RadarVerticalOffset = 0.dp
-private const val GojekCoveragePulseDurationMs = 7_200
-private const val RadarWaveCount = 3
-
 @Composable
 fun PeerDiscoveryExperience(
     uiState: NetworkDiscoveryUiState,
@@ -130,45 +124,87 @@ fun PeerDiscoveryExperience(
             )
         }
     ) { contentPadding ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding)
         ) {
-            StylizedDiscoveryMap(Modifier.fillMaxSize())
-            RadioRadarOverlay(
-                active = uiState.phase == NetworkDiscoveryPhase.Scanning ||
+            val focalOffsetY = (maxHeight * 0.02f).coerceIn(4.dp, 20.dp)
+            val radarDiameter = minOf(maxWidth, maxHeight) * 0.95f
+            val mapEmphasis = mapEmphasisFor(uiState.phase)
+
+            StylizedDiscoveryMap(
+                emphasis = mapEmphasis,
+                modifier = Modifier.fillMaxSize()
+            )
+            MapCenterVignette(
+                centerYOffset = focalOffsetY,
+                scanningActive = uiState.phase == NetworkDiscoveryPhase.Scanning ||
                     uiState.phase == NetworkDiscoveryPhase.Connecting,
+                modifier = Modifier.fillMaxSize()
+            )
+            RadioRadarOverlay(
+                phase = uiState.phase,
+                peerCount = uiState.peers.size,
+                diameter = radarDiameter,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .offset(y = RadarVerticalOffset)
+                    .offset(y = focalOffsetY)
             )
             PeerMarkerLayer(
                 peers = uiState.peers,
+                centerYOffset = focalOffsetY,
+                scanningActive = uiState.phase == NetworkDiscoveryPhase.Scanning ||
+                    uiState.phase == NetworkDiscoveryPhase.Connecting,
                 modifier = Modifier.fillMaxSize()
             )
+            val showTelemetry = uiState.phase != NetworkDiscoveryPhase.Scanning &&
+                uiState.phase != NetworkDiscoveryPhase.Connecting
+            if (showTelemetry) {
+                RadarTelemetryStrip(
+                    uiState = uiState,
+                    elapsedSeconds = elapsedSeconds,
+                    centerYOffset = focalOffsetY,
+                    radarDiameter = radarDiameter,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             DiscoveryStatusCard(
                 uiState = uiState,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(top = 12.dp)
             )
         }
     }
 }
 
-@Composable
-private fun StylizedDiscoveryMap(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        drawRect(Color(0xFFF4F6F3))
+private fun mapEmphasisFor(phase: NetworkDiscoveryPhase): Float = when (phase) {
+    NetworkDiscoveryPhase.Scanning,
+    NetworkDiscoveryPhase.Connecting -> 0.88f
+    NetworkDiscoveryPhase.Results,
+    NetworkDiscoveryPhase.Connected -> 1f
+    else -> 0.75f
+}
 
-        val road = Color.White
-        val roadEdge = Color(0xFFD5DEE3)
-        val minorRoad = Color(0xFFE4E9E7)
-        val river = Color(0xFFCDEAF3)
-        val greenArea = Color(0xFFD7EEDB)
-        val building = Color(0xFFE5E8E5)
-        val buildingEdge = Color(0xFFD8DEDA)
+private fun blendTowardMuted(color: Color, emphasis: Float): Color {
+    val muted = Color(0xFFE8ECF0)
+    return lerp(muted, color, emphasis)
+}
+
+@Composable
+private fun StylizedDiscoveryMap(emphasis: Float, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val baseCanvas = blendTowardMuted(Color(0xFFF4F6F3), emphasis)
+        drawRect(baseCanvas)
+
+        val road = blendTowardMuted(Color.White, emphasis)
+        val roadEdge = blendTowardMuted(Color(0xFFD5DEE3), emphasis)
+        val minorRoad = blendTowardMuted(Color(0xFFE4E9E7), emphasis)
+        val river = blendTowardMuted(Color(0xFFCDEAF3), emphasis)
+        val greenArea = blendTowardMuted(Color(0xFFD7EEDB), emphasis * 0.85f + 0.15f)
+        val building = blendTowardMuted(Color(0xFFE5E8E5), emphasis * 0.5f + 0.5f)
+        val buildingEdge = blendTowardMuted(Color(0xFFD8DEDA), emphasis * 0.5f + 0.5f)
 
         drawRoundRect(
             color = greenArea,
@@ -295,7 +331,7 @@ private fun StylizedDiscoveryMap(modifier: Modifier = Modifier) {
             drawPath(path, minorRoad, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
             drawPath(
                 path,
-                Color.White.copy(alpha = 0.82f),
+                Color.White.copy(alpha = 0.82f * emphasis),
                 style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
             )
         }
@@ -303,208 +339,190 @@ private fun StylizedDiscoveryMap(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RadioRadarOverlay(
-    active: Boolean,
+private fun MapCenterVignette(
+    centerYOffset: Dp,
+    scanningActive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    BoxWithConstraints(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        val diameter = minOf(maxWidth, maxHeight) * 0.82f
-        if (active) {
-            ActiveRadar(diameter)
-        } else {
-            StaticRadar(diameter)
-        }
-    }
-}
-
-@Composable
-private fun ActiveRadar(diameter: Dp) {
-    val transition = rememberInfiniteTransition(label = "network-radar")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(GojekCoveragePulseDurationMs, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar-progress"
-    )
-
-    RadarCanvas(
-        diameter = diameter,
-        progress = progress,
-        active = true,
-        pinLift = pinLiftFor(progress).dp
-    )
-}
-
-@Composable
-private fun StaticRadar(diameter: Dp) {
-    RadarCanvas(
-        diameter = diameter,
-        progress = 0.35f,
-        active = false,
-        pinLift = 0.dp
-    )
-}
-
-@Composable
-private fun RadarCanvas(
-    diameter: Dp,
-    progress: Float,
-    active: Boolean,
-    pinLift: Dp
-) {
-    Box(
-        modifier = Modifier.size(diameter),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val maxRadius = size.minDimension / 2f * 0.96f
-            drawRadarWaves(
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f + centerYOffset.toPx())
+        val radius = minOf(size.width, size.height) * 0.52f
+        val innerStop = if (scanningActive) 0.72f else 0.78f
+        val midAlpha = if (scanningActive) 0.10f else 0.12f
+        val outerAlpha = if (scanningActive) 0.18f else 0.22f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colorStops = arrayOf(
+                    0f to Color.Transparent,
+                    innerStop to Color.Transparent,
+                    0.82f to Color.White.copy(alpha = midAlpha),
+                    1f to Color.White.copy(alpha = outerAlpha)
+                ),
                 center = center,
-                maxRadius = maxRadius,
-                progress = progress,
-                active = active
-            )
-        }
-        PeerPinMarker(pinLift)
-    }
-}
-
-private fun DrawScope.drawRadarWaves(
-    center: Offset,
-    maxRadius: Float,
-    progress: Float,
-    active: Boolean
-) {
-    if (!active) {
-        drawCircle(
-            color = TelegramBlue.copy(alpha = 0.14f),
-            radius = maxRadius * 0.38f,
-            center = center
-        )
-        return
-    }
-
-    repeat(RadarWaveCount) { waveIndex ->
-        val phaseOffset = waveIndex.toFloat() / RadarWaveCount
-        val waveProgress = (progress + phaseOffset) % 1f
-        val easedProgress = ((1f - cos(PI * waveProgress)) / 2f).toFloat()
-        val visibility = sin(PI * waveProgress).toFloat()
-        val alpha = 0.34f * visibility * visibility
-        val radius = maxRadius * (0.01f + 0.99f * easedProgress)
-        val highlightCenter = center - Offset(radius * 0.2f, radius * 0.22f)
-
-        drawCircle(
-            brush = Brush.radialGradient(
-                0f to Color(0xFFA9EAFF).copy(alpha = alpha),
-                0.28f to Color(0xFF5CCAF1).copy(alpha = alpha * 0.98f),
-                0.62f to TelegramBlue.copy(alpha = alpha * 0.86f),
-                1f to TelegramBlueStrong.copy(alpha = alpha * 0.58f),
-                center = highlightCenter,
-                radius = radius * 1.18f
+                radius = radius
             ),
             radius = radius,
             center = center
         )
-        drawCircle(
-            brush = Brush.radialGradient(
-                0f to Color.White.copy(alpha = alpha * 0.24f),
-                0.5f to Color(0xFFBDEFFF).copy(alpha = alpha * 0.1f),
-                1f to Color.Transparent,
-                center = highlightCenter,
-                radius = radius * 0.54f
-            ),
-            radius = radius * 0.54f,
-            center = highlightCenter
-        )
-        drawCircle(
-            color = TelegramBlueStrong.copy(alpha = alpha * 0.3f),
-            radius = radius,
-            center = center,
-            style = Stroke(width = 1.dp.toPx())
-        )
     }
-}
-
-private fun pinLiftFor(progress: Float): Float {
-    val oceanSwell = (1f - cos(progress * 2f * PI).toFloat()) / 2f
-    return -2.8f * oceanSwell
 }
 
 @Composable
-private fun PeerPinMarker(pinLift: Dp) {
-    Image(
-        painter = painterResource(R.drawable.ill_peer_pin_blue),
-        contentDescription = stringResource(R.string.network_self_marker),
-        modifier = Modifier
-            .size(width = 30.dp, height = 45.dp)
-            .offset(y = (-19).dp + pinLift)
+private fun RadarTelemetryStrip(
+    uiState: NetworkDiscoveryUiState,
+    elapsedSeconds: Int,
+    centerYOffset: Dp,
+    radarDiameter: Dp,
+    modifier: Modifier = Modifier
+) {
+    val mediumLabel = telemetryMediumLabel(uiState.transportStatus)
+    val elapsedLabel = if (uiState.phase == NetworkDiscoveryPhase.Scanning) {
+        formatElapsed(elapsedSeconds)
+    } else {
+        "—"
+    }
+    val telemetry = stringResource(
+        R.string.network_telemetry_strip,
+        elapsedLabel,
+        mediumLabel,
+        uiState.peers.size
     )
+
+    Box(modifier = modifier) {
+        Text(
+            telemetry,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = centerYOffset + radarDiameter * 0.34f)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            style = CarakaTextStyles.monoData,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.88f)
+        )
+    }
+}
+
+@Composable
+private fun telemetryMediumLabel(status: LocalTransportStatus): String {
+    val labels = buildList {
+        if (status.nearbyAvailable) add(stringResource(R.string.network_transport_nearby))
+        if (status.wifiAwareAvailable) add(stringResource(R.string.network_transport_aware))
+        if (status.wifiDirectEnabled) add(stringResource(R.string.network_transport_wifi_direct))
+    }
+    return labels.firstOrNull()
+        ?: stringResource(R.string.network_transport_unavailable)
 }
 
 @Composable
 private fun PeerMarkerLayer(
     peers: List<MeshNodeUi>,
+    centerYOffset: Dp,
+    scanningActive: Boolean,
     modifier: Modifier = Modifier
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val surface = MaterialTheme.colorScheme.surface
     val outline = MaterialTheme.colorScheme.outline
     val authority = LocalStatusColors.current.authority
+    val visualizationDescription = stringResource(
+        R.string.network_peer_visualization,
+        peers.size
+    )
 
-    Canvas(
+    Box(
         modifier = modifier.semantics {
-            contentDescription = "Radio peer visualization, ${peers.size} peers"
+            contentDescription = visualizationDescription
         }
     ) {
-        val center = Offset(size.width / 2f, size.height / 2f + RadarVerticalOffset.toPx())
-        val baseRadius = minOf(size.width, size.height) * 0.28f
-
         peers.forEach { peer ->
-            val hash = peer.id.hashCode() and Int.MAX_VALUE
-            val angle = ((hash % 360) - 90) * PI / 180.0
-            val distance = baseRadius * (0.72f + ((hash / 360) % 24) / 100f)
-            val point = Offset(
-                center.x + cos(angle).toFloat() * distance,
-                center.y + sin(angle).toFloat() * distance
+            AnimatedPeerMarker(
+                peer = peer,
+                centerYOffset = centerYOffset,
+                scanningActive = scanningActive,
+                modifier = Modifier.fillMaxSize()
             )
-            val markerColor = when {
-                peer.isAuthority -> authority
-                peer.isConnected -> primary
-                else -> outline
-            }
+        }
+    }
+}
 
-            drawCircle(surface, 18.dp.toPx(), point)
-            if (peer.isConnected) {
-                drawCircle(
-                    markerColor.copy(alpha = 0.25f),
-                    16.dp.toPx(),
-                    point,
-                    style = Stroke(width = 4.dp.toPx())
-                )
+@Composable
+private fun AnimatedPeerMarker(
+    peer: MeshNodeUi,
+    centerYOffset: Dp,
+    scanningActive: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
+    val outline = MaterialTheme.colorScheme.outline
+    val authority = LocalStatusColors.current.authority
+    val entrance = remember(peer.id) { Animatable(0f) }
+    LaunchedEffect(peer.id) {
+        entrance.snapTo(0f)
+        entrance.animateTo(1f, tween(durationMillis = 420))
+    }
+    val scale = entrance.value
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f + centerYOffset.toPx())
+        val baseRadius = minOf(size.width, size.height) * 0.28f
+        val hash = peer.id.hashCode() and Int.MAX_VALUE
+        val angle = ((hash % 360) - 90) * PI / 180.0
+        val distance = baseRadius * (0.72f + ((hash / 360) % 24) / 100f)
+        val point = Offset(
+            center.x + cos(angle).toFloat() * distance,
+            center.y + sin(angle).toFloat() * distance
+        )
+        val markerColor = when {
+            peer.isAuthority -> authority
+            peer.isConnected -> primary
+            else -> outline
+        }
+
+        if (scanningActive) {
+            drawCircle(
+                color = markerColor.copy(alpha = 0.10f * scale),
+                radius = 22.dp.toPx() * scale,
+                center = point
+            )
+            drawCircle(
+                color = markerColor.copy(alpha = 0.16f * scale),
+                radius = 16.dp.toPx() * scale,
+                center = point,
+                style = Stroke(width = 2.dp.toPx())
+            )
+        }
+
+        val markerRadius = 18.dp.toPx() * scale
+        drawCircle(surface, markerRadius, point)
+        if (peer.isConnected) {
+            drawCircle(
+                markerColor.copy(alpha = 0.25f),
+                16.dp.toPx() * scale,
+                point,
+                style = Stroke(width = 4.dp.toPx())
+            )
+        }
+        if (peer.isAuthority) {
+            val half = 10.dp.toPx() * scale
+            val diamond = Path().apply {
+                moveTo(point.x, point.y - half)
+                lineTo(point.x + half, point.y)
+                lineTo(point.x, point.y + half)
+                lineTo(point.x - half, point.y)
+                close()
             }
-            if (peer.isAuthority) {
-                val half = 10.dp.toPx()
-                val diamond = Path().apply {
-                    moveTo(point.x, point.y - half)
-                    lineTo(point.x + half, point.y)
-                    lineTo(point.x, point.y + half)
-                    lineTo(point.x - half, point.y)
-                    close()
-                }
-                drawPath(diamond, markerColor)
-                drawCircle(Color.White, 2.5.dp.toPx(), point)
-            } else {
-                drawCircle(markerColor.copy(alpha = 0.18f), 14.dp.toPx(), point)
-                drawCircle(markerColor, 8.dp.toPx(), point)
-                drawCircle(Color.White, 2.5.dp.toPx(), point)
-            }
+            drawPath(diamond, markerColor)
+            drawCircle(
+                markerColor.copy(alpha = 0.35f),
+                12.dp.toPx() * scale,
+                point,
+                style = Stroke(width = 2.dp.toPx())
+            )
+            drawCircle(Color.White, 2.5.dp.toPx() * scale, point)
+        } else {
+            drawCircle(markerColor.copy(alpha = 0.18f), 14.dp.toPx() * scale, point)
+            drawCircle(markerColor, 8.dp.toPx() * scale, point)
+            drawCircle(Color.White, 2.5.dp.toPx() * scale, point)
         }
     }
 }
@@ -515,7 +533,6 @@ private fun DiscoveryStatusCard(
     modifier: Modifier = Modifier
 ) {
     val title = discoveryTitle(uiState)
-    val subtitle = discoverySubtitle(uiState.phase)
     val icon = when (uiState.phase) {
         NetworkDiscoveryPhase.PermissionRequired -> Icons.Default.Lock
         NetworkDiscoveryPhase.WifiDisabled -> Icons.Default.WifiOff
@@ -524,42 +541,42 @@ private fun DiscoveryStatusCard(
         NetworkDiscoveryPhase.Results -> Icons.Default.Hub
         else -> Icons.Default.NearMe
     }
+    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
 
     Surface(
         modifier = modifier
-            .fillMaxWidth()
+            .border(1.dp, borderColor, LocalCarakaShapes.current.lg)
             .testTag("network_phase_${uiState.phase.name}"),
         shape = LocalCarakaShapes.current.lg,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
-        shadowElevation = 3.dp
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+        shadowElevation = 2.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(23.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.width(8.dp))
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Text(
                     "${uiState.peers.size}",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -585,14 +602,26 @@ private fun PeerDiscoverySheet(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(R.drawable.ill_peer_pin_blue),
-                contentDescription = null,
-                modifier = Modifier.size(width = 34.dp, height = 48.dp)
-            )
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WifiTethering,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(9.dp)
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(discoveryTitle(uiState), style = MaterialTheme.typography.titleMedium)
+                Text(sheetTitle(uiState), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    discoverySubtitle(uiState, elapsedSeconds),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     sheetSupportingText(uiState.phase, elapsedSeconds),
                     style = MaterialTheme.typography.bodySmall,
@@ -653,6 +682,9 @@ private fun PrimaryDiscoveryAction(
         else -> Triple(R.string.network_scan_action, onScanAgain, true)
     }
 
+    val showProgress = phase == NetworkDiscoveryPhase.Scanning ||
+        phase == NetworkDiscoveryPhase.Connecting
+
     Button(
         onClick = action.second,
         enabled = action.third,
@@ -663,22 +695,38 @@ private fun PrimaryDiscoveryAction(
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.primary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            disabledContainerColor = if (showProgress) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+            disabledContentColor = if (showProgress) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     ) {
-        Icon(
-            when (phase) {
-                NetworkDiscoveryPhase.PermissionRequired -> Icons.Default.Lock
-                NetworkDiscoveryPhase.WifiDisabled -> Icons.Default.WifiOff
-                NetworkDiscoveryPhase.Scanning -> Icons.Default.Search
-                NetworkDiscoveryPhase.Connecting -> Icons.Default.Hub
-                NetworkDiscoveryPhase.Connected -> Icons.Default.CheckCircle
-                else -> Icons.Default.Refresh
-            },
-            contentDescription = null,
-            modifier = Modifier.size(17.dp)
-        )
+        if (showProgress) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(17.dp)
+                    .testTag("network_scan_progress"),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                when (phase) {
+                    NetworkDiscoveryPhase.PermissionRequired -> Icons.Default.Lock
+                    NetworkDiscoveryPhase.WifiDisabled -> Icons.Default.WifiOff
+                    NetworkDiscoveryPhase.Connected -> Icons.Default.CheckCircle
+                    else -> Icons.Default.Refresh
+                },
+                contentDescription = null,
+                modifier = Modifier.size(17.dp)
+            )
+        }
         Spacer(Modifier.width(6.dp))
         Text(stringResource(action.first), maxLines = 1)
     }
@@ -789,8 +837,32 @@ private fun discoveryTitle(uiState: NetworkDiscoveryUiState): String {
 }
 
 @Composable
-private fun discoverySubtitle(phase: NetworkDiscoveryPhase): String {
-    return when (phase) {
+private fun sheetTitle(uiState: NetworkDiscoveryUiState): String {
+    return when (uiState.phase) {
+        NetworkDiscoveryPhase.Scanning -> stringResource(R.string.network_searching_devices)
+        NetworkDiscoveryPhase.Connecting -> stringResource(R.string.network_sheet_connecting_title)
+        NetworkDiscoveryPhase.Results -> stringResource(R.string.network_sheet_results_title)
+        NetworkDiscoveryPhase.Connected -> stringResource(R.string.network_sheet_connected_title)
+        NetworkDiscoveryPhase.NoPeers -> stringResource(R.string.network_sheet_no_peers_title)
+        NetworkDiscoveryPhase.PermissionRequired ->
+            stringResource(R.string.network_sheet_permission_title)
+        NetworkDiscoveryPhase.WifiDisabled -> stringResource(R.string.network_sheet_wifi_title)
+        NetworkDiscoveryPhase.Failed -> stringResource(R.string.network_sheet_failed_title)
+        NetworkDiscoveryPhase.Idle -> stringResource(R.string.network_sheet_idle_title)
+    }
+}
+
+@Composable
+private fun discoverySubtitle(
+    uiState: NetworkDiscoveryUiState,
+    elapsedSeconds: Int
+): String {
+    return when (uiState.phase) {
+        NetworkDiscoveryPhase.Scanning -> when {
+            elapsedSeconds < 3 -> stringResource(R.string.network_scan_stage_preparing)
+            elapsedSeconds < 10 -> stringResource(R.string.network_scan_stage_sweeping)
+            else -> stringResource(R.string.network_scan_stage_waiting)
+        }
         NetworkDiscoveryPhase.PermissionRequired ->
             stringResource(R.string.network_permission_subtitle)
         NetworkDiscoveryPhase.WifiDisabled ->

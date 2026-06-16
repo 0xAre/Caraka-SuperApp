@@ -1,14 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
-  <title id="title">CARAKA mesh network logo</title>
-  <desc id="desc">An open C-shaped communication orbit connecting three mesh nodes to a central core.</desc>
-  <g fill="none" stroke="#229ED9" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M78 27C65 15 44 14 29 25C11 38 10 65 25 82C39 98 65 99 80 82" stroke-width="9"/>
-    <path d="M52 54L77 28M52 54L79 80M52 54L27 54" stroke-width="5"/>
+  <title id="title">CARAKA network logo</title>
+  <desc id="desc">A bold C-shaped orbit connected to three network nodes and a central communication core.</desc>
+  <g fill="none" stroke="#0B2145" stroke-linejoin="round">
+    <path d="M25 40C31 20 49 13 64 14C71 14 77 17 82 21" stroke-width="11"/>
+    <path d="M25 68C31 88 49 95 64 94C72 94 78 91 83 87" stroke-width="11"/>
+    <path d="M38 54H26M65 43L77 31M65 65L77 77" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="54" cy="54" r="15" stroke-width="5"/>
   </g>
-  <g fill="#229ED9">
-    <circle cx="52" cy="54" r="9"/>
-    <circle cx="78" cy="28" r="8"/>
-    <circle cx="80" cy="81" r="8"/>
-    <circle cx="27" cy="54" r="7"/>
+  <g fill="#0B2145">
+    <circle cx="54" cy="54" r="8"/>
+    <circle cx="25" cy="54" r="8"/>
+    <circle cx="79" cy="31" r="8"/>
+    <circle cx="79" cy="77" r="8"/>
   </g>
 </svg>

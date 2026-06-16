@@ -31,7 +31,8 @@ class NetworkDiscoveryUiStateTest {
                 mapNetworkDiscoveryPhase(
                     rawConnectionState = rawState,
                     hasPeers = rawState == "PEERS_FOUND",
-                    hasActiveMedium = rawState != "WIFI_P2P_DISABLED"
+                    hasActiveMedium = rawState != "WIFI_P2P_DISABLED",
+                    isDiscoverySessionActive = rawState == "DISCOVERING"
                 )
             )
         }
@@ -57,7 +58,7 @@ class NetworkDiscoveryUiStateTest {
                 rawConnectionState = "NO_PEERS",
                 hasPeers = false,
                 hasActiveMedium = true,
-                isScanPresentationActive = true
+                isDiscoverySessionActive = true
             )
         )
         assertEquals(
@@ -66,7 +67,7 @@ class NetworkDiscoveryUiStateTest {
                 rawConnectionState = "PEERS_FOUND",
                 hasPeers = true,
                 hasActiveMedium = true,
-                isScanPresentationActive = true
+                isDiscoverySessionActive = true
             )
         )
         assertEquals(
@@ -75,7 +76,7 @@ class NetworkDiscoveryUiStateTest {
                 rawConnectionState = "DISCOVERY_FAILED",
                 hasPeers = false,
                 hasActiveMedium = true,
-                isScanPresentationActive = true
+                isDiscoverySessionActive = true
             )
         )
     }
@@ -83,7 +84,6 @@ class NetworkDiscoveryUiStateTest {
     @Test
     fun scanCannotRestartDuringBusyOrActiveStates() {
         listOf(
-            "DISCOVERING",
             "CONNECTING",
             "CONNECTED",
             "CONNECTED_GO",
@@ -94,6 +94,7 @@ class NetworkDiscoveryUiStateTest {
         }
 
         assertTrue(canStartPeerScan("IDLE"))
+        assertTrue(canStartPeerScan("DISCOVERING"))
         assertTrue(canStartPeerScan("NO_PEERS"))
         assertTrue(canStartPeerScan("DISCOVERY_FAILED"))
     }

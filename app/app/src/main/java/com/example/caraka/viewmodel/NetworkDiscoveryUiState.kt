@@ -19,14 +19,16 @@ data class NetworkDiscoveryUiState(
     val peers: List<MeshNodeUi> = emptyList(),
     val rawConnectionState: String = "IDLE",
     val transportStatus: LocalTransportStatus = LocalTransportStatus(),
-    val scanStartedAtMillis: Long? = null
+    val scanStartedAtMillis: Long? = null,
+    val scanDeadlineMillis: Long? = null,
+    val scanAttemptCount: Int = 0
 )
 
 fun mapNetworkDiscoveryPhase(
     rawConnectionState: String,
     hasPeers: Boolean,
     hasActiveMedium: Boolean,
-    isScanPresentationActive: Boolean = false
+    isDiscoverySessionActive: Boolean = false
 ): NetworkDiscoveryPhase {
     return when {
         rawConnectionState == "PERMISSION_MISSING" -> NetworkDiscoveryPhase.PermissionRequired
@@ -40,8 +42,7 @@ fun mapNetworkDiscoveryPhase(
             rawConnectionState.startsWith("CONNECTION_REJECTED") ->
             NetworkDiscoveryPhase.Failed
         hasPeers || rawConnectionState == "PEERS_FOUND" -> NetworkDiscoveryPhase.Results
-        rawConnectionState == "DISCOVERING" || isScanPresentationActive ->
-            NetworkDiscoveryPhase.Scanning
+        isDiscoverySessionActive -> NetworkDiscoveryPhase.Scanning
         rawConnectionState == "NO_PEERS" || rawConnectionState == "DISCONNECTED" ->
             NetworkDiscoveryPhase.NoPeers
         else -> NetworkDiscoveryPhase.Idle
@@ -50,7 +51,6 @@ fun mapNetworkDiscoveryPhase(
 
 fun canStartPeerScan(rawConnectionState: String): Boolean {
     return rawConnectionState !in setOf(
-        "DISCOVERING",
         "CONNECTING",
         "CONNECTED",
         "CONNECTED_GO",

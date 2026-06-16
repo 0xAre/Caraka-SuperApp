@@ -68,6 +68,7 @@ class WifiDirectManager(
         private const val LAN_DISCOVERY_PORT = 8890
         private const val LAN_DISCOVERY_INTERVAL_MS = 3_000L
         private const val DISCOVERY_INTERVAL_MS = 6_000L
+        private const val DISCOVERY_SESSION_DURATION_MS = 15_000L
         private const val AUTO_CONNECT_COOLDOWN_MS = 20_000L
 
         // WiFi P2P DNS-SD Service Discovery constants
@@ -107,6 +108,7 @@ class WifiDirectManager(
 
     private var receiver: WifiDirectReceiver? = null
     private var scanJob: Job? = null
+    private var discoverySessionJob: Job? = null
     private var lanListenJob: Job? = null
     private var lanBroadcastJob: Job? = null
     private var autoConnectLoopJob: Job? = null  // NEW: periodic connection requests to all peers
@@ -131,6 +133,9 @@ class WifiDirectManager(
 
     private val _connectionState = MutableStateFlow("IDLE")
     override val connectionState: StateFlow<String> = _connectionState
+
+    private val _peerDiscoverySession = MutableStateFlow(PeerDiscoverySession())
+    override val peerDiscoverySession: StateFlow<PeerDiscoverySession> = _peerDiscoverySession
 
     override val localTransportStatus: StateFlow<LocalTransportStatus> =
         isWifiP2pEnabled
@@ -484,6 +489,8 @@ class WifiDirectManager(
         }
         receiver = null
         scanJob?.cancel(); scanJob = null
+        discoverySessionJob?.cancel(); discoverySessionJob = null
+        _peerDiscoverySession.value = _peerDiscoverySession.value.copy(active = false)
         lanBroadcastJob?.cancel(); lanBroadcastJob = null
         lanListenJob?.cancel(); lanListenJob = null
         autoConnectLoopJob?.cancel(); autoConnectLoopJob = null
@@ -594,6 +601,7 @@ class WifiDirectManager(
                     if (reasonCode == WifiP2pManager.BUSY) {
                         scheduleDiscoveryRetry()
                     } else {
+                        finishDiscoverySession()
                         _connectionState.value = "DISCOVERY_FAILED"
                     }
                     requestCurrentPeers()
@@ -602,8 +610,37 @@ class WifiDirectManager(
         } catch (e: SecurityException) {
             Log.e(TAG, "Missing permission for WiFi Direct discovery", e)
             discoveryInFlight = false
+            finishDiscoverySession()
             _connectionState.value = "PERMISSION_MISSING"
         }
+    }
+
+    override fun startPeerDiscoverySession() {
+        if (_connectionState.value in busyStates || _peerDiscoverySession.value.active) return
+        beginDiscoverySession()
+        if (!discoveryInFlight) discoverPeers()
+    }
+
+    private fun beginDiscoverySession() {
+        val now = System.currentTimeMillis()
+        _peerDiscoverySession.value = _peerDiscoverySession.value.begin(
+            nowMillis = now,
+            durationMillis = DISCOVERY_SESSION_DURATION_MS
+        )
+        discoverySessionJob?.cancel()
+        discoverySessionJob = scope.launch {
+            delay(DISCOVERY_SESSION_DURATION_MS)
+            if (!_peerDiscoverySession.value.active) return@launch
+            finishDiscoverySession()
+            if (_connectionState.value !in busyStates && _availablePeers.value.isEmpty()) {
+                _connectionState.value = "NO_PEERS"
+            }
+        }
+    }
+
+    private fun finishDiscoverySession() {
+        discoverySessionJob?.cancel()
+        _peerDiscoverySession.value = _peerDiscoverySession.value.finish()
     }
 
     private fun scheduleDiscoveryRetry() {
@@ -652,6 +689,7 @@ class WifiDirectManager(
     @SuppressLint("MissingPermission")
     override fun connectToPeer(device: WifiP2pDevice) {
         if (connectInFlight) return
+        finishDiscoverySession()
         connectInFlight = true
         _connectionState.value = "CONNECTING"
         pendingWifiDirectMac = device.deviceAddress
@@ -830,6 +868,7 @@ class WifiDirectManager(
             scope.launch { delay(1_200L); if (!serviceDiscoveryRegistered) discoverPeers() }
         } else {
             _availablePeers.value = emptyList()
+            finishDiscoverySession()
             _connectionState.value = "WIFI_P2P_DISABLED"
             serviceDiscoveryRegistered = false
         }
@@ -859,6 +898,7 @@ class WifiDirectManager(
         if (prevState !in busyStates) {
             _connectionState.value = if (peers.isEmpty()) "NO_PEERS" else "PEERS_FOUND"
         }
+        if (peers.isNotEmpty()) finishDiscoverySession()
 
         Log.d(TAG, "Peers available: ${peers.size} — ${peers.map { it.deviceName }}")
 

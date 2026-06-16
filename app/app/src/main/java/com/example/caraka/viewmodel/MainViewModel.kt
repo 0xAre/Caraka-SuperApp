@@ -12,8 +12,6 @@ import com.example.caraka.network.ConnectivityMonitor
 import com.example.caraka.network.ConnectivityStatus
 import com.example.caraka.network.MeshTransport
 import com.example.caraka.repository.MeshRepository
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,10 +73,6 @@ class MainViewModel(
     val connectionState: StateFlow<String> = transport.connectionState
     val localTransportStatus = transport.localTransportStatus
 
-    private val _scanStartedAtMillis = MutableStateFlow<Long?>(null)
-    private val _scanPresentationActive = MutableStateFlow(false)
-    private var scanPresentationJob: Job? = null
-
     // NEW: Connection request dialog state
     private val _incomingConnectionRequest = MutableStateFlow<String?>(null)
     val incomingConnectionRequest: StateFlow<String?> = _incomingConnectionRequest
@@ -126,20 +120,21 @@ class MainViewModel(
         meshNodes,
         connectionState,
         localTransportStatus,
-        _scanStartedAtMillis,
-        _scanPresentationActive
-    ) { nodes, rawState, transportStatus, scanStartedAt, scanPresentationActive ->
+        transport.peerDiscoverySession
+    ) { nodes, rawState, transportStatus, discoverySession ->
         NetworkDiscoveryUiState(
             phase = mapNetworkDiscoveryPhase(
                 rawConnectionState = rawState,
                 hasPeers = nodes.isNotEmpty(),
                 hasActiveMedium = transportStatus.hasActiveMedium,
-                isScanPresentationActive = scanPresentationActive
+                isDiscoverySessionActive = discoverySession.active
             ),
             peers = nodes,
             rawConnectionState = rawState,
             transportStatus = transportStatus,
-            scanStartedAtMillis = scanStartedAt
+            scanStartedAtMillis = discoverySession.startedAtMillis,
+            scanDeadlineMillis = discoverySession.deadlineMillis,
+            scanAttemptCount = discoverySession.attemptCount
         )
     }.stateIn(
         viewModelScope,
@@ -267,14 +262,7 @@ class MainViewModel(
 
     fun startPeerScan() {
         if (!canStartPeerScan(connectionState.value)) return
-        _scanStartedAtMillis.value = System.currentTimeMillis()
-        _scanPresentationActive.value = true
-        scanPresentationJob?.cancel()
-        scanPresentationJob = viewModelScope.launch {
-            delay(MinimumScanPresentationMs)
-            _scanPresentationActive.value = false
-        }
-        transport.discoverPeers()
+        transport.startPeerDiscoverySession()
     }
 
     fun discoverPeers() = startPeerScan()
@@ -427,8 +415,6 @@ class MainViewModel(
         connectivityMonitor.cleanup()
     }
 }
-
-private const val MinimumScanPresentationMs = 15_000L
 
 class MainViewModelFactory(
     private val repository: MeshRepository,

@@ -30,6 +30,7 @@ interface MeshTransport {
     /** true when a Wi-Fi Aware (NAN) data path is the active primary transport. */
     val isAwareActive: StateFlow<Boolean>
     val localTransportStatus: StateFlow<LocalTransportStatus>
+    val peerDiscoverySession: StateFlow<PeerDiscoverySession>
 
     // ========== LIFECYCLE / DISCOVERY ==========
 
@@ -37,6 +38,7 @@ interface MeshTransport {
     fun stopListening()
     fun startFallbackDiscovery()
     fun discoverPeers()
+    fun startPeerDiscoverySession()
     fun updateDeviceName(name: String)
 
     // ========== CONNECTION ACTIONS ==========

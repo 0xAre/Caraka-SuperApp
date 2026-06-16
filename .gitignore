@@ -38,3 +38,7 @@ prompt*.md
 research_prompt.md
 CARAKA_BIGPLAN_V2.md
 docs/RENCANA_IMPLEMENTASI_13JUNI.md
+
+# Local review artifacts & recordings (too large / ephemeral for git)
+tmp/
+screenshots/
