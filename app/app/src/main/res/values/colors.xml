@@ -16,5 +16,7 @@
     <color name="caraka_qr_scanner_text">#FFFFFFFF</color>
     <color name="caraka_qr_scanner_text_muted">#D9E5F4FB</color>
     <color name="caraka_primary_blue">#229ED9</color>
+    <color name="caraka_splash_background">#E5F4FB</color>
+    <color name="caraka_logo_splash">#087DB5</color>
     <color name="caraka_logo_adaptive">#000000</color>
 </resources>
