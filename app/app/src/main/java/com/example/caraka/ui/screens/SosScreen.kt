@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.annotation.DrawableRes
 import com.example.caraka.R
+import com.example.caraka.network.MeshPolicy
 import com.example.caraka.ui.components.HoldToConfirmButton
 import com.example.caraka.ui.components.LocalSnackbar
 import com.example.caraka.ui.theme.*
@@ -353,13 +354,23 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                 }
                 BasicTextField(
                     value = description,
-                    onValueChange = { if (!sosSent) description = it },
+                    onValueChange = { if (!sosSent && it.length <= MeshPolicy.CARRY_BODY_MAX_CHARS) description = it },
                     textStyle = CarakaTextStyles.bodyDefault.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     enabled = !sosSent,
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            // Carry-cap counter: a short SOS stays small enough to be CARRIED far across the mesh
+            // (store-carry-forward), not just flooded once — so keep it concise.
+            Text(
+                text = "${description.length}/${MeshPolicy.CARRY_BODY_MAX_CHARS}",
+                style = CarakaTextStyles.statusSecondary,
+                color = if (description.length >= MeshPolicy.CARRY_BODY_MAX_CHARS)
+                    MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 

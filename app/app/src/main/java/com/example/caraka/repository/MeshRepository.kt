@@ -14,6 +14,7 @@ import com.example.caraka.network.MeshProtocol
 import com.example.caraka.network.MeshTransport
 import com.example.caraka.ui.util.SosAlertText
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
 import java.util.UUID
 
 /**
@@ -30,6 +31,9 @@ class MeshRepository(
 ) {
 
     var transport: MeshTransport? = null
+
+    /** Guards [flushCarry] so the FGS timer and peer-appear triggers never re-broadcast in parallel. */
+    private val carryFlushMutex = Mutex()
 
     // ========== PEER MANAGEMENT ==========
 
@@ -211,6 +215,77 @@ class MeshRepository(
         }
     }
 
+    /**
+     * Enqueue a message into the store-carry-forward store (Phase 2 / D7 aggressive carry). The
+     * bundle is re-broadcast to the mesh whenever a new contact appears (and on the periodic sweep)
+     * until its hop TTL / age expire or the storage quota evicts it. This is what lets a message
+     * reach a destination tens of km away by riding moving carriers — not just a continuous live
+     * relay chain that almost never exists in a partitioned disaster network.
+     *
+     * Bounded per the user's decision (aggressive but cheap): a hard PAYLOAD SIZE CAP keeps bundles
+     * small, the existing outbox quota caps total storage, and EMERGENCY (SOS) is evicted last.
+     * Idempotent: re-carrying an id we already track (unicast outbox OR an existing carry) is a no-op,
+     * and a bundle with no hop budget left (ttl ≤ 1) is not carried.
+     */
+    suspend fun carryBundle(protocol: MeshProtocol) {
+        if (protocol.ttl <= 1) return
+        val payloadJson = protocol.toJson()
+        if (payloadJson.toByteArray(Charsets.UTF_8).size > MeshPolicy.MAX_CARRY_PAYLOAD_BYTES) return
+        if (outboxDao.getById(protocol.id) != null) return
+        val now = System.currentTimeMillis()
+        outboxDao.upsert(
+            OutboxEntity(
+                id = protocol.id,
+                recipientId = protocol.recipientId,
+                payloadJson = payloadJson,
+                state = "CARRY",
+                priority = protocol.priority,
+                attemptCount = 0,
+                nextAttemptAt = now,            // eligible on the very next flush
+                createdAt = now,
+                ttlExpiry = now + MeshPolicy.MESSAGE_MAX_AGE_MS
+            )
+        )
+        enforceOutboxQuota()
+    }
+
+    /**
+     * Re-broadcast carried bundles that are due (Phase 2 / D10). Driven by peer-appearance (a new
+     * contact = a fresh chance to spread) and the periodic queue-processor. Each bundle is rate-limited
+     * via nextAttemptAt and goes dormant after [MeshPolicy.MAX_CARRY_REBROADCASTS] re-floods; expired
+     * bundles are evicted first. No ACK and no delete-on-send — carry is epidemic and best-effort,
+     * bounded only by hop TTL, age, and quota. Receiver-side dedup makes the redundant floods cheap.
+     */
+    suspend fun flushCarry() {
+        // A flush in progress already covers this tick — skip rather than double-broadcast (the FGS
+        // timer and peer-appear triggers can fire concurrently).
+        if (!carryFlushMutex.tryLock()) return
+        try {
+            val now = System.currentTimeMillis()
+            outboxDao.deleteExpired(now)
+            val due = outboxDao.getDueCarry(now, MeshPolicy.CARRY_BATCH_LIMIT)
+            if (due.isEmpty()) return
+            // D12: re-broadcast LESS often in dense clusters (message likely already spread), and stay
+            // at the aggressive base cadence at partition edges where carry is the only way forward.
+            val density = transport?.activeNeighborCount ?: 0
+            val densityFactor = 1.0 + density.toDouble() / MeshPolicy.CARRY_DENSITY_REF
+            val interval = (MeshPolicy.CARRY_REBROADCAST_INTERVAL_MS * densityFactor).toLong()
+            for (bundle in due) {
+                transport?.sendMessage(bundle.payloadJson)
+                val attempts = bundle.attemptCount + 1
+                val next = if (attempts >= MeshPolicy.MAX_CARRY_REBROADCASTS) {
+                    bundle.ttlExpiry // dormant until age/quota cleanup
+                } else {
+                    val jitter = (Math.random() * MeshPolicy.RETRY_JITTER_MS).toLong()
+                    now + interval + jitter
+                }
+                outboxDao.updateAttempt(bundle.id, "CARRY", attempts, next)
+            }
+        } finally {
+            carryFlushMutex.unlock()
+        }
+    }
+
     fun getMessagesByPeer(peerId: String): Flow<List<MessageEntity>> {
         return messageDao.getMessagesByPeer(peerId)
     }
@@ -236,6 +311,10 @@ class MeshRepository(
         val myId = identityManager.getPeerId()
         val myName = identityManager.getDisplayName()
         val myRole = identityManager.getRole()
+        // Sign the flagged message id so relays/recipients can verify the FLAG is authentic before
+        // honouring it. An unsigned/forged FLAG must never be able to suppress content — otherwise a
+        // forged-flag DoS against SOS/authority messages (flagCount ≥ 3 → "tidak akurat") is trivial.
+        val flagSignature = cryptoManager.signMessage(messageId, identityManager.getSigningKeyPair().secretKey)
 
         val flagPacket = com.example.caraka.network.MeshProtocol(
             type = "FLAG",
@@ -246,8 +325,9 @@ class MeshRepository(
             recipientId = "BROADCAST",
             content = messageId, // the flagged message's ID
             timestamp = System.currentTimeMillis(),
-            ttl = 5,
-            priority = "NORMAL"
+            ttl = MeshPolicy.TTL_FLAG,
+            priority = "NORMAL",
+            signature = flagSignature
         )
         transport?.sendMessage(flagPacket.toJson())
     }
@@ -300,7 +380,7 @@ class MeshRepository(
             content = content, // Store plaintext locally so UI can show it
             encryptedPayload = encryptedPayload,
             timestamp = timestamp,
-            ttl = 5,
+            ttl = MeshPolicy.TTL_TEXT,
             priority = "NORMAL",
             signature = signature,
             sosCategory = null,
@@ -322,7 +402,7 @@ class MeshRepository(
             content = "", // Clear plaintext for network transmission
             encryptedPayload = encryptedPayload,
             timestamp = timestamp,
-            ttl = 5,
+            ttl = MeshPolicy.TTL_TEXT,
             priority = "NORMAL",
             signature = signature
         )
@@ -381,7 +461,7 @@ class MeshRepository(
             content = fullContent,
             encryptedPayload = null,
             timestamp = timestamp,
-            ttl = 10, // Higher TTL for SOS
+            ttl = MeshPolicy.TTL_SOS, // Highest hop budget — life-safety broadcast
             priority = "EMERGENCY",
             signature = signature,
             sosCategory = category,
@@ -403,7 +483,7 @@ class MeshRepository(
             content = fullContent,
             encryptedPayload = null,
             timestamp = timestamp,
-            ttl = 10,
+            ttl = MeshPolicy.TTL_SOS,
             priority = "EMERGENCY",
             signature = signature,
             sosCategory = category,
@@ -411,5 +491,9 @@ class MeshRepository(
             longitude = lng
         )
         transport?.sendMessage(protocol.toJson())
+        // C5 fix: SOS is no longer fire-and-forget. Carry it so it keeps spreading to peers we meet
+        // later — the origin re-broadcasts until TTL/age expire, turning a momentary broadcast into a
+        // delay-tolerant epidemic that can cross partitions and long distances via moving carriers.
+        carryBundle(protocol)
     }
 }

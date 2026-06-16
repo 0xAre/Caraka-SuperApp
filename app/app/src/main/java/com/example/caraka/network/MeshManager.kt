@@ -12,7 +12,10 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -74,6 +77,13 @@ class MeshManager(
     // ── Nearby Connections layer (null when no Play Services) ─────────────────────────────────────
     private var nearby: NearbyTransport? = null
 
+    // ── Emergency LocalOnlyHotspot layer (universal multi-peer enabler, Phase 3) ──────────────────
+    private val localHotspotManager = LocalHotspotManager(
+        context = context,
+        broadcast = { json -> wifiDirectManager.sendMessage(json) }
+    )
+    private var hotspotOfferJob: Job? = null
+
     /** neighbour peerId -> connId (for next-hop unicast) and the reverse, learned on HANDSHAKE. */
     private val peerToConnId = ConcurrentHashMap<String, String>()
     private val connIdToPeer = ConcurrentHashMap<String, String>()
@@ -83,6 +93,10 @@ class MeshManager(
     init {
         if (awareSupported) setupAwareLayer()
         if (nearbySupported) setupNearbyLayer()
+        // Inbound HOTSPOT_OFFER from a neighbour → let the hotspot layer decide whether to auto-join.
+        wifiDirectManager.setHotspotOfferSink { ssid, pass, fromId ->
+            localHotspotManager.onOfferReceived(ssid, pass, fromId)
+        }
         Log.d(TAG, "Transports — aware=$awareSupported nearby=$nearbySupported (WiFiDirect/LAN always on)")
     }
 
@@ -220,6 +234,7 @@ class MeshManager(
     override val connectionState: StateFlow<String> get() = wifiDirectManager.connectionState
     override val relayedMessageCount: StateFlow<Int> get() = wifiDirectManager.relayedMessageCount
     override val batteryLevel: StateFlow<Int> get() = wifiDirectManager.batteryLevel
+    override val activeNeighborCount: Int get() = wifiDirectManager.activeNeighborCount
     override val incomingChatAlert: SharedFlow<ChatAlert> get() = wifiDirectManager.incomingChatAlert
     override val peerDiscoverySession: StateFlow<PeerDiscoverySession>
         get() = wifiDirectManager.peerDiscoverySession
@@ -264,6 +279,8 @@ class MeshManager(
         awareSocketManager?.stopAll()
         meshRouter?.stop()
         nearby?.stop()
+        hotspotOfferJob?.cancel(); hotspotOfferJob = null
+        localHotspotManager.stop()
         peerToConnId.clear()
         connIdToPeer.clear()
     }
@@ -282,4 +299,38 @@ class MeshManager(
 
     override fun sendMessage(json: String) = wifiDirectManager.sendMessage(json)
     override fun sendToPeer(peerId: String, json: String) = wifiDirectManager.sendToPeer(peerId, json)
+
+    /**
+     * Inject [CourierManager] ke WifiDirectManager setelah semua dependency siap.
+     * Dipanggil dari CarakaApp.onCreate() setelah kurirManager diinisialisasi.
+     * Tanpa ini, COURIER_* messages akan jatuh ke "Unknown type" log dan diabaikan.
+     */
+    fun setCourierManager(courierManager: CourierManager) {
+        wifiDirectManager.courierManager = courierManager
+        Log.d(TAG, "CourierManager injected into WifiDirectManager ✓")
+    }
+
+    // ========== EMERGENCY HOTSPOT (Phase 3 — universal multi-peer) ==========
+
+    override val hotspot: StateFlow<HotspotUiState> get() = localHotspotManager.state
+
+    override fun startEmergencyHotspot() {
+        localHotspotManager.startHosting()
+        // While hosting, keep gossiping the credentials so neighbours can discover and converge.
+        hotspotOfferJob?.cancel()
+        hotspotOfferJob = scope.launch {
+            val pid = identityManager.getPeerId()
+            val name = identityManager.getDisplayName()
+            val role = identityManager.getRole()
+            while (isActive) {
+                localHotspotManager.broadcastOfferIfHosting(pid, name, role)
+                delay(5_000L)
+            }
+        }
+    }
+
+    override fun stopEmergencyHotspot() {
+        hotspotOfferJob?.cancel(); hotspotOfferJob = null
+        localHotspotManager.stopHosting()
+    }
 }

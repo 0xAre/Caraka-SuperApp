@@ -27,6 +27,21 @@ interface OutboxDao {
     @Query("SELECT * FROM outbox WHERE recipientId = :recipientId AND state IN ('QUEUED','SENT')")
     suspend fun getPendingForPeer(recipientId: String): List<OutboxEntity>
 
+    /**
+     * Store-carry-forward bundles due for a re-broadcast at or before [now], EMERGENCY first so SOS
+     * spreads with priority. A SEPARATE lane from the unicast retry queries above (state = 'CARRY'),
+     * so carry never interferes with ACK-driven unicast delivery.
+     */
+    @Query(
+        """
+        SELECT * FROM outbox WHERE state = 'CARRY' AND nextAttemptAt <= :now
+        ORDER BY CASE priority WHEN 'EMERGENCY' THEN 3 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 1 ELSE 0 END DESC,
+          createdAt ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun getDueCarry(now: Long, limit: Int): List<OutboxEntity>
+
     @Query("UPDATE outbox SET state = :state WHERE id = :id")
     suspend fun updateState(id: String, state: String)
 

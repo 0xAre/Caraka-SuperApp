@@ -120,6 +120,9 @@ class MeshForegroundService : Service() {
                 delay(MeshPolicy.QUEUE_PROCESSOR_TICK_MS)
                 try {
                     repository.retryDueMessages()
+                    // Phase 2: re-broadcast due store-carry-forward bundles (SOS/broadcast/transit)
+                    // so carried messages keep spreading to new contacts across partitions.
+                    repository.flushCarry()
                 } catch (e: Exception) {
                     Log.e(TAG, "Queue-processor tick gagal", e)
                 }

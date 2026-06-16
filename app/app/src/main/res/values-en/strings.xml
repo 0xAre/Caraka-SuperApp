@@ -379,4 +379,12 @@
     <string name="network_failed_subtitle">Local radio failed to start or the connection was rejected</string>
     <string name="network_failed_guidance">Check permissions and Wi-Fi, move the devices closer, then scan again.</string>
     <string name="network_tap_peer_hint">Tap a peer to view details and connect.</string>
+
+    <!-- Emergency hotspot (Phase 3 — universal multi-peer) -->
+    <string name="hotspot_title">Emergency Hotspot</string>
+    <string name="hotspot_subtitle">Bring many devices onto one local network with no internet or router.</string>
+    <string name="hotspot_ssid">SSID: %1$s</string>
+    <string name="hotspot_pass">Password: %1$s</string>
+    <string name="hotspot_start">Create Emergency Hotspot</string>
+    <string name="hotspot_stop">Stop Hotspot</string>
 </resources>

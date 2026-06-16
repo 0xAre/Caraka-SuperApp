@@ -1,0 +1,538 @@
+# Caraka Courier Mode — Implementation Plan
+
+> **Fitur**: Kurir fisik manusia sebagai pembawa pesan terenkripsi (the *real* Caraka)  
+> **Scope**: Ekstensi fitur CARAKA v1 — tidak memerlukan project baru  
+> **Fondasi yang dipakai**: DTN outbox, X25519+XSalsa20-Poly1305 E2E, Ed25519 signing, Room/SQLCipher
+
+---
+
+## Ringkasan Konsep
+
+```
+A ──[enkripsi untuk Z]──► titip ke B ──[B jalan ke X km]──► temu Z ──[transfer]──► Z decrypt
+
+  A: tahu siapa Z (atau tidak, di mode stealth)
+  B: kurir buta — membawa ciphertext, tidak tahu isinya
+  Z: hanya perlu tahu cara klaim (kunci / token)
+```
+
+Ini bukan sekedar relay otomatis seperti DTN yang sudah ada. Ini adalah **aksi sadar**: B secara eksplisit menerima peran kurir dan membawa bundle khusus yang hanya bisa diklaim oleh Z yang sah.
+
+---
+
+## Dua Mode Operasi
+
+### Mode 1 — Directed Courier (A Kenal Z)
+
+A sudah memiliki kunci publik Z (dari QR exchange sebelumnya).
+
+### Mode 2 — Stealth / Blind Drop (A Tidak Kenal Z, B Tidak Kenal Siapapun)
+
+A dan Z hanya perlu berbagi satu *rendezvous token* secara out-of-band. B tidak tahu siapa A maupun Z.
+
+---
+
+## Analisis: Apakah A Harus Kenal Z Lebih Dulu?
+
+| Skenario | Jawaban | Mekanisme |
+|---|---|---|
+| A dan Z sudah QR-exchange | **Ya, lebih mudah** | A enkripsi langsung dengan public key Z |
+| A dan Z belum pernah bertemu | **Tidak harus** | Pakai *Blind Drop* dengan ephemeral key + rendezvous token |
+| Z sama sekali anonim untuk A dan B | **Bisa** | Mode Stealth penuh — hanya token yang menjadi kunci |
+
+---
+
+## Protokol Kriptografi
+
+### Mode 1 — Directed Courier Protocol
+
+```
+Aktor:  A (pengirim), B (kurir), Z (penerima)
+Pre-kondisi: A memiliki Z_enc_pub (dari QR exchange sebelumnya)
+
+1. A menyusun pesan M
+2. A mengenkripsi:
+     nonce ← random(24 bytes)
+     C = crypto_box(M, nonce, Z_enc_pub, A_enc_sk)   ← hanya Z yang bisa buka
+3. A membuat COURIER_BUNDLE:
+     {
+       bundleId   : UUID,
+       type       : "DIRECTED",
+       targetId   : Z.peerId,          ← siapa yang berhak klaim
+       encPayload : base64(C),
+       senderPub  : A_enc_pub,         ← Z perlu ini untuk decrypt
+       nonce      : base64(nonce),
+       signature  : sign(bundleId, A_sign_sk),   ← autentikasi A
+       expiry     : timestamp + 72h
+     }
+4. A mentransfer COURIER_BUNDLE ke B via mesh/QR/direct TCP
+5. B menyimpan bundle di tabel courier_bundle (state=CARRYING, targetId=Z.peerId)
+6. B jalan ke lokasi Z...
+7. Saat B dalam jangkauan Z (HANDSHAKE terjadi):
+     - B cek: apakah Z.peerId == bundle.targetId?
+     - Jika ya → kirim COURIER_DELIVER ke Z
+8. Z menerima COURIER_DELIVER:
+     - Verifikasi signature A (jika A dikenal)
+     - Dekripsi: crypto_box_open(C, nonce, A_enc_pub, Z_enc_sk)
+     - Tampilkan pesan plaintext
+     - Kirim COURIER_ACK ke B
+9. B menandai bundle sebagai DELIVERED → hapus dari storage
+```
+
+**Properti keamanan Mode 1:**
+- ✅ B tidak bisa membaca isi (X25519 DH hanya bisa dibuka oleh Z_enc_sk)
+- ✅ B tidak bisa memalsukan pesan (signature A_sign_sk diverifikasi oleh Z)
+- ✅ Bundle tidak bisa diklaim oleh selain Z (targetId + crypto)
+- ✅ Replay attack dicegah oleh bundleId dedup + expiry
+
+---
+
+### Mode 2 — Stealth / Blind Drop Protocol
+
+```
+Aktor:  A (pengirim), B (kurir buta), Z (penerima anonim)
+Pre-kondisi: A dan Z telah sepakat satu "Rendezvous Token" RT secara out-of-band
+             (bisa via kode verbal, kertas, atau pesan CARAKA terpisah sebelumnya)
+
+== SETUP (A lakukan ini) ==
+
+1. A generate ephemeral key pair:
+     EPK_priv, EPK_pub ← X25519_keygen()
+
+2. A derive claim token:
+     RT_claim = BLAKE2b(EPK_pub || nonce_rahasia)   ← 16 bytes, hex 32 char
+     [A membagi RT_claim dan nonce_rahasia ke Z secara out-of-band]
+
+3. A enkripsi pesan M dengan secretbox (simetris, pakai EPK_priv sebagai seed):
+     sym_key = KDF(EPK_priv)                        ← BLAKE2b-256 dari private key
+     C = crypto_secretbox(M, random_nonce, sym_key)
+     [EPK_priv = kunci — siapa yang punya ini bisa decrypt]
+
+     CATATAN: A mengirim EPK_priv ke Z melalui jalur out-of-band yang aman
+              (bisa juga via CARAKA chat terenkripsi ke Z sebelumnya, atau fisik)
+
+4. A membuat STEALTH_BUNDLE:
+     {
+       bundleId     : UUID,
+       type         : "STEALTH",
+       claimToken   : RT_claim,         ← B hanya tahu hash ini, bukan isinya
+       epkPub       : base64(EPK_pub),  ← untuk verifikasi claim oleh B
+       encPayload   : base64(C),        ← ciphertext
+       encNonce     : base64(nonce),
+       expiry       : timestamp + 72h
+       // TIDAK ADA: senderId, recipientId, signature yang linkable ke A
+     }
+
+5. A transfer STEALTH_BUNDLE ke B via direct mesh
+
+== DELIVERY (di lokasi X) ==
+
+6. B tiba di lokasi X, aktifkan "Caraka Mode"
+   B broadcast: { availableTokens: [RT_claim_1, RT_claim_2, ...] }
+   (hanya hash token — tidak ada info apapun tentang isi atau pengirim)
+
+7. Z aktifkan "Caraka Mode", Z punya EPK_priv yang dikirim A sebelumnya:
+     EPK_pub_claim = X25519_pubkey(EPK_priv)
+     RT_my_claim   = BLAKE2b(EPK_pub_claim || nonce_rahasia)
+
+8. Z cocokkan RT_my_claim dengan daftar B → MATCH DITEMUKAN
+
+9. Challenge-Response agar B yakin Z adalah pemegang kunci yang sah:
+     B  → Z: nonce_challenge (random 32 bytes)
+     Z  → B: proof = sign(nonce_challenge, EPK_priv)
+     B verifikasi: verify(proof, nonce_challenge, EPK_pub) → valid?
+
+     [B tidak perlu tahu siapa Z. B hanya verifikasi: "ini orangnya yang berhak"]
+
+10. B kirim encPayload + encNonce ke Z
+    Z dekripsi: sym_key = KDF(EPK_priv)
+                plaintext = secretbox_open(C, nonce, sym_key)
+
+11. Z mendapat pesan. Transfer selesai.
+    B kirim status "Delivered" ke... siapa? Tidak ada — B tidak tahu siapa A.
+    Opsional: A dapat mengirim RT juga ke dirinya sendiri untuk poll status
+              (mekanisme "delivery receipt" opsional via RT_receipt yang terpisah)
+
+12. B hapus bundle. Selesai.
+```
+
+**Properti keamanan Mode 2 (Stealth):**
+- ✅ B tidak tahu siapa A (tidak ada senderId dalam bundle)
+- ✅ B tidak tahu siapa Z (hanya tahu "seseorang dengan kunci yang benar")
+- ✅ B tidak bisa membaca isi (ciphertext dengan kunci yang B tidak miliki)
+- ✅ Pihak ketiga yang sniff jaringan: hanya lihat RT_claim (hash tidak bermakna)
+- ✅ Z membuktikan kepemilikan kunci via challenge-response tanpa mengungkap identitas
+- ✅ A anonim sepenuhnya dalam bundle (tidak ada senderId, tidak ada signature A)
+- ⚠️ Kelemahan: EPK_priv harus dikirim ke Z via kanal aman sebelumnya (out-of-band)
+- ⚠️ Jika EPK_priv bocor ke pihak ketiga → pihak itu bisa klaim bundle
+
+---
+
+## Perbandingan Dua Mode
+
+| Aspek | Directed (Mode 1) | Stealth (Mode 2) |
+|---|---|---|
+| A kenal Z? | Ya (butuh kunci publik Z) | Tidak harus |
+| B tahu tujuan? | Tahu peerId Z (untuk matching) | Tidak tahu siapapun |
+| B tahu pengirim? | Ada signature A | Tidak ada |
+| Anonimitas A | Sedang (Z tahu A) | Tinggi (A bisa anonim) |
+| Anonimitas Z | Sedang (B tahu peerId Z) | Tinggi (B hanya tahu hash) |
+| Setup effort | Rendah (cukup QR exchange) | Sedang (perlu koordinasi EPK_priv) |
+| Kasus penggunaan | Relawan saling kenal | Operasi sensitif / intel lapangan |
+
+---
+
+## Gap Analysis — Apa yang Perlu Ditambah
+
+### Yang SUDAH ADA di codebase (reuse)
+- `CryptoManager.encryptMessage()` — `crypto_box` X25519 ✅
+- `CryptoManager.signMessage()` / `verifySignature()` — Ed25519 ✅
+- `OutboxEntity` + `OutboxDao` — persistensi bundle ✅
+- `MeshProtocol` — wire format JSON ✅
+- `MeshPolicy` — quota, TTL, eviction ✅
+- HANDSHAKE flow saat peer ketemu ✅
+- `flushCarry()` dipanggil saat peer baru ditemui ✅
+
+### Yang PERLU DITAMBAH
+
+#### 1. Tabel Database Baru: `courier_bundle`
+Terpisah dari `outbox` karena semantiknya berbeda — ini bukan retry, ini carry-until-claimed.
+
+```
+courier_bundle (
+  bundleId       TEXT PRIMARY KEY,
+  mode           TEXT,        -- "DIRECTED" | "STEALTH"
+  state          TEXT,        -- "CARRYING" | "DELIVERED" | "EXPIRED" | "REJECTED"
+  claimToken     TEXT,        -- hash RT (Stealth) atau peerId Z (Directed)
+  epkPub         TEXT,        -- base64 EPK_pub (Stealth) atau Z_enc_pub (Directed)
+  encPayload     TEXT,        -- base64 ciphertext
+  encNonce       TEXT,        -- base64 nonce
+  senderPub      TEXT?,       -- base64 A_enc_pub (Directed only, untuk Z bisa decrypt)
+  signatureA     TEXT?,       -- Ed25519 sig dari A (Directed only)
+  priority       TEXT,        -- "NORMAL" | "EMERGENCY"
+  createdAt      INTEGER,
+  expiry         INTEGER,
+  locationHintLat REAL?,      -- opsional: koordinat tujuan (hint navigasi)
+  locationHintLon REAL?,
+  deliveredAt    INTEGER?
+)
+```
+
+#### 2. Tabel Baru: `courier_task` (di sisi kurir / B)
+Untuk melacak tugas kurir yang sedang aktif dari sisi B.
+
+```
+courier_task (
+  taskId         TEXT PRIMARY KEY,
+  bundleId       TEXT,
+  acceptedAt     INTEGER,
+  status         TEXT,    -- "ACTIVE" | "DELIVERED" | "CANCELLED"
+  locationHintLat REAL?,
+  locationHintLon REAL?
+)
+```
+
+#### 3. Tipe Pesan Baru di `MeshProtocol`
+
+```kotlin
+// Tipe baru yang perlu ditambahkan:
+"COURIER_OFFER"     // A → B: minta B jadi kurir, kirim bundle metadata
+"COURIER_ACCEPT"    // B → A: B setuju jadi kurir
+"COURIER_REJECT"    // B → A: B menolak
+"COURIER_BROADCAST" // B → all: aku membawa token-token ini (Stealth mode)
+"COURIER_CLAIM"     // Z → B: aku klaim token ini
+"COURIER_CHALLENGE" // B → Z: buktikan kepemilikan kunci
+"COURIER_PROOF"     // Z → B: signature bukti kepemilikan
+"COURIER_DELIVER"   // B → Z: ini payload-nya
+"COURIER_ACK"       // Z → B: terima kasih, sudah diterima
+"COURIER_RECEIPT"   // B → A: pesan berhasil disampaikan (opsional, jika A dikenal)
+```
+
+#### 4. Field Tambahan di `MeshProtocol`
+
+```kotlin
+// Tambahan field untuk mendukung courier mode:
+val courierBundleId : String? = null,
+val courierMode     : String? = null,   // "DIRECTED" | "STEALTH"
+val claimToken      : String? = null,
+val epkPub          : String? = null,
+val challengeNonce  : String? = null,
+val proofSignature  : String? = null,
+val locationHintLat : Double? = null,
+val locationHintLon : Double? = null,
+```
+
+#### 5. Komponen Logic Baru
+
+| Komponen | Lokasi | Fungsi |
+|---|---|---|
+| `CourierManager` | `network/` | Orchestrator — handle semua COURIER_* message types |
+| `CourierRepository` | `repository/` | CRUD courier_bundle + courier_task |
+| `CourierCryptoHelper` | `crypto/` | EPK keygen, KDF, secretbox, RT_claim derivation |
+| `CourierDao` | `data/local/dao/` | Room DAO untuk dua tabel baru |
+| `CourierBundleEntity` | `data/local/entity/` | Room entity untuk courier_bundle |
+| `CourierTaskEntity` | `data/local/entity/` | Room entity untuk courier_task |
+
+#### 6. UI Baru
+
+| Layar / Komponen | Fungsi |
+|---|---|
+| `CourierRequestDialog` | A memilih mode, pilih B sebagai kurir |
+| `CourierAcceptSheet` | B melihat permintaan kurir (isi tersamarkan), accept/reject |
+| `CourierActiveIndicator` | Badge di HomeScreen: "Kamu membawa 2 paket" |
+| `CourierModeScreen` | B & Z: aktifkan Caraka Mode di lokasi X |
+| `CourierDeliveryAnimation` | Animasi konfirmasi saat transfer berhasil |
+| `CourierHistoryScreen` | Log tugas kurir yang pernah dilakukan |
+
+---
+
+## Alur UI Lengkap
+
+### Alur Mode 1 (Directed)
+```
+A                              B                              Z
+│                              │                              │
+│── [pilih B dari peer list]──►│                              │
+│── COURIER_OFFER ────────────►│                              │
+│   (preview: "1 paket untuk   │                              │
+│    seseorang, 72h, Normal")  │                              │
+│                              │── [terima/tolak dialog] ────►│
+│◄── COURIER_ACCEPT ───────────│                              │
+│── [kirim bundle] ───────────►│                              │
+│   (bundle disimpan di        │                              │
+│    courier_bundle CARRYING)  │                              │
+│                              │                              │
+│                   [B berjalan ke lokasi Z...]               │
+│                              │                              │
+│                              │◄── [HANDSHAKE dengan Z] ────│
+│                              │ cek: targetId match?         │
+│                              │── COURIER_DELIVER ──────────►│
+│                              │── COURIER_CHALLENGE ─────── ►│
+│                              │◄── COURIER_PROOF ────────────│
+│                              │ verifikasi proof OK?         │
+│                              │── encPayload ──────────────► │
+│                              │◄── COURIER_ACK ──────────────│
+│                              │                              │
+│◄── COURIER_RECEIPT ──────────│                    Z decrypt  │
+│ "✓ Pesan berhasil            │                    & baca M  │
+│  disampaikan"                │                              │
+```
+
+### Alur Mode 2 (Stealth)
+```
+A                              B                              Z
+│                              │                              │
+│ [generate EPK pair]          │                              │
+│ [kirim EPK_priv ke Z         │                              │
+│  via jalur lain]             │                              │
+│                              │                              │
+│── STEALTH bundle ───────────►│                              │
+│   (no sender info)           │ B simpan bundle              │
+│                              │ state = CARRYING             │
+│                              │                              │
+│                   [B menuju lokasi X...]                    │
+│                              │                              │
+│               [B & Z aktifkan "Caraka Mode"]                │
+│                              │                              │
+│                              │── COURIER_BROADCAST ────────►│
+│                              │   [RT_claim_1, RT_claim_2]   │
+│                              │                              │
+│                              │          Z punya EPK_priv    │
+│                              │          Z hitung RT_claim   │
+│                              │◄── COURIER_CLAIM ────────────│
+│                              │    (RT_claim match!)         │
+│                              │                              │
+│                              │── COURIER_CHALLENGE ────────►│
+│                              │◄── COURIER_PROOF ────────────│
+│                              │ verifikasi proof → valid     │
+│                              │── encPayload ──────────────► │
+│                              │◄── COURIER_ACK ──────────────│
+│                              │                              │
+│                   B hapus bundle. SELESAI.                  │
+│                              │                              │
+│                              │          Z dekripsi dengan   │
+│                              │          sym_key = KDF(EPK_priv)
+│                              │          → baca pesan M      │
+```
+
+---
+
+## Perubahan Database — Migrasi Room
+
+Ini adalah database migration **v3 → v4** (additive, backward-compatible).
+
+```kotlin
+// Di CarakaDatabase.kt, tambahkan migration:
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS courier_bundle (
+                bundleId TEXT PRIMARY KEY NOT NULL,
+                mode TEXT NOT NULL,
+                state TEXT NOT NULL,
+                claimToken TEXT NOT NULL,
+                epkPub TEXT NOT NULL,
+                encPayload TEXT NOT NULL,
+                encNonce TEXT NOT NULL,
+                senderPub TEXT,
+                signatureA TEXT,
+                priority TEXT NOT NULL DEFAULT 'NORMAL',
+                createdAt INTEGER NOT NULL,
+                expiry INTEGER NOT NULL,
+                locationHintLat REAL,
+                locationHintLon REAL,
+                deliveredAt INTEGER
+            )
+        """)
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS courier_task (
+                taskId TEXT PRIMARY KEY NOT NULL,
+                bundleId TEXT NOT NULL,
+                acceptedAt INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'ACTIVE',
+                locationHintLat REAL,
+                locationHintLon REAL
+            )
+        """)
+    }
+}
+```
+
+---
+
+## Perubahan `MeshPolicy` yang Diperlukan
+
+```kotlin
+// Tambahan konstanta untuk courier mode:
+
+/** Kurir: ukuran maksimum satu bundle kurir (lebih besar dari carry biasa — file bisa lebih besar). */
+const val COURIER_MAX_PAYLOAD_BYTES = 64 * 1024  // 64KB, cukup untuk teks panjang + metadata
+
+/** Timeout challenge-response saat Caraka Mode aktif (ms). */
+const val COURIER_CHALLENGE_TIMEOUT_MS = 30_000L
+
+/** Berapa lama bundle kurir disimpan sebelum expired jika tidak terdeliver. */
+const val COURIER_BUNDLE_MAX_AGE_MS = 72L * 60 * 60 * 1000  // 72 jam
+
+/** Radius broadcast COURIER_BROADCAST saat Caraka Mode aktif (TTL=1, local only). */
+const val COURIER_BROADCAST_TTL = 1
+```
+
+---
+
+## `CourierCryptoHelper` — Implementasi Kritis
+
+```kotlin
+object CourierCryptoHelper {
+
+    /**
+     * Derive claim token dari EPK_pub + nonce rahasia.
+     * Hasilnya adalah string 32-char hex — tidak mengungkap isi apapun.
+     */
+    fun deriveClaimToken(epkPub: ByteArray, nonce: ByteArray): String {
+        val input = epkPub + nonce
+        val hash = lazySodium.cryptoGenericHash(input, 16) // BLAKE2b 16 bytes
+        return hash.toHexString()
+    }
+
+    /**
+     * Derive symmetric key dari EPK_priv untuk secretbox (Mode Stealth).
+     * Menggunakan BLAKE2b-256 sebagai KDF — deterministic, tidak reversible.
+     */
+    fun deriveSymKey(epkPriv: ByteArray): ByteArray {
+        return lazySodium.cryptoGenericHash(epkPriv, 32) // 256-bit key
+    }
+
+    /**
+     * Enkripsi payload untuk Stealth Mode.
+     * Tidak ada identitas pengirim dalam output.
+     */
+    fun stealthEncrypt(plaintext: String, epkPriv: ByteArray): Pair<String, String> {
+        val symKey = deriveSymKey(epkPriv)
+        val nonce = lazySodium.nonce(SecretBox.NONCEBYTES)
+        val ciphertext = lazySodium.cryptoSecretBoxEasy(plaintext, nonce, Key.fromBytes(symKey))
+        return Pair(
+            Base64.encodeToString(ciphertext, Base64.NO_WRAP),
+            Base64.encodeToString(nonce, Base64.NO_WRAP)
+        )
+    }
+
+    /**
+     * Dekripsi Stealth payload — Z menggunakan EPK_priv yang diterima dari A.
+     */
+    fun stealthDecrypt(encPayloadB64: String, encNonceB64: String, epkPriv: ByteArray): String? {
+        val symKey = deriveSymKey(epkPriv)
+        val nonce = Base64.decode(encNonceB64, Base64.NO_WRAP)
+        val ciphertext = Base64.decode(encPayloadB64, Base64.NO_WRAP)
+        return lazySodium.cryptoSecretBoxOpenEasy(
+            Base64.encodeToString(ciphertext, Base64.NO_WRAP),
+            nonce,
+            Key.fromBytes(symKey)
+        )
+    }
+}
+```
+
+---
+
+## Rencana Implementasi Bertahap
+
+### Phase A — Directed Courier (MVP, ~2 minggu)
+Reuse infrastruktur yang ada semaksimal mungkin.
+
+- `[ ]` Tambah tabel `courier_bundle` + `courier_task` — migrasi DB v3→v4
+- `[ ]` Tambah tipe pesan `COURIER_*` ke `MeshProtocol`
+- `[ ]` Implementasi `CourierManager` — handle offer/accept/deliver/ack flow
+- `[ ]` Integrasi ke `WifiDirectManager.handleHandshake()` — cek pending courier bundles
+- `[ ]` UI: `CourierRequestDialog` (A pilih kurir)
+- `[ ]` UI: `CourierAcceptSheet` (B lihat & accept)
+- `[ ]` UI: `CourierActiveIndicator` di HomeScreen
+- `[ ]` UI: `CourierDeliveryAnimation` saat berhasil
+- `[ ]` Verifikasi E2E di 2 device fisik
+
+### Phase B — Stealth / Blind Drop (~1.5 minggu setelah Phase A)
+Tambahkan protokol anonymous di atas fondasi Phase A.
+
+- `[ ]` `CourierCryptoHelper` — EPK keygen, KDF, stealthEncrypt/Decrypt, RT derivation
+- `[ ]` `CourierModeScreen` — UI untuk B & Z aktifkan mode Caraka di lapangan
+- `[ ]` Implementasi COURIER_BROADCAST + COURIER_CLAIM flow
+- `[ ]` Challenge-response: COURIER_CHALLENGE + COURIER_PROOF
+- `[ ]` Out-of-band EPK_priv transfer: encode ke QR + share via CARAKA chat
+- `[ ]` Verifikasi Stealth Mode di 3 device fisik (A, B, Z)
+
+### Phase C — Polish & Differentiator (Opsional)
+- `[ ]` Location hint — tampilkan koordinat tujuan di UI B (hint navigasi)
+- `[ ]` Courier history screen
+- `[ ]` Courier receipt balik ke A (jika A mau meninggalkan contact point)
+- `[ ]` Multi-bundle: B bisa membawa lebih dari satu paket dari berbagai pengirim
+- `[ ]` Bundle expiry notification: peringatan jika bundle akan expired sebelum terdeliver
+
+---
+
+---
+
+## ✅ Keputusan Desain (Dikonfirmasi Pengguna)
+
+| # | Pertanyaan | Keputusan |
+|---|---|---|
+| Q1 | Bagaimana EPK_priv dikirim ke Z? | **A & Z harus QR-exchange / bertemu langsung sebelumnya.** A punya enc_pub Z; Z punya signing_pub A untuk verifikasi anti-scam |
+| Q2 | Apakah B perlu lihat deadline? | **Ya** — B ditampilkan expiry (mis: "72 jam tersisa") tanpa mengekspos isi/identitas, untuk mitigasi insiden B |
+| Q3 | Apakah B juga stealth? | **Ya, B juga anonim terhadap Z.** Validasi anti-scam: signature A ada di *dalam* payload terenkripsi; Z verifikasi setelah decrypt. B tidak pernah lihat signature ini. |
+| Q4 | Ukuran payload courier? | **64KB sekarang.** Konstanta di MeshPolicy agar mudah dinaikkan di masa depan. |
+
+---
+
+## Verification Plan
+
+### Automated
+- Unit test `CourierCryptoHelper`: encrypt → decrypt roundtrip, RT derivation, challenge-response validity
+- Unit test `CourierManager`: state machine (CARRYING → DELIVERED, CARRYING → EXPIRED)
+- DB migration test: v3 → v4 tanpa kehilangan data
+
+### Manual (Device Test)
+1. **Directed 3-device**: A kirim ke Z via B — verifikasi B tidak bisa baca, Z bisa decrypt + verifikasi signature A
+2. **Stealth 3-device**: A buat bundle stealth, B carry, Z klaim — verifikasi B tidak tahu siapa Z, B tidak tahu siapa A
+3. **Reject flow**: B tolak permintaan kurir → A mendapat notifikasi rejected
+4. **Expiry display**: B melihat sisa waktu bundle tanpa melihat isi
+5. **Replay attack**: kirim COURIER_DELIVER dua kali dengan bundleId sama → hanya pertama yang diproses
+6. **Scam validation**: bundle tanpa signature valid → Z reject setelah decrypt

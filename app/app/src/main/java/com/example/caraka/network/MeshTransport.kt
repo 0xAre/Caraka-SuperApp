@@ -1,6 +1,7 @@
 package com.example.caraka.network
 
 import android.net.wifi.p2p.WifiP2pDevice
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -56,4 +57,26 @@ interface MeshTransport {
 
     /** Send a JSON payload directed at a specific peerId (unicast, multi-hop aware). */
     fun sendToPeer(peerId: String, json: String)
+
+    /**
+     * Best-effort count of directly-reachable LAN/hotspot neighbours. Used by density-aware policy
+     * (probabilistic gossip forwarding + adaptive carry cadence). Default 0 = treat as sparse.
+     */
+    val activeNeighborCount: Int get() = 0
+
+    // ========== EMERGENCY HOTSPOT (universal multi-peer — default no-op, D9-safe) ==========
+
+    /** Snapshot of the local emergency-hotspot subsystem (host/join/credentials/status). */
+    val hotspot: StateFlow<HotspotUiState> get() = INACTIVE_HOTSPOT
+
+    /** Start hosting a LocalOnlyHotspot so many peers can converge onto one shared LAN (M-to-N). */
+    fun startEmergencyHotspot() {}
+
+    /** Stop hosting the emergency hotspot. */
+    fun stopEmergencyHotspot() {}
+
+    companion object {
+        /** Shared inactive flow so the default [hotspot] getter allocates nothing per call. */
+        val INACTIVE_HOTSPOT: StateFlow<HotspotUiState> = MutableStateFlow(HotspotUiState())
+    }
 }

@@ -379,4 +379,12 @@
     <string name="network_failed_subtitle">Radio lokal gagal memulai atau koneksi ditolak</string>
     <string name="network_failed_guidance">Periksa izin dan Wi-Fi, dekatkan perangkat, lalu coba pindai ulang.</string>
     <string name="network_tap_peer_hint">Ketuk peer untuk melihat detail dan menghubungkan.</string>
+
+    <!-- Emergency hotspot (Phase 3 — universal multi-peer) -->
+    <string name="hotspot_title">Hotspot Darurat</string>
+    <string name="hotspot_subtitle">Satukan banyak perangkat ke satu jaringan lokal tanpa internet atau router.</string>
+    <string name="hotspot_ssid">SSID: %1$s</string>
+    <string name="hotspot_pass">Sandi: %1$s</string>
+    <string name="hotspot_start">Buat Hotspot Darurat</string>
+    <string name="hotspot_stop">Hentikan Hotspot</string>
 </resources>

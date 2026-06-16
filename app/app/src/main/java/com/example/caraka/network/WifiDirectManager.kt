@@ -169,6 +169,17 @@ class WifiDirectManager(
     fun addOverlayBroadcastSink(sink: (String) -> Unit) { overlayBroadcastSinks.add(sink) }
     fun addOverlayUnicastSink(sink: (String, String) -> Unit) { overlayUnicastSinks.add(sink) }
 
+    /** Sink invoked when a neighbour's HOTSPOT_OFFER arrives so the facade can auto-join (Phase 3). */
+    @Volatile private var hotspotOfferSink: ((ssid: String, pass: String, fromPeerId: String) -> Unit)? = null
+    fun setHotspotOfferSink(sink: (String, String, String) -> Unit) { hotspotOfferSink = sink }
+
+    /**
+     * Courier manager — menangani semua COURIER_* messages dan state machine Caraka Kurir.
+     * Di-set oleh MeshManager setelah CourierManager diinisialisasi (dependency injection manual).
+     * Nullable sehingga WifiDirectManager tetap bisa berdiri sendiri tanpa courier feature.
+     */
+    @Volatile var courierManager: CourierManager? = null
+
     // Emits when a direct chat message arrives — used to show an in-app floating alert.
     private val _incomingChatAlert = MutableSharedFlow<ChatAlert>(extraBufferCapacity = 8)
     override val incomingChatAlert: SharedFlow<ChatAlert> = _incomingChatAlert
@@ -192,6 +203,9 @@ class WifiDirectManager(
     /** peerId → last time we flushed the outbox to them on appearance (debounce, EU-2.2). */
     private val lastPeerFlushAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** Global throttle for re-broadcasting carried bundles when a new contact appears (Phase 2). */
+    @Volatile private var lastCarryFlushAt = 0L
+
     // EU-3.1 / D14: two-state duty cycle. Beacon/gossip/discovery run tight when there is recent
     // mesh activity and widen when idle, to save battery during long disaster operation. Any
     // inbound/outbound traffic refreshes [lastActivityAt]; intervals scale via [dutyInterval].
@@ -201,6 +215,26 @@ class WifiDirectManager(
         System.currentTimeMillis() - lastActivityAt > MeshPolicy.IDLE_THRESHOLD_MS
     private fun dutyInterval(baseMs: Long): Long =
         if (isMeshIdle()) baseMs * MeshPolicy.IDLE_INTERVAL_MULTIPLIER else baseMs
+
+    // D12: density-aware policy input — peers we currently hear directly on the LAN/hotspot subnet
+    // (the storm-prone dimension). Exposed via MeshTransport for the carry cadence adapter.
+    override val activeNeighborCount: Int get() = peerIpRegistry.size
+
+    /**
+     * Probabilistic gossip gate (D12). EMERGENCY is ALWAYS forwarded (life-safety). For other classes,
+     * forward unconditionally when neighbours are few; above [MeshPolicy.GOSSIP_DENSITY_THRESHOLD]
+     * forward with probability THRESHOLD/neighbours (clamped to [GOSSIP_MIN_PROBABILITY,1]) so the
+     * expected forwarder count stays ~constant and dense clusters don't storm. Dedup + carry ensure
+     * the message still propagates and persists even when an individual node declines to re-flood.
+     */
+    private fun shouldForwardGossip(priority: String): Boolean {
+        if (MeshPolicy.dropPriorityOf(priority) == MeshPolicy.DropPriority.EMERGENCY) return true
+        val n = peerIpRegistry.size
+        if (n <= MeshPolicy.GOSSIP_DENSITY_THRESHOLD) return true
+        val p = (MeshPolicy.GOSSIP_DENSITY_THRESHOLD.toDouble() / n)
+            .coerceIn(MeshPolicy.GOSSIP_MIN_PROBABILITY, 1.0)
+        return Math.random() < p
+    }
 
     // EU-3.2 / D14: deep idle suspends only ACTIVE Wi-Fi Direct discovery (the costly part). The
     // passive LAN listener is never stopped, so the node stays reachable and inbound traffic
@@ -1199,6 +1233,8 @@ class WifiDirectManager(
         // "CONNECTED" here previously put us into busyStates and silently killed discovery.
         if (_connectionState.value !in busyStates) _connectionState.value = "MESH_ACTIVE"
         Log.d(TAG, "LAN peer ACTIVE_MESH: ${peer.displayName} at $hostAddress (verified=${peer.isVerified})")
+        // A new LAN contact = a fresh chance to spread anything we are carrying (Phase 2).
+        maybeFlushCarry()
     }
 
     // ========== PEER_LIST GOSSIP (full-mesh awareness) ==========
@@ -1433,6 +1469,8 @@ class WifiDirectManager(
             // EU-3.1 / D14: real payload traffic (not background gossip/heartbeat/handshake beacons)
             // counts as mesh activity and keeps the duty cycle in the tight ACTIVE state.
             if (protocol.type in listOf("TEXT", "SOS", "ACK", "FLAG")) touchActivity()
+            // Courier messages juga count as activity
+            if (protocol.type.startsWith("COURIER_")) touchActivity()
             when (protocol.type) {
                 "HANDSHAKE" -> handleHandshake(protocol, fromAddress)
                 "TEXT"      -> handleTextMessage(protocol)
@@ -1442,9 +1480,15 @@ class WifiDirectManager(
                 "CONNECTION_REQUEST" -> handleConnectionRequest(protocol, fromAddress)
                 "CONNECTION_ACCEPT"  -> handleConnectionAccept(protocol, fromAddress)
                 "CONNECTION_REJECT"  -> handleConnectionReject(protocol, fromAddress)
-                "PEER_LIST"          -> handlePeerList(protocol) // gossip arriving over a socket/Aware relay (offline path)
+                "PEER_LIST"          -> handlePeerList(protocol)
+                "HOTSPOT_OFFER"      -> handleHotspotOffer(protocol)
                 "ROUTING_HEARTBEAT"  -> { /* handled by MeshRouter on the Aware transport; ignore here */ }
-                else -> Log.w(TAG, "Unknown type: ${protocol.type}")
+                // Courier Mode (Caraka Kurir Phase A+B) — delegasikan ke CourierManager
+                else -> if (protocol.type.startsWith("COURIER_")) {
+                    courierManager?.handleCourierMessage(protocol)
+                } else {
+                    Log.w(TAG, "Unknown type: ${protocol.type}")
+                }
             }
         }
     }
@@ -1483,6 +1527,19 @@ class WifiDirectManager(
         )
         socketManager.sendPayload(handshake.toJson())
         Log.d(TAG, "Handshake sent")
+    }
+
+    /**
+     * A new contact just appeared → re-offer our carried bundles to the mesh so anything we are
+     * holding gets a chance to reach the newcomer (and beyond). Globally debounced so frequent
+     * beacons don't trigger a re-flood storm (Phase 2 / D10).
+     */
+    private fun maybeFlushCarry() {
+        val now = System.currentTimeMillis()
+        if (now - lastCarryFlushAt > MeshPolicy.CARRY_FLUSH_DEBOUNCE_MS) {
+            lastCarryFlushAt = now
+            scope.launch { repository.flushCarry() }
+        }
     }
 
     private suspend fun handleHandshake(protocol: MeshProtocol, fromAddress: String) {
@@ -1569,6 +1626,10 @@ class WifiDirectManager(
             lastPeerFlushAt[protocol.senderId] = nowFlush
             repository.flushForPeer(protocol.senderId)
         }
+        // Also re-offer carried bundles (broadcast/SOS/transit) to this freshly-arrived contact.
+        maybeFlushCarry()
+        // Courier Mode (Directed): cek apakah ada bundle kurir untuk peer ini, kirim langsung.
+        courierManager?.onPeerHandshake(protocol.senderId, protocol.senderId)
     }
 
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
@@ -1576,19 +1637,29 @@ class WifiDirectManager(
         val isBroadcast = protocol.recipientId == "BROADCAST" || protocol.recipientId.isBlank()
         val isForMe = protocol.recipientId == myId || isBroadcast
 
-        // Relay unicast messages not addressed to us.
+        // Relay unicast messages not addressed to us — and CARRY them (store-carry-forward) so they
+        // can still reach the recipient via a moving carrier when no live route exists (Phase 2 / C6).
         if (!isForMe && protocol.ttl > 1) {
-            sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
-            _relayedMessageCount.value++
+            val relayed = protocol.copy(ttl = protocol.ttl - 1)
+            if (shouldForwardGossip(protocol.priority)) {
+                sendMessage(relayed.toJson())
+                _relayedMessageCount.value++
+            }
+            repository.carryBundle(relayed) // carry regardless — reliability layer (Phase 2)
             return
         }
         if (!isForMe) return
 
         // Relay broadcast messages so they reach nodes beyond the first hop (BUG-P1).
-        // Only relay if we are not the original sender (avoids redundant re-flood).
+        // Only relay if we are not the original sender (avoids redundant re-flood). Density-gated by
+        // gossip (D12) to avoid storms; carried regardless so it keeps spreading to peers met later.
         if (isBroadcast && protocol.senderId != myId && protocol.ttl > 1) {
-            sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
-            _relayedMessageCount.value++
+            val relayed = protocol.copy(ttl = protocol.ttl - 1)
+            if (shouldForwardGossip(protocol.priority)) {
+                sendMessage(relayed.toJson())
+                _relayedMessageCount.value++
+            }
+            repository.carryBundle(relayed)
         }
 
         val senderPeer = repository.getPeerById(protocol.senderId)
@@ -1694,7 +1765,7 @@ class WifiDirectManager(
             recipientId = originSenderId,
             content = ackedMessageId,
             timestamp = System.currentTimeMillis(),
-            ttl = 5,
+            ttl = MeshPolicy.TTL_ACK,
             priority = "NORMAL"
         )
         sendToPeer(originSenderId, ack.toJson())
@@ -1702,10 +1773,14 @@ class WifiDirectManager(
 
     private suspend fun handleSosMessage(protocol: MeshProtocol) {
         Log.d(TAG, "SOS from ${protocol.senderName}: ${protocol.content}")
-        // SOS di-relay dulu (DTN principle: propagasi cepat) baru verifikasi lokal.
+        // SOS di-relay dulu (DTN principle: propagasi cepat) baru verifikasi lokal. Selain di-flood
+        // sekarang, SOS juga DI-CARRY: disimpan & disiarkan ulang ke peer yang ditemui kemudian,
+        // sehingga bisa menembus partisi & jarak jauh lewat pembawa bergerak (Phase 2 / C5 fix).
         if (protocol.ttl > 1) {
-            sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
+            val relayed = protocol.copy(ttl = protocol.ttl - 1)
+            sendMessage(relayed.toJson())
             _relayedMessageCount.value++
+            repository.carryBundle(relayed)
         }
 
         // T4: Verifikasi signature SOS sebelum simpan ke DB dan tampilkan notifikasi.
@@ -1748,9 +1823,41 @@ class WifiDirectManager(
     }
 
     private suspend fun handleFlagMessage(protocol: MeshProtocol) {
+        val myId = identityManager.getPeerId()
+        if (protocol.senderId == myId) return // never act on our own echoed flag
+
+        // A FLAG is destructive (flagCount ≥ 3 marks a message "tidak akurat"), so it MUST be
+        // authenticated before we honour OR relay it — otherwise a forged FLAG can suppress SOS /
+        // authority messages across the whole mesh. Require a valid Ed25519 signature over the
+        // flagged id from a peer whose signing key we already know (TOFU). Unverifiable → drop.
+        val signingKeyB64 = repository.getPeerById(protocol.senderId)?.signingKey
+        if (protocol.signature.isNullOrBlank() || signingKeyB64.isNullOrBlank()) {
+            Log.w(TAG, "FLAG tanpa signature / kunci pengirim tak dikenal (${protocol.senderId}) — diabaikan")
+            return
+        }
+        val signingKey = cryptoManager.keyFromBase64(signingKeyB64)
+        if (!cryptoManager.verifySignature(protocol.content, protocol.signature, signingKey)) {
+            Log.w(TAG, "SECURITY: Signature FLAG tidak valid dari ${protocol.senderId} — drop")
+            return
+        }
+
         val targetId = protocol.content
         if (targetId.isNotBlank()) repository.flagMessageById(targetId)
-        if (protocol.ttl > 1) sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
+        if (protocol.ttl > 1 && shouldForwardGossip(protocol.priority)) {
+            sendMessage(protocol.copy(ttl = protocol.ttl - 1).toJson())
+        }
+    }
+
+    /**
+     * A neighbour is advertising an emergency LocalOnlyHotspot (Phase 3). Hand the credentials to the
+     * facade ([MeshManager]) which owns the [LocalHotspotManager] and decides whether to auto-join.
+     * Never relayed (the offer is sent with ttl = 1 — a hotspot you cannot physically reach is useless).
+     */
+    private fun handleHotspotOffer(protocol: MeshProtocol) {
+        val ssid = protocol.hotspotSsid
+        val pass = protocol.hotspotPass
+        if (ssid.isNullOrBlank() || pass.isNullOrBlank()) return
+        hotspotOfferSink?.invoke(ssid, pass, protocol.senderId)
     }
 
     // ========== NEW: CONNECTION REQUEST HANDLERS ==========

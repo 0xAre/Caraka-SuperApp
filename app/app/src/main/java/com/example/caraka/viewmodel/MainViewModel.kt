@@ -162,6 +162,9 @@ class MainViewModel(
     /** Current device battery level (0-100). Updated on each connect attempt. */
     val batteryLevel: StateFlow<Int> = transport.batteryLevel
 
+    /** Emergency LocalOnlyHotspot state (host/join/credentials/status) — universal multi-peer (Phase 3). */
+    val hotspotState = transport.hotspot
+
     /** Fires when a direct chat arrives — drives the floating in-app alert. */
     val incomingChatAlert = transport.incomingChatAlert
 
@@ -259,6 +262,12 @@ class MainViewModel(
         // via ACTION_STOP intent (dari tombol notifikasi atau clearIdentity).
         transport.stopListening()
     }
+
+    /** Start hosting an emergency LocalOnlyHotspot so many peers converge onto one LAN (Phase 3). */
+    fun startEmergencyHotspot() = transport.startEmergencyHotspot()
+
+    /** Stop hosting the emergency hotspot. */
+    fun stopEmergencyHotspot() = transport.stopEmergencyHotspot()
 
     fun startPeerScan() {
         if (!canStartPeerScan(connectionState.value)) return

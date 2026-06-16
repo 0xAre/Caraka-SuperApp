@@ -5,10 +5,13 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.caraka.crypto.DatabasePassphraseManager
+import com.example.caraka.data.local.dao.CourierDao
 import com.example.caraka.data.local.dao.MessageDao
 import com.example.caraka.data.local.dao.OutboxDao
 import com.example.caraka.data.local.dao.PeerDao
 import com.example.caraka.data.local.dao.RelayDao
+import com.example.caraka.data.local.entity.CourierBundleEntity
+import com.example.caraka.data.local.entity.CourierTaskEntity
 import com.example.caraka.data.local.entity.MessageEntity
 import com.example.caraka.data.local.entity.OutboxEntity
 import com.example.caraka.data.local.entity.PeerEntity
@@ -39,9 +42,11 @@ import net.sqlcipher.database.SupportFactory
         MessageEntity::class,
         PeerEntity::class,
         RelayedMessageEntity::class,
-        OutboxEntity::class
+        OutboxEntity::class,
+        CourierBundleEntity::class,
+        CourierTaskEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class CarakaDatabase : RoomDatabase() {
@@ -50,6 +55,7 @@ abstract class CarakaDatabase : RoomDatabase() {
     abstract fun peerDao(): PeerDao
     abstract fun relayDao(): RelayDao
     abstract fun outboxDao(): OutboxDao
+    abstract fun courierDao(): CourierDao
 
     companion object {
         @Volatile
@@ -100,6 +106,52 @@ abstract class CarakaDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v3 → v4: Caraka Courier Mode — additive only, no data loss.
+         *  - courier_bundle: bundle terenkripsi yang dibawa kurir (Directed & Stealth modes).
+         *  - courier_task:   tugas kurir aktif dari sisi node pembawa (B).
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS courier_bundle (
+                        bundleId TEXT NOT NULL,
+                        mode TEXT NOT NULL,
+                        state TEXT NOT NULL DEFAULT 'PENDING_ACCEPT',
+                        claimToken TEXT NOT NULL,
+                        epkPub TEXT NOT NULL,
+                        encPayload TEXT NOT NULL,
+                        encNonce TEXT NOT NULL,
+                        senderPub TEXT,
+                        signatureA TEXT,
+                        priority TEXT NOT NULL DEFAULT 'NORMAL',
+                        createdAt INTEGER NOT NULL,
+                        expiry INTEGER NOT NULL,
+                        locationHintLat REAL,
+                        locationHintLon REAL,
+                        deliveredAt INTEGER,
+                        PRIMARY KEY(bundleId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS courier_task (
+                        taskId TEXT NOT NULL,
+                        bundleId TEXT NOT NULL,
+                        acceptedAt INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE',
+                        locationHintLat REAL,
+                        locationHintLon REAL,
+                        deliveredAt INTEGER,
+                        PRIMARY KEY(taskId)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): CarakaDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
@@ -138,7 +190,7 @@ abstract class CarakaDatabase : RoomDatabase() {
                 DB_NAME
             )
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
 
         /**
