@@ -18,6 +18,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.caraka.service.MeshForegroundService
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -55,6 +57,7 @@ import com.example.caraka.ui.prefs.UiPrefsState
 import com.example.caraka.ui.screens.AlertsScreen
 import com.example.caraka.ui.screens.ChatScreen
 import com.example.caraka.ui.screens.CourierScreen
+import com.example.caraka.ui.screens.CourierHistoryScreen
 import com.example.caraka.ui.screens.HelpScreen
 import com.example.caraka.ui.screens.HomeScreen
 import com.example.caraka.ui.screens.MessagesScreen
@@ -268,15 +271,30 @@ private fun CarakaNav(
         }
     }
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val showBottomBar = currentRoute in listOf(
+        Screen.Home.route,
+        Screen.Messages.route,
+        Screen.Network.route,
+        Screen.Sos.route,
+        Screen.Settings.route,
+        Screen.Alerts.route,
+        Screen.Courier.route
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             bottomBar = {
-                BottomNavBar(
-                    navController = navController,
-                    sosBadgeCount = sosAlerts.size,
-                    messagesBadgeCount = messagesUnreadCount
-                )
+                if (showBottomBar) {
+                    BottomNavBar(
+                        navController = navController,
+                        sosBadgeCount = sosAlerts.size,
+                        messagesBadgeCount = messagesUnreadCount
+                    )
+                }
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
@@ -286,10 +304,13 @@ private fun CarakaNav(
                 modifier = Modifier
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding)
+                    .imePadding()
             ) {
                 composable(Screen.Home.route) {
+                    val courierCarryCount by courierViewModel.activeCarryCount.collectAsState()
                     HomeScreen(
                         viewModel = viewModel,
+                        courierCarryCount = courierCarryCount,
                         onNavigateToSos = { navController.navigate(Screen.Sos.route) },
                         onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
                         onNavigateToMessages = { navController.navigate(Screen.Messages.route) },
@@ -391,6 +412,13 @@ private fun CarakaNav(
                 // ── Caraka Courier Mode ──────────────────────────────────────────────
                 composable(Screen.Courier.route) {
                     CourierScreen(
+                        viewModel = courierViewModel,
+                        onBack = { navController.popBackStack() },
+                        onNavigateToHistory = { navController.navigate(Screen.CourierHistory.route) }
+                    )
+                }
+                composable(Screen.CourierHistory.route) {
+                    CourierHistoryScreen(
                         viewModel = courierViewModel,
                         onBack = { navController.popBackStack() }
                     )

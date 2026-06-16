@@ -115,6 +115,7 @@ class MeshForegroundService : Service() {
     private fun startQueueProcessor() {
         if (queueJob?.isActive == true) return
         val repository = (application as CarakaApp).repository
+        val courierRepository = (application as CarakaApp).courierRepository
         queueJob = serviceScope.launch {
             while (isActive) {
                 delay(MeshPolicy.QUEUE_PROCESSOR_TICK_MS)
@@ -123,6 +124,8 @@ class MeshForegroundService : Service() {
                     // Phase 2: re-broadcast due store-carry-forward bundles (SOS/broadcast/transit)
                     // so carried messages keep spreading to new contacts across partitions.
                     repository.flushCarry()
+                    // Courier: sapu bundle kurir yang sudah kedaluwarsa (tandai task EXPIRED + hapus).
+                    courierRepository.cleanupExpiredBundles()
                 } catch (e: Exception) {
                     Log.e(TAG, "Queue-processor tick gagal", e)
                 }

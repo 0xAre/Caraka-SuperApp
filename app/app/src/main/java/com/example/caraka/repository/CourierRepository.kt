@@ -184,6 +184,8 @@ class CourierRepository(
     fun getCarryingBundles(): Flow<List<CourierBundleEntity>> = courierDao.getCarryingBundlesFlow()
     fun getActiveCarryCount(): Flow<Int> = courierDao.getActiveCarryCount()
     fun getActiveTasks(): Flow<List<CourierTaskEntity>> = courierDao.getActiveTasks()
+    /** Riwayat semua tugas kurir (untuk CourierHistoryScreen). */
+    fun getAllTasks(): Flow<List<CourierTaskEntity>> = courierDao.getAllTasksFlow()
 
     // ── Bundle State Transitions ──────────────────────────────────────────────────────────────
 
@@ -228,9 +230,21 @@ class CourierRepository(
         Log.d(TAG, "Bundle delivered and removed: $bundleId")
     }
 
-    /** Hapus bundle expired dari storage. */
+    /**
+     * Sweeper: tandai task ACTIVE yang bundle-nya kedaluwarsa sebagai EXPIRED (untuk riwayat),
+     * lalu hapus bundle expired dari storage.
+     */
     suspend fun cleanupExpiredBundles() {
-        courierDao.deleteExpiredBundles(System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val expired = courierDao.getExpiredBundles(now)
+        for (bundle in expired) {
+            val task = courierDao.getTaskByBundleId(bundle.bundleId)
+            if (task != null && task.status == "ACTIVE") {
+                courierDao.updateTaskStatus(task.taskId, "EXPIRED", null)
+            }
+        }
+        courierDao.deleteExpiredBundles(now)
+        if (expired.isNotEmpty()) Log.d(TAG, "Sweeper: ${expired.size} bundle kurir expired dibersihkan")
     }
 
     // ── Directed Delivery: HANDSHAKE trigger ─────────────────────────────────────────────────

@@ -51,6 +51,10 @@ interface CourierDao {
     @Query("UPDATE courier_bundle SET state = 'DELIVERED', deliveredAt = :deliveredAt WHERE bundleId = :bundleId")
     suspend fun markDelivered(bundleId: String, deliveredAt: Long)
 
+    /** Bundle yang sudah kedaluwarsa — dipakai sweeper untuk menandai task EXPIRED sebelum dihapus. */
+    @Query("SELECT * FROM courier_bundle WHERE expiry > 0 AND expiry < :now")
+    suspend fun getExpiredBundles(now: Long): List<CourierBundleEntity>
+
     /** Hapus bundle yang sudah expired. */
     @Query("DELETE FROM courier_bundle WHERE expiry > 0 AND expiry < :now")
     suspend fun deleteExpiredBundles(now: Long)
@@ -75,6 +79,10 @@ interface CourierDao {
 
     @Query("SELECT * FROM courier_task WHERE status = 'ACTIVE' ORDER BY acceptedAt ASC")
     fun getActiveTasks(): Flow<List<CourierTaskEntity>>
+
+    /** Semua tugas kurir (riwayat) — terbaru di atas. Untuk CourierHistoryScreen. */
+    @Query("SELECT * FROM courier_task ORDER BY acceptedAt DESC")
+    fun getAllTasksFlow(): Flow<List<CourierTaskEntity>>
 
     @Query("SELECT * FROM courier_task WHERE bundleId = :bundleId")
     suspend fun getTaskByBundleId(bundleId: String): CourierTaskEntity?

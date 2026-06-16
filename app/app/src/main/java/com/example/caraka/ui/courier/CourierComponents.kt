@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -50,6 +49,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -85,6 +85,26 @@ import com.example.caraka.ui.components.CarakaBody
 import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaListTitle
 import com.example.caraka.ui.theme.CarakaTextStyles
+import com.example.caraka.ui.theme.LocalStatusColors
+import androidx.compose.ui.res.stringResource
+import com.example.caraka.R
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.CameraAlt
+import com.example.caraka.crypto.QrIdentityManager
+import com.example.caraka.ui.scanner.CarakaQrCaptureActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -110,7 +130,7 @@ fun CourierSendSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(
             modifier = Modifier
@@ -135,27 +155,27 @@ fun CourierSendSheet(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("Kirim via Kurir", style = CarakaTextStyles.dialogTitle)
-                    CarakaBody("Pesan akan dibawa oleh kurir ke penerima", muted = true)
+                    Text(stringResource(R.string.courier_fab_send), style = CarakaTextStyles.dialogTitle)
+                    CarakaBody(stringResource(R.string.courier_send_subtitle), muted = true)
                 }
             }
 
             // Mode Selector
-            Text("Mode Pengiriman", style = CarakaTextStyles.fieldLabel)
+            Text(stringResource(R.string.courier_send_mode_label), style = CarakaTextStyles.fieldLabel)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ModeChip(
-                    label = "📍 Directed",
-                    desc = "Kurir tahu ke mana tuju",
+                    label = stringResource(R.string.courier_mode_directed),
+                    desc = stringResource(R.string.courier_mode_directed_desc),
                     selected = mode == "DIRECTED",
                     onClick = { mode = "DIRECTED" },
                     modifier = Modifier.weight(1f)
                 )
                 ModeChip(
-                    label = "🔮 Stealth",
-                    desc = "Anonim penuh — 2 arah",
+                    label = stringResource(R.string.courier_mode_stealth),
+                    desc = stringResource(R.string.courier_mode_stealth_desc),
                     selected = mode == "STEALTH",
                     onClick = { mode = "STEALTH" },
                     modifier = Modifier.weight(1f)
@@ -163,11 +183,11 @@ fun CourierSendSheet(
             }
 
             // Pilih kurir
-            Text("Pilih Kurir", style = CarakaTextStyles.fieldLabel)
+            Text(stringResource(R.string.courier_send_pick_courier), style = CarakaTextStyles.fieldLabel)
             if (peers.isEmpty()) {
                 CarakaCard(modifier = Modifier.fillMaxWidth()) {
                     CarakaBody(
-                        "Tidak ada peer terkoneksi. Hubungkan ke peer terlebih dahulu.",
+                        stringResource(R.string.courier_no_peers),
                         muted = true,
                         modifier = Modifier.padding(12.dp)
                     )
@@ -195,8 +215,8 @@ fun CourierSendSheet(
                     value = recipientId,
                     onValueChange = { recipientId = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Peer ID Penerima (Z)") },
-                    placeholder = { Text("Paste Peer ID penerima...") },
+                    label = { Text(stringResource(R.string.courier_recipient_label)) },
+                    placeholder = { Text(stringResource(R.string.courier_recipient_placeholder)) },
                     leadingIcon = {
                         Icon(Icons.Default.AccountCircle, contentDescription = null)
                     },
@@ -222,7 +242,7 @@ fun CourierSendSheet(
                         )
                         Spacer(Modifier.width(8.dp))
                         CarakaBody(
-                            "Penerima tidak perlu diketahui kurir. Z akan klaim dengan EPK_priv yang sudah kamu bagikan.",
+                            stringResource(R.string.courier_stealth_recipient_note),
                             muted = true
                         )
                     }
@@ -236,8 +256,8 @@ fun CourierSendSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp),
-                label = { Text("Pesan Rahasia") },
-                placeholder = { Text("Tulis pesan yang akan dienkripsi...") },
+                label = { Text(stringResource(R.string.courier_message_label)) },
+                placeholder = { Text(stringResource(R.string.courier_message_placeholder)) },
                 leadingIcon = {
                     Icon(Icons.Default.Message, contentDescription = null)
                 },
@@ -271,7 +291,7 @@ fun CourierSendSheet(
                 Icon(Icons.Default.DirectionsBike, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Tugaskan Kurir",
+                    stringResource(R.string.courier_assign_btn),
                     style = CarakaTextStyles.buttonLabel
                 )
             }
@@ -371,8 +391,8 @@ fun CourierOfferDialog(
     val expiryStr = remember(expiryMs) {
         SimpleDateFormat("dd MMM HH:mm", Locale("id")).format(Date(expiryMs))
     }
-    val modeColor = if (mode == "STEALTH") Color(0xFF7C4DFF) else MaterialTheme.colorScheme.primary
-    val modeLabel = if (mode == "STEALTH") "🔮 Stealth" else "📍 Directed"
+    val modeColor = if (mode == "STEALTH") LocalStatusColors.current.stealth else MaterialTheme.colorScheme.primary
+    val modeLabel = if (mode == "STEALTH") stringResource(R.string.courier_mode_stealth) else stringResource(R.string.courier_mode_directed)
 
     AlertDialog(
         onDismissRequest = { /* tidak bisa dismiss, harus pilih */ },
@@ -392,7 +412,7 @@ fun CourierOfferDialog(
         },
         title = {
             Text(
-                "Permintaan Kurir",
+                stringResource(R.string.courier_offer_title),
                 style = CarakaTextStyles.dialogTitle,
                 textAlign = TextAlign.Center
             )
@@ -402,7 +422,7 @@ fun CourierOfferDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 CarakaBody(
-                    "$fromPeerName memintamu menjadi kurir.",
+                    stringResource(R.string.courier_offer_intro_format, fromPeerName),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -421,12 +441,12 @@ fun CourierOfferDialog(
 
                 InfoRow(
                     icon = Icons.Default.Shield,
-                    label = "Isinya",
-                    value = "Terenkripsi — kamu tidak bisa membacanya"
+                    label = stringResource(R.string.courier_offer_content_label),
+                    value = stringResource(R.string.courier_offer_content_value)
                 )
                 InfoRow(
                     icon = Icons.Default.Key,
-                    label = "Deadline",
+                    label = stringResource(R.string.courier_offer_deadline_label),
                     value = expiryStr,
                     valueColor = if (expiryMs - System.currentTimeMillis() < 3_600_000L)
                         MaterialTheme.colorScheme.error
@@ -435,7 +455,7 @@ fun CourierOfferDialog(
                 if (locationHintLat != null && locationHintLon != null) {
                     InfoRow(
                         icon = Icons.Default.Map,
-                        label = "Lokasi tujuan",
+                        label = stringResource(R.string.courier_offer_location_label),
                         value = "%.4f, %.4f".format(locationHintLat, locationHintLon)
                     )
                 }
@@ -446,7 +466,7 @@ fun CourierOfferDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     CarakaBody(
-                        "⚠️ Kamu akan membawa bundle terenkripsi. Jika kamu kehilangan device, bundle akan expire otomatis.",
+                        stringResource(R.string.courier_offer_warning),
                         modifier = Modifier.padding(10.dp),
                         muted = false
                     )
@@ -460,12 +480,12 @@ fun CourierOfferDialog(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Terima")
+                Text(stringResource(R.string.courier_accept))
             }
         },
         dismissButton = {
             FilledTonalButton(onClick = onReject) {
-                Text("Tolak")
+                Text(stringResource(R.string.courier_reject))
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
@@ -518,30 +538,32 @@ fun StealthBroadcastDialog(
     onDismiss: () -> Unit
 ) {
     var selectedToken by remember { mutableStateOf<String?>(null) }
+    val stealth = LocalStatusColors.current.stealth
+    val onStealth = LocalStatusColors.current.onStealth
 
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
             Surface(
                 shape = CircleShape,
-                color = Color(0xFF7C4DFF).copy(alpha = 0.14f),
+                color = stealth.copy(alpha = 0.14f),
                 modifier = Modifier.size(56.dp)
             ) {
                 Icon(
                     Icons.Default.LockPerson,
                     contentDescription = null,
-                    tint = Color(0xFF7C4DFF),
+                    tint = stealth,
                     modifier = Modifier.padding(14.dp)
                 )
             }
         },
         title = {
-            Text("Token Stealth Diterima", style = CarakaTextStyles.dialogTitle, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.courier_stealth_broadcast_title), style = CarakaTextStyles.dialogTitle, textAlign = TextAlign.Center)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 CarakaBody(
-                    "Kurir di sekitarmu broadcast ${tokenList.size} token. Apakah ada yang milikmu?",
+                    stringResource(R.string.courier_stealth_broadcast_intro_format, tokenList.size),
                     muted = true
                 )
                 LazyColumn(
@@ -557,7 +579,7 @@ fun StealthBroadcastDialog(
                                 .clickable { selectedToken = if (selectedToken == token) null else token },
                             shape = MaterialTheme.shapes.medium,
                             color = if (selectedToken == token)
-                                Color(0xFF7C4DFF).copy(alpha = 0.14f)
+                                stealth.copy(alpha = 0.14f)
                             else MaterialTheme.colorScheme.surfaceVariant
                         ) {
                             Row(
@@ -568,7 +590,7 @@ fun StealthBroadcastDialog(
                                     if (selectedToken == token) Icons.Default.CheckCircle
                                     else Icons.Default.RadioButtonUnchecked,
                                     contentDescription = null,
-                                    tint = if (selectedToken == token) Color(0xFF7C4DFF)
+                                    tint = if (selectedToken == token) stealth
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -590,17 +612,44 @@ fun StealthBroadcastDialog(
             Button(
                 onClick = { selectedToken?.let { onClaim(it) } },
                 enabled = selectedToken != null,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C4DFF))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = stealth,
+                    contentColor = onStealth
+                )
             ) {
-                Text("Klaim Token")
+                Text(stringResource(R.string.courier_claim_btn))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Bukan milikku") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.courier_not_mine)) }
         },
         containerColor = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.extraLarge
     )
+}
+
+/**
+ * Launcher reusable untuk memindai QR kredensial Stealth.
+ * Mengembalikan lambda untuk memulai scan; hasilnya mem-feed [onScanned] (epkPriv, nonce).
+ */
+@Composable
+private fun rememberStealthScanLauncher(onScanned: (epkPriv: String, nonce: String) -> Unit): () -> Unit {
+    val launcher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { raw ->
+            QrIdentityManager.parseStealthCredentialPayload(raw)?.let { onScanned(it.epkPriv, it.nonce) }
+        }
+    }
+    return {
+        launcher.launch(
+            ScanOptions().apply {
+                setCaptureActivity(CarakaQrCaptureActivity::class.java)
+                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                setOrientationLocked(true)
+                setBeepEnabled(true)
+                setBarcodeImageEnabled(false)
+            }
+        )
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -617,6 +666,7 @@ fun StealthChallengeDialog(
 ) {
     var epkPriv by remember { mutableStateOf("") }
     var showPrivKey by remember { mutableStateOf(false) }
+    val launchScan = rememberStealthScanLauncher { epk, _ -> epkPriv = epk }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -635,12 +685,12 @@ fun StealthChallengeDialog(
             }
         },
         title = {
-            Text("Verifikasi Identitas", style = CarakaTextStyles.dialogTitle, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.courier_challenge_title), style = CarakaTextStyles.dialogTitle, textAlign = TextAlign.Center)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CarakaBody(
-                    "Kurir memintamu membuktikan kepemilikan kunci EPK_priv. Masukkan kunci yang diterima dari pengirim.",
+                    stringResource(R.string.courier_challenge_desc),
                     muted = true
                 )
                 Surface(
@@ -649,7 +699,7 @@ fun StealthChallengeDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
-                        Text("Bundle ID", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.courier_bundle_id), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             bundleId.take(16) + "...",
@@ -664,8 +714,8 @@ fun StealthChallengeDialog(
                     value = epkPriv,
                     onValueChange = { epkPriv = it.trim() },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("EPK_priv (Base64)") },
-                    placeholder = { Text("Paste kunci dari pengirim...") },
+                    label = { Text(stringResource(R.string.courier_epk_label)) },
+                    placeholder = { Text(stringResource(R.string.courier_epk_placeholder)) },
                     leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                     trailingIcon = {
                         IconButton(onClick = { showPrivKey = !showPrivKey }) {
@@ -680,6 +730,14 @@ fun StealthChallengeDialog(
                     shape = MaterialTheme.shapes.medium,
                     maxLines = 3
                 )
+                TextButton(
+                    onClick = launchScan,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.courier_scan_qr))
+                }
             }
         },
         confirmButton = {
@@ -687,11 +745,11 @@ fun StealthChallengeDialog(
                 onClick = { onRespond(epkPriv) },
                 enabled = epkPriv.isNotBlank()
             ) {
-                Text("Verifikasi")
+                Text(stringResource(R.string.courier_verify_btn))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.courier_cancel)) }
         },
         containerColor = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.extraLarge
@@ -720,12 +778,13 @@ fun DeliveryReceivedSheet(
     var showPrivKey by remember { mutableStateOf(false) }
     var decryptError by remember { mutableStateOf(false) }
     var isDecrypting by remember { mutableStateOf(false) }
+    val launchScan = rememberStealthScanLauncher { epk, _ -> epkPriv = epk }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(
             modifier = Modifier
@@ -750,9 +809,9 @@ fun DeliveryReceivedSheet(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("Pesan Diterima!", style = CarakaTextStyles.dialogTitle)
+                    Text(stringResource(R.string.courier_delivery_title), style = CarakaTextStyles.dialogTitle)
                     CarakaBody(
-                        "Dari kurir $mode — ${fromPeerId.take(8)}",
+                        stringResource(R.string.courier_delivery_from_format, mode, fromPeerId.take(8)),
                         muted = true
                     )
                 }
@@ -765,7 +824,7 @@ fun DeliveryReceivedSheet(
                         value = epkPriv,
                         onValueChange = { epkPriv = it.trim() },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("EPK_priv untuk dekripsi") },
+                        label = { Text(stringResource(R.string.courier_epk_decrypt_label)) },
                         leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = { showPrivKey = !showPrivKey }) {
@@ -780,9 +839,17 @@ fun DeliveryReceivedSheet(
                         shape = MaterialTheme.shapes.medium,
                         isError = decryptError,
                         supportingText = if (decryptError) {
-                            { Text("Kunci salah atau data rusak", color = MaterialTheme.colorScheme.error) }
+                            { Text(stringResource(R.string.courier_decrypt_wrong_key), color = MaterialTheme.colorScheme.error) }
                         } else null
                     )
+                    TextButton(
+                        onClick = launchScan,
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.courier_scan_qr))
+                    }
                 }
 
                 if (decryptError) {
@@ -792,7 +859,7 @@ fun DeliveryReceivedSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         CarakaBody(
-                            "❌ Dekripsi gagal. Pastikan kunci yang dimasukkan benar.",
+                            stringResource(R.string.courier_decrypt_failed),
                             modifier = Modifier.padding(12.dp)
                         )
                     }
@@ -828,7 +895,7 @@ fun DeliveryReceivedSheet(
                 ) {
                     Icon(Icons.Default.Key, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Buka Pesan", style = CarakaTextStyles.buttonLabel)
+                    Text(stringResource(R.string.courier_open_message), style = CarakaTextStyles.buttonLabel)
                 }
             } else {
                 // Pesan berhasil terdekripsi — tampilkan dengan indah
@@ -842,7 +909,7 @@ fun DeliveryReceivedSheet(
                 ) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Tutup", style = CarakaTextStyles.buttonLabel)
+                    Text(stringResource(R.string.courier_close), style = CarakaTextStyles.buttonLabel)
                 }
             }
         }
@@ -851,22 +918,13 @@ fun DeliveryReceivedSheet(
 
 @Composable
 private fun DecryptedMessageDisplay(decryptedText: String) {
-    // Parse inner payload jika format JSON signed payload
-    val displayText = if (decryptedText.startsWith("{\"content\"")) {
-        try {
-            val regex = Regex(""""content"\s*:\s*"((?:[^"\\]|\\.)*)"""")
-            regex.find(decryptedText)?.groupValues?.get(1) ?: decryptedText
-        } catch (_: Exception) {
-            decryptedText
-        }
-    } else decryptedText
-
-    val isVerified = decryptedText.contains("\"signerPub\"") && decryptedText.contains("\"signature\"")
-
+    // decryptedText sudah berupa konten polos yang LOLOS verifikasi Ed25519 signature A
+    // di CourierRepository.verifyInnerPayload() (mengembalikan null bila signature invalid).
+    // Maka keberhasilan dekripsi = pesan asli & terverifikasi.
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
         ),
         shape = MaterialTheme.shapes.large
     ) {
@@ -874,27 +932,25 @@ private fun DecryptedMessageDisplay(decryptedText: String) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (isVerified) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        "Terverifikasi — Pesan asli dari pengirim",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    stringResource(R.string.courier_verified_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             Text(
-                displayText,
+                decryptedText,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -930,7 +986,7 @@ fun DeliverySuccessSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(
             modifier = Modifier
@@ -972,16 +1028,17 @@ fun DeliverySuccessSheet(
             }
 
             Text(
-                if (carrierName != null) "Pesan Berhasil Disampaikan!" else "Terkirim ke Penerima!",
+                if (carrierName != null) stringResource(R.string.courier_success_receipt_title)
+                else stringResource(R.string.courier_success_delivered_title),
                 style = CarakaTextStyles.dialogTitle,
                 textAlign = TextAlign.Center
             )
 
             CarakaBody(
                 if (carrierName != null)
-                    "Kurirmu ($carrierName) berhasil menyampaikan pesan ke penerima."
+                    stringResource(R.string.courier_success_receipt_body_format, carrierName)
                 else
-                    "Bundle berhasil disampaikan. Identitas penerima tetap anonim.",
+                    stringResource(R.string.courier_success_delivered_body),
                 muted = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -1019,7 +1076,171 @@ fun DeliverySuccessSheet(
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Selesai", style = CarakaTextStyles.buttonLabel)
+                Text(stringResource(R.string.courier_done), style = CarakaTextStyles.buttonLabel)
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  StealthCredentialShareSheet — A membagikan EPK_priv + nonce ke Z (QR / salin / chat)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+fun StealthCredentialShareSheet(
+    bundleId: String,
+    epkPrivB64: String,
+    nonceB64: String,
+    peers: List<PeerEntity>,
+    onShareViaChat: (recipientId: String, payloadJson: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val clipboard = LocalClipboardManager.current
+    val stealth = LocalStatusColors.current.stealth
+
+    val payloadJson = remember(bundleId, epkPrivB64, nonceB64) {
+        QrIdentityManager.buildStealthCredentialPayload(bundleId, epkPrivB64, nonceB64)
+    }
+    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(payloadJson) {
+        // QR selalu hitam-di-putih agar scannable di tema apa pun (bukan inverted).
+        qrBitmap = withContext(Dispatchers.Default) {
+            QrIdentityManager.generateQrBitmap(
+                payloadJson,
+                sizePx = 560,
+                darkColor = 0xFF000000.toInt(),
+                lightColor = 0xFFFFFFFF.toInt()
+            )
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = stealth.copy(alpha = 0.14f), modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = stealth, modifier = Modifier.padding(10.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(stringResource(R.string.courier_share_title), style = CarakaTextStyles.dialogTitle)
+                    CarakaBody(stringResource(R.string.courier_share_subtitle), muted = true)
+                }
+            }
+
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CarakaBody(
+                    stringResource(R.string.courier_share_warning),
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+
+            // QR — selalu di atas tile putih agar kontras & scannable di tema apa pun.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(Color.White)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val bmp = qrBitmap
+                if (bmp != null) {
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = stringResource(R.string.cd_courier_qr),
+                        modifier = Modifier.size(220.dp)
+                    )
+                } else {
+                    Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = stealth)
+                    }
+                }
+            }
+
+            CredentialCopyRow(label = "EPK_priv", value = epkPrivB64) {
+                clipboard.setText(AnnotatedString(epkPrivB64))
+            }
+            CredentialCopyRow(label = "Nonce", value = nonceB64) {
+                clipboard.setText(AnnotatedString(nonceB64))
+            }
+
+            if (peers.isNotEmpty()) {
+                Text(stringResource(R.string.courier_share_via_chat), style = CarakaTextStyles.fieldLabel)
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().height(110.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(peers) { peer ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onShareViaChat(peer.id, payloadJson) },
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Send, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(peer.displayName, style = MaterialTheme.typography.bodyMedium)
+                                    Text(peer.role, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(stringResource(R.string.courier_done), style = CarakaTextStyles.buttonLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CredentialCopyRow(label: String, value: String, onCopy: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    value.take(28) + if (value.length > 28) "…" else "",
+                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+            }
+            IconButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.courier_copy_format, label), tint = MaterialTheme.colorScheme.primary)
             }
         }
     }

@@ -54,7 +54,8 @@ sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector)
     object Help      : Screen("help",        R.string.help_title,          Icons.Default.Settings)
     object QrIdentity: Screen("qr_identity", R.string.qr_screen_title,    Icons.Default.Settings)
     object Alerts    : Screen("alerts",      R.string.alerts_screen_title, Icons.Default.Warning)
-    object Courier   : Screen("courier",     R.string.nav_home,            Icons.Default.Home) // Caraka Kurir
+    object Courier   : Screen("courier",     R.string.courier_title,       Icons.Default.Home) // Caraka Kurir
+    object CourierHistory : Screen("courier_history", R.string.courier_history_title, Icons.Default.Home)
 
     companion object {
         fun chatRoute(peerId: String) = "chat/$peerId"

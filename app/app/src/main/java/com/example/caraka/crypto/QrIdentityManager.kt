@@ -45,6 +45,21 @@ object QrIdentityManager {
         val signPub: String   // Ed25519 public key, Base64
     )
 
+    /**
+     * Payload kredensial Stealth Courier — dibagikan A → Z out-of-band (QR / chat).
+     * Field [t] = tag tipe untuk membedakan dari [QrIdentityPayload] saat parsing.
+     */
+    @Serializable
+    data class StealthCredentialPayload(
+        val v: Int = QR_VERSION,
+        val t: String = STEALTH_TAG,
+        val bundleId: String,
+        val epkPriv: String,   // Base64 EPK_priv
+        val nonce: String      // Base64 nonce rahasia
+    )
+
+    private const val STEALTH_TAG = "scred"
+
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -75,6 +90,25 @@ object QrIdentityManager {
         return runCatching {
             val payload = json.decodeFromString<QrIdentityPayload>(raw)
             if (payload.peerId.isBlank() || payload.signPub.isBlank()) null
+            else payload
+        }.getOrNull()
+    }
+
+    /** Build payload JSON kredensial Stealth (untuk QR / chat share). */
+    fun buildStealthCredentialPayload(bundleId: String, epkPrivB64: String, nonceB64: String): String {
+        return json.encodeToString(
+            StealthCredentialPayload(bundleId = bundleId, epkPriv = epkPrivB64, nonce = nonceB64)
+        )
+    }
+
+    /**
+     * Parse string QR/chat menjadi [StealthCredentialPayload].
+     * Return null bila bukan kredensial Stealth valid (mis. ini QR identitas biasa).
+     */
+    fun parseStealthCredentialPayload(raw: String): StealthCredentialPayload? {
+        return runCatching {
+            val payload = json.decodeFromString<StealthCredentialPayload>(raw)
+            if (payload.t != STEALTH_TAG || payload.epkPriv.isBlank()) null
             else payload
         }.getOrNull()
     }

@@ -12,7 +12,11 @@ data class StatusColors(
     val relay: Color,
     val sos: Color,
     val authority: Color,
-    val direct: Color
+    val direct: Color,
+    /** Aksen Courier "Stealth" (di atas surface). Per-tema. */
+    val stealth: Color,
+    /** Konten (teks/ikon) di atas fill [stealth]. Flip antar-tema. */
+    val onStealth: Color
 )
 
 val LocalStatusColors = staticCompositionLocalOf {
@@ -23,6 +27,8 @@ val LocalStatusColors = staticCompositionLocalOf {
         relay = Color.Unspecified,
         sos = Color.Unspecified,
         authority = Color.Unspecified,
-        direct = Color.Unspecified
+        direct = Color.Unspecified,
+        stealth = Color.Unspecified,
+        onStealth = Color.Unspecified
     )
 }

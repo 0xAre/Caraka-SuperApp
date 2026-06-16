@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.caraka.crypto.CourierCryptoHelper
 import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.data.local.entity.CourierBundleEntity
+import com.example.caraka.data.local.entity.CourierTaskEntity
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.network.CourierEvent
 import com.example.caraka.network.CourierManager
@@ -107,6 +108,19 @@ class CourierViewModel(
     val stealthCredentials: StateFlow<StealthCredentials?> = _stealthCredentials.asStateFlow()
     fun clearStealthCredentials() { _stealthCredentials.value = null }
 
+    /** A membagikan kredensial Stealth (payload JSON) ke Z via chat CARAKA terenkripsi E2E. */
+    fun shareCredentialsViaChat(recipientId: String, payloadJson: String) {
+        viewModelScope.launch {
+            try {
+                meshRepository.sendDirectMessage(recipientId, payloadJson)
+                _snackbar.emit("Kredensial dikirim ke ${recipientId.take(8)} via chat terenkripsi.")
+            } catch (e: Exception) {
+                Log.e(TAG, "shareCredentialsViaChat gagal", e)
+                _snackbar.emit("Gagal kirim kredensial via chat: ${e.message}")
+            }
+        }
+    }
+
     // ── My bundles (B sedang membawa) ────────────────────────────────────────────────────────
     val carryingBundles: StateFlow<List<CourierBundleEntity>> =
         courierRepository.getCarryingBundles()
@@ -114,6 +128,10 @@ class CourierViewModel(
 
     // ── Connected peers (untuk picker kurir) ─────────────────────────────────────────────────
     val connectedPeers: StateFlow<List<PeerEntity>> = meshRepository.getConnectedPeers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ── Riwayat tugas kurir (CourierHistoryScreen) ───────────────────────────────────────────
+    val historyTasks: StateFlow<List<CourierTaskEntity>> = courierRepository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {

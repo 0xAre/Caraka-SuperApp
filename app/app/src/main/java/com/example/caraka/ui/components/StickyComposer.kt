@@ -2,10 +2,10 @@ package com.example.caraka.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -24,12 +24,11 @@ fun StickyComposer(
     placeholder: String = stringResource(com.example.caraka.R.string.chat_input_placeholder),
     topContent: @Composable (() -> Unit)? = null
 ) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
-        Column(
-            modifier = modifier
-                .imePadding()
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
-        ) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier
+    ) {
+        Column {
             topContent?.invoke()
             ChatInputBar(
                 value = value,

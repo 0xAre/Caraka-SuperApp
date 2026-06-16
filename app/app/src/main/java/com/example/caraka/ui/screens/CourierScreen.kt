@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LockPerson
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -62,11 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.caraka.R
 import com.example.caraka.data.local.entity.CourierBundleEntity
 import com.example.caraka.ui.components.CarakaBody
 import com.example.caraka.ui.components.CarakaCard
@@ -77,7 +79,9 @@ import com.example.caraka.ui.courier.DeliveryReceivedSheet
 import com.example.caraka.ui.courier.DeliverySuccessSheet
 import com.example.caraka.ui.courier.StealthBroadcastDialog
 import com.example.caraka.ui.courier.StealthChallengeDialog
+import com.example.caraka.ui.courier.StealthCredentialShareSheet
 import com.example.caraka.ui.theme.CarakaTextStyles
+import com.example.caraka.ui.theme.LocalStatusColors
 import com.example.caraka.viewmodel.CourierDialogState
 import com.example.caraka.viewmodel.CourierViewModel
 import java.text.SimpleDateFormat
@@ -88,12 +92,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun CourierScreen(
     viewModel: CourierViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val dialogState by viewModel.dialogState.collectAsState()
     val carakaModeActive by viewModel.carakaModeActive.collectAsState()
     val carryingBundles by viewModel.carryingBundles.collectAsState()
     val connectedPeers by viewModel.connectedPeers.collectAsState()
+    val stealthCreds by viewModel.stealthCredentials.collectAsState()
     val scope = rememberCoroutineScope()
 
     // State untuk hasil decrypt Directed (harus async karena getEncryptionKeyPair() suspend)
@@ -180,17 +186,29 @@ fun CourierScreen(
         is CourierDialogState.None -> { /* nothing */ }
     }
 
+    // Setelah A membuat bundle STEALTH: tampilkan sheet berbagi kredensial (EPK_priv + nonce).
+    stealthCreds?.let { creds ->
+        StealthCredentialShareSheet(
+            bundleId = creds.bundleId,
+            epkPrivB64 = creds.epkPrivB64,
+            nonceB64 = creds.nonceSecretB64,
+            peers = connectedPeers,
+            onShareViaChat = { peerId, payloadJson -> viewModel.shareCredentialsViaChat(peerId, payloadJson) },
+            onDismiss = { viewModel.clearStealthCredentials() }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            "Caraka Kurir",
+                            stringResource(R.string.courier_title),
                             style = CarakaTextStyles.screenTitle
                         )
                         Text(
-                            "Kirim pesan lewat kurir terpercaya",
+                            stringResource(R.string.courier_subtitle),
                             style = CarakaTextStyles.caption,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -198,7 +216,12 @@ fun CourierScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToHistory) {
+                        Icon(Icons.Default.History, contentDescription = stringResource(R.string.cd_courier_history))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -211,7 +234,7 @@ fun CourierScreen(
                 ExtendedFloatingActionButton(
                     onClick = { viewModel.openSendRequest() },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Kirim via Kurir") },
+                    text = { Text(stringResource(R.string.courier_fab_send)) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
@@ -245,7 +268,7 @@ fun CourierScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "Bundle Dibawa",
+                        stringResource(R.string.courier_carrying_section),
                         style = CarakaTextStyles.sectionTitle
                     )
                     if (carryingBundles.isNotEmpty()) {
@@ -320,14 +343,12 @@ private fun CarakaModeCard(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 CarakaListTitle(
-                    if (active) "Caraka Mode Aktif" else "Caraka Mode",
+                    if (active) stringResource(R.string.courier_mode_active_title) else stringResource(R.string.courier_mode_title),
                     color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
                 CarakaBody(
-                    if (active)
-                        "Broadcast stealth token ke peer sekitar. Z bisa klaim pesan tanpa mengetahui identitasmu."
-                    else
-                        "Aktifkan saat kamu tiba di lokasi tujuan untuk menerima bundle stealth secara anonim.",
+                    if (active) stringResource(R.string.courier_mode_active_desc)
+                    else stringResource(R.string.courier_mode_desc),
                     muted = true
                 )
             }
@@ -347,10 +368,10 @@ private fun CarakaModeCard(
 @Composable
 private fun BundleCarryItem(bundle: CourierBundleEntity) {
     val modeColor = when (bundle.mode) {
-        "STEALTH" -> Color(0xFF7C4DFF)
+        "STEALTH" -> LocalStatusColors.current.stealth
         else -> MaterialTheme.colorScheme.primary
     }
-    val modeLabel = if (bundle.mode == "STEALTH") "🔮 Stealth" else "📍 Directed"
+    val modeLabel = if (bundle.mode == "STEALTH") stringResource(R.string.courier_mode_stealth) else stringResource(R.string.courier_mode_directed)
     val expiryDate = androidx.compose.runtime.remember(bundle.expiry) {
         SimpleDateFormat("dd MMM HH:mm", Locale("id")).format(Date(bundle.expiry))
     }
@@ -403,7 +424,7 @@ private fun BundleCarryItem(bundle: CourierBundleEntity) {
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Expire: $expiryDate",
+                    stringResource(R.string.courier_expire_format, expiryDate),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isExpiringSoon)
                         MaterialTheme.colorScheme.error
@@ -441,9 +462,9 @@ private fun EmptyBundleCard() {
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
             )
-            CarakaListTitle("Tidak ada bundle")
+            CarakaListTitle(stringResource(R.string.courier_empty_title))
             CarakaBody(
-                "Kamu belum membawa bundle kurir apapun. Terima tawaran dari pengirim atau aktifkan Caraka Mode untuk mode stealth.",
+                stringResource(R.string.courier_empty_desc),
                 muted = true
             )
         }

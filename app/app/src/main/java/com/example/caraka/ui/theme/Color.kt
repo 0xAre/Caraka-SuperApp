@@ -30,6 +30,13 @@ val DangerRedDark     = Color(0xFFFF6B6B)
 val InfoBlue          = Color(0xFF3478F6)
 val InfoBlueDark      = Color(0xFF6EA6FF)
 
+// Courier "Stealth" accent — violet teredam (bukan neon). Pasangan on-color
+// flip antar-tema agar konten di atas fill Stealth tetap kontras.
+val StealthViolet     = Color(0xFF6B5E95)   // light: violet medium di atas surface terang
+val OnStealthLight    = Color(0xFFFFFFFF)   // konten di atas StealthViolet (light)
+val StealthVioletDark = Color(0xFFC9B7E0)   // dark: lavender muda agar terbaca di canvas gelap
+val OnStealthDark     = Color(0xFF2A1A40)   // konten di atas StealthVioletDark (dark)
+
 // ─── LIGHT TEXT & BORDERS ──────────────────────────────────────────────────
 val TextPrimary    = Color(0xFF111827)
 val TextSecondary  = Color(0xFF64748B)

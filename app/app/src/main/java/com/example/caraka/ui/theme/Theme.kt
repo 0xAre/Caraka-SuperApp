@@ -125,7 +125,9 @@ fun CarakaTheme(
             relay     = InfoBlueDark,
             sos       = DangerRedDark,
             authority = SuccessGreenDark,
-            direct    = TelegramBlueDark
+            direct    = TelegramBlueDark,
+            stealth   = StealthVioletDark,
+            onStealth = OnStealthDark
         )
     } else {
         StatusColors(
@@ -135,7 +137,9 @@ fun CarakaTheme(
             relay     = InfoBlue,
             sos       = DangerRed,
             authority = SuccessGreen,
-            direct    = TelegramBlueStrong
+            direct    = TelegramBlueStrong,
+            stealth   = StealthViolet,
+            onStealth = OnStealthLight
         )
     }
 
