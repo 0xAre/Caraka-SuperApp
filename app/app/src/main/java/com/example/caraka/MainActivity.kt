@@ -17,8 +17,10 @@ import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.caraka.service.MeshForegroundService
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,12 +38,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.caraka.ui.components.BottomNavBar
@@ -274,6 +278,7 @@ private fun CarakaNav(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Routes that show the global bottom nav bar.
     val showBottomBar = currentRoute in listOf(
         Screen.Home.route,
         Screen.Messages.route,
@@ -283,6 +288,11 @@ private fun CarakaNav(
         Screen.Alerts.route,
         Screen.Courier.route
     )
+
+    // The chat screen owns its own bottom inset (IME + nav bar) via a sticky composer,
+    // so the global BottomNavBar is hidden there and the chat content extends to the
+    // true screen bottom (bottom padding = 0). See StickyComposer / ChatScreen.
+    val isChatRoute = currentRoute == Screen.CHAT_ROUTE_PATTERN
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -298,13 +308,23 @@ private fun CarakaNav(
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
+            val layoutDirection = LocalLayoutDirection.current
+            val contentPadding = if (isChatRoute) {
+                PaddingValues(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                    bottom = 0.dp
+                )
+            } else {
+                innerPadding
+            }
             NavHost(
                 navController = navController,
                 startDestination = Screen.Home.route,
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding)
-                    .imePadding()
+                    .padding(contentPadding)
+                    .consumeWindowInsets(contentPadding)
             ) {
                 composable(Screen.Home.route) {
                     val courierCarryCount by courierViewModel.activeCarryCount.collectAsState()

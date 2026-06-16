@@ -136,25 +136,14 @@ fun ChatScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        bottomBar = {
-            StickyComposer(
-                value = messageText,
-                onValueChange = { messageText = it },
-                onSend = {
-                    if (messageText.isNotBlank()) {
-                        viewModel?.sendDirectMessage(peerId, messageText)
-                        snackbar.tryEmit(sentMsg)
-                        messageText = ""
-                    }
-                }
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
         ) {
             Row(
                 modifier = Modifier
@@ -176,7 +165,8 @@ fun ChatScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
@@ -236,6 +226,18 @@ fun ChatScreen(
                     }
                 }
             }
+
+            StickyComposer(
+                value = messageText,
+                onValueChange = { messageText = it },
+                onSend = {
+                    if (messageText.isNotBlank()) {
+                        viewModel?.sendDirectMessage(peerId, messageText)
+                        snackbar.tryEmit(sentMsg)
+                        messageText = ""
+                    }
+                }
+            )
         }
     }
 
