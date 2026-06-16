@@ -10,10 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.caraka.R
 import com.example.caraka.ui.components.CarakaBody
 import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaGlassSurface
@@ -53,7 +55,7 @@ fun ConnectionRequestDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Permintaan Koneksi Masuk",
+                    text = stringResource(R.string.connection_request_title),
                     style = CarakaTextStyles.dialogTitle,
                     color = TextPrimary
                 )
@@ -108,7 +110,7 @@ fun ConnectionRequestDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 CarakaBody(
-                    text = "Terima permintaan koneksi dari perangkat ini?",
+                    text = stringResource(R.string.connection_request_question),
                     muted = true,
                     textAlign = TextAlign.Center
                 )
@@ -131,7 +133,7 @@ fun ConnectionRequestDialog(
                             contentColor = CoralError
                         )
                     ) {
-                        Text("TOLAK", style = CarakaTextStyles.buttonLabel)
+                        Text(stringResource(R.string.connection_request_reject), style = CarakaTextStyles.buttonLabel)
                     }
 
                     Button(
@@ -147,7 +149,7 @@ fun ConnectionRequestDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("TERIMA", style = CarakaTextStyles.buttonLabel)
+                        Text(stringResource(R.string.connection_request_accept), style = CarakaTextStyles.buttonLabel)
                     }
                 }
             }

@@ -244,12 +244,12 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                "Pilih jenis keadaan darurat",
+                stringResource(R.string.sos_select_emergency_title),
                 style = CarakaTextStyles.screenTitle,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                "Informasi ini membantu peer memprioritaskan respons.",
+                stringResource(R.string.sos_select_emergency_subtitle),
                 style = CarakaTextStyles.screenSubtitle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -412,7 +412,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                             )
                         } else {
                             Text(
-                                if (!locationPermissionGranted) "Akses Ditolak" else "Mencari...",
+                                if (!locationPermissionGranted) stringResource(R.string.sos_access_denied) else stringResource(R.string.sos_searching),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = CarakaTextStyles.statusPrimary
                             )
@@ -454,7 +454,7 @@ fun SosScreen(viewModel: MainViewModel? = null, onBack: () -> Unit = {}) {
                             )
                         }
                         Text(
-                            if (locationName.isNotEmpty()) locationName else "Unknown\nLocation",
+                            if (locationName.isNotEmpty()) locationName else stringResource(R.string.sos_unknown_location),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             style = CarakaTextStyles.badge,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
@@ -543,7 +543,7 @@ fun SosCategoryCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.sos_category_selected_cd),
                     tint = Color.White,
                     modifier = Modifier.size(14.dp)
                 )

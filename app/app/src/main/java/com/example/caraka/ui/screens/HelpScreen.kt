@@ -99,12 +99,12 @@ fun HelpScreen(onBack: () -> Unit, onLaunchTour: () -> Unit) {
                     Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.padding(end = 12.dp)) {
-                        CarakaListTitle("Tur Interaktif")
-                        CarakaBody("Putar ulang panduan 5 langkah", muted = true)
+                        CarakaListTitle(stringResource(R.string.help_tour_title))
+                        CarakaBody(stringResource(R.string.help_tour_subtitle), muted = true)
                     }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onLaunchTour) {
-                        Text("Mulai", color = MaterialTheme.colorScheme.primary, style = CarakaTextStyles.buttonLabel)
+                        Text(stringResource(R.string.help_tour_start), color = MaterialTheme.colorScheme.primary, style = CarakaTextStyles.buttonLabel)
                     }
                 }
             }

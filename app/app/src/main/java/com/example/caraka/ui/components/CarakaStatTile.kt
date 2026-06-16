@@ -8,7 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.caraka.R
 
 @Composable
 fun CarakaStatTile(
@@ -28,26 +30,26 @@ fun CarakaStatTile(
         ) {
             CarakaMetricColumn(
                 value = "$nodeCount",
-                label = "Node",
+                label = stringResource(R.string.home_stat_nodes),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f)
             )
             CarakaMetricColumn(
                 value = "${"%.1f".format(coverageKm)}",
                 valueSuffix = "km",
-                label = "Jangkauan",
+                label = stringResource(R.string.home_stat_range),
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.weight(1f)
             )
             CarakaMetricColumn(
                 value = "$alarmCount",
-                label = "Alarm",
+                label = stringResource(R.string.home_stat_alerts),
                 color = if (alarmCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             CarakaMetricColumn(
                 value = "$forwardedCount",
-                label = "Relay",
+                label = stringResource(R.string.settings_label_relay),
                 color = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.weight(1f)
             )

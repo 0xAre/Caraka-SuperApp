@@ -72,7 +72,7 @@ fun MessagesScreen(
                 title = {
                     CarakaTopBarTitle(
                         title = stringResource(R.string.messages_title),
-                        subtitle = "Percakapan terenkripsi di jaringan mesh"
+                        subtitle = stringResource(R.string.messages_subtitle)
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -115,8 +115,8 @@ fun MessagesScreen(
                     contentAlignment = Alignment.TopCenter
                 ) {
                     MeshEmptyStateIllustration(
-                        message = "Belum ada pesan di jaringan",
-                        subtitle = "Hubungkan ke peer di sekitar untuk mulai berkomunikasi",
+                        message = stringResource(R.string.messages_empty_network_title),
+                        subtitle = stringResource(R.string.messages_empty_network_subtitle),
                         actionLabel = stringResource(R.string.messages_open_network),
                         onAction = onNavigateToNetwork,
                         contentDescription = stringResource(R.string.messages_no_peers)

@@ -86,8 +86,8 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     CarakaTopBarTitle(
-                        title = "Profil",
-                        subtitle = "Identitas, keamanan, dan preferensi CARAKA"
+                        title = stringResource(R.string.nav_settings),
+                        subtitle = stringResource(R.string.settings_profile_subtitle)
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -104,7 +104,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Identitas")
+            SectionTitle(stringResource(R.string.settings_section_identity))
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -177,7 +177,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Jaringan")
+            SectionTitle(stringResource(R.string.settings_section_network))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsStatChip(stringResource(R.string.settings_stat_nodes), "$meshNodeCount", Icons.Default.Hub, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 SettingsStatChip(stringResource(R.string.settings_stat_peers), "$connectedPeerCount", Icons.Default.People, statusColors.online, Modifier.weight(1f))
@@ -189,21 +189,22 @@ fun SettingsScreen(
                 goIntentValue <= 7 -> MaterialTheme.colorScheme.tertiary
                 else -> statusColors.online
             }
+            val goPriorityInfoMsg = stringResource(R.string.settings_go_priority_info)
             SettingsStatChip(
-                label = "Prioritas GO",
+                label = stringResource(R.string.settings_go_priority_label),
                 value = "$goIntentValue/15",
                 icon = Icons.Default.Hub,
                 color = goIntentColor,
                 modifier = Modifier.fillMaxWidth(),
-                subLabel = "Tinggi = lebih sering jadi relay utama",
+                subLabel = stringResource(R.string.settings_go_priority_sublabel),
                 onInfoClick = {
                     haptics.tick()
-                    snackbar.tryEmit("Semakin tinggi nilai, semakin diprioritaskan menjadi Group Owner jaringan mesh")
+                    snackbar.tryEmit(goPriorityInfoMsg)
                 }
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Tampilan & aksesibilitas")
+            SectionTitle(stringResource(R.string.settings_section_appearance))
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -263,7 +264,7 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Bantuan & info")
+            SectionTitle(stringResource(R.string.settings_section_help))
 
             CarakaCard(
                 modifier = Modifier.fillMaxWidth().clickable { haptics.tick(); onOpenHelp() }.semantics { contentDescription = helpCd },
@@ -301,7 +302,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Zona berbahaya")
+            SectionTitle(stringResource(R.string.settings_section_danger))
             Button(
                 onClick = { showResetDialog = true },
                 modifier = Modifier
@@ -314,14 +315,14 @@ fun SettingsScreen(
                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Hapus data darurat",
+                    stringResource(R.string.settings_wipe_data_btn),
                     style = CarakaTextStyles.buttonLabel,
                     color = MaterialTheme.colorScheme.error
                 )
             }
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Mode demo")
+            SectionTitle(stringResource(R.string.settings_section_demo))
             AttackSimulatorCard(
                 isActive = attackSimActive,
                 onToggle = { 
@@ -338,8 +339,8 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Hapus seluruh data CARAKA?", color = MaterialTheme.colorScheme.onSurface) },
-            text = { Text("Tindakan ini akan MENGHAPUS SEMUA DATA mesh, riwayat pesan, dan identitas Anda dari perangkat secara permanen. Lanjutkan?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            title = { Text(stringResource(R.string.settings_wipe_dialog_title), color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text(stringResource(R.string.settings_wipe_dialog_desc), color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -350,7 +351,7 @@ fun SettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text(
-                        "WIPE SEKARANG",
+                        stringResource(R.string.settings_wipe_now),
                         style = CarakaTextStyles.buttonLabel.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onError
                     )
@@ -372,16 +373,16 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    "Pilih Role Jaringan",
+                    stringResource(R.string.settings_role_sheet_title),
                     style = CarakaTextStyles.dialogTitle,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 val roles = listOf(
-                    Triple("CIVILIAN", Icons.Default.Person, "Pengguna umum jaringan mesh"),
-                    Triple("BPBD", Icons.Default.Warning, "Badan Penanggulangan Bencana Daerah"),
-                    Triple("POLRI", Icons.Default.Shield, "Kepolisian Negara Republik Indonesia"),
-                    Triple("PMI", Icons.Default.LocalHospital, "Palang Merah Indonesia")
+                    Triple("CIVILIAN", Icons.Default.Person, stringResource(R.string.settings_role_civilian_desc)),
+                    Triple("BPBD", Icons.Default.Warning, stringResource(R.string.settings_role_bpbd_desc)),
+                    Triple("POLRI", Icons.Default.Shield, stringResource(R.string.settings_role_polri_desc)),
+                    Triple("PMI", Icons.Default.LocalHospital, stringResource(R.string.settings_role_pmi_desc))
                 )
                 
                 roles.forEach { (roleName, icon, desc) ->
@@ -402,7 +403,7 @@ fun SettingsScreen(
                                 if (isAuthorityItem) {
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        "(Perlu Verifikasi QR)",
+                                        stringResource(R.string.settings_role_verify_required),
                                         style = CarakaTextStyles.statLabel,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -424,8 +425,8 @@ fun SettingsScreen(
     if (showRoleConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showRoleConfirmDialog = false },
-            title = { Text("Konfirmasi Role", color = MaterialTheme.colorScheme.onSurface) },
-            text = { Text("Role ini memerlukan verifikasi identitas dari otoritas terkait. Lanjutkan?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            title = { Text(stringResource(R.string.settings_role_confirm_title), color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text(stringResource(R.string.settings_role_confirm_desc), color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
                 TextButton(onClick = {
                     selectedPendingRole?.let { viewModel?.updateRole(it) }
@@ -433,14 +434,14 @@ fun SettingsScreen(
                     showRoleSheet = false
                 }) {
                     Text(
-                        "Lanjutkan",
+                        stringResource(R.string.settings_continue),
                         style = CarakaTextStyles.buttonLabel.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRoleConfirmDialog = false }) { Text("Batal", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                TextButton(onClick = { showRoleConfirmDialog = false }) { Text(stringResource(R.string.settings_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             },
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -475,8 +476,10 @@ private fun ToggleRow(
     checked: Boolean,
     onToggle: () -> Unit
 ) {
+    val enabledLabel = stringResource(R.string.settings_toggle_enabled)
+    val disabledLabel = stringResource(R.string.settings_toggle_disabled)
     CarakaCard(
-        modifier = Modifier.fillMaxWidth().clickable { onToggle() }.semantics { contentDescription = "$title. ${if (checked) "Enabled" else "Disabled"}" },
+        modifier = Modifier.fillMaxWidth().clickable { onToggle() }.semantics { contentDescription = "$title. ${if (checked) enabledLabel else disabledLabel}" },
         hasSubtleBorder = true,
             containerColor = MaterialTheme.colorScheme.surface
     ) {
@@ -535,7 +538,7 @@ private fun SettingsStatChip(
                 Spacer(Modifier.height(4.dp))
                 Icon(
                     Icons.Default.Info,
-                    contentDescription = "Info",
+                    contentDescription = stringResource(R.string.cd_info_tooltip),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .size(14.dp)
@@ -608,7 +611,7 @@ private fun AttackSimulatorCard(isActive: Boolean, onToggle: () -> Unit) {
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             Text(
-                text = "Fitur khusus demonstrasi — jangan aktifkan saat operasi nyata",
+                text = stringResource(R.string.settings_demo_warning),
                 style = CarakaTextStyles.statLabel,
                 color = if (isActive) MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
                 else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),

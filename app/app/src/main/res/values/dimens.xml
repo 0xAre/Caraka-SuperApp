@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="caraka_qr_frame_size">284dp</dimen>
+    <dimen name="caraka_qr_frame_corner_length">52dp</dimen>
+    <dimen name="caraka_qr_frame_corner_thickness">5dp</dimen>
+</resources>
