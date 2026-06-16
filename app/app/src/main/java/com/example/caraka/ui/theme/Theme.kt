@@ -1,8 +1,10 @@
 package com.example.caraka.ui.theme
 
 import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,7 +16,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.core.view.WindowCompat
 
-private val DefaultColorScheme = lightColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = TelegramBlueStrong,
     onPrimary = Color.White,
     primaryContainer = TelegramBlueContainer,
@@ -41,7 +43,34 @@ private val DefaultColorScheme = lightColorScheme(
     outlineVariant = BorderSubtle,
 )
 
-private val HighContrastScheme = DefaultColorScheme.copy(
+private val DarkColorScheme = darkColorScheme(
+    primary = TelegramBlueDark,
+    onPrimary = Color(0xFF003A57),
+    primaryContainer = TelegramBlueDarkCont,
+    onPrimaryContainer = Color(0xFFB3E5FF),
+    secondary = InfoBlueDark,
+    onSecondary = Color(0xFF00225A),
+    secondaryContainer = Color(0xFF163172),
+    onSecondaryContainer = Color(0xFFD5E3FF),
+    tertiary = WarningAmberDark,
+    onTertiary = Color(0xFF3E2700),
+    tertiaryContainer = Color(0xFF593A00),
+    onTertiaryContainer = Color(0xFFFFDDB4),
+    background = CanvasDarkBg,
+    onBackground = TextPrimaryDark,
+    surface = SurfaceDarkLow,
+    onSurface = TextPrimaryDark,
+    surfaceVariant = SurfaceDarkMid,
+    onSurfaceVariant = TextSecondaryDark,
+    error = DangerRedDark,
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = BorderSubtleDark,
+    outlineVariant = DividerSubtleDark,
+)
+
+private val HighContrastScheme = LightColorScheme.copy(
     background = Color.White,
     surface = Color.White,
     onBackground = Color.Black,
@@ -55,11 +84,17 @@ private val HighContrastScheme = DefaultColorScheme.copy(
 
 @Composable
 fun CarakaTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
     highContrast: Boolean = false,
     bigText: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (highContrast) HighContrastScheme else DefaultColorScheme
+    val colorScheme = when {
+        highContrast -> HighContrastScheme
+        darkTheme    -> DarkColorScheme
+        else         -> LightColorScheme
+    }
+    val isLight = !darkTheme && !highContrast
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -68,8 +103,8 @@ fun CarakaTheme(
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = true
-                isAppearanceLightNavigationBars = true
+                isAppearanceLightStatusBars = isLight
+                isAppearanceLightNavigationBars = isLight
             }
         }
     }
@@ -82,15 +117,27 @@ fun CarakaTheme(
     }
 
     val shapes = CarakaShapes()
-    val statusColors = StatusColors(
-        online = SuccessGreen,
-        hybrid = TelegramBlueStrong,
-        meshOnly = WarningAmber,
-        relay = InfoBlue,
-        sos = DangerRed,
-        authority = SuccessGreen,
-        direct = TelegramBlueStrong
-    )
+    val statusColors = if (darkTheme) {
+        StatusColors(
+            online    = SuccessGreenDark,
+            hybrid    = TelegramBlueDark,
+            meshOnly  = WarningAmberDark,
+            relay     = InfoBlueDark,
+            sos       = DangerRedDark,
+            authority = SuccessGreenDark,
+            direct    = TelegramBlueDark
+        )
+    } else {
+        StatusColors(
+            online    = SuccessGreen,
+            hybrid    = TelegramBlueStrong,
+            meshOnly  = WarningAmber,
+            relay     = InfoBlue,
+            sos       = DangerRed,
+            authority = SuccessGreen,
+            direct    = TelegramBlueStrong
+        )
+    }
 
     CompositionLocalProvider(
         LocalDensity provides density,

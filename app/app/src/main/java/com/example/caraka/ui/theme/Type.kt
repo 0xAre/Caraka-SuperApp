@@ -322,4 +322,15 @@ object CarakaTextStyles {
         fontSize = 15.sp,
         lineHeight = 20.sp
     )
+
+    // ── Alias untuk CourierScreen dan komponen baru ──────────────────────────────────────────
+
+    /** Section header di dalam screen (e.g. "Bundle Dibawa"). */
+    val sectionTitle get() = listTitle
+
+    /** Label di atas form field. */
+    val fieldLabel get() = sectionHeader
+
+    /** Caption kecil — subtitle di TopAppBar, metadata. */
+    val caption get() = statusSecondary
 }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Notifications
@@ -80,7 +81,8 @@ fun HomeScreen(
     onNavigateToNetwork: (() -> Unit)? = null,
     onNavigateToProfile: (() -> Unit)? = null,
     onNavigateToQr: (() -> Unit)? = null,
-    onNavigateToHelp: (() -> Unit)? = null
+    onNavigateToHelp: (() -> Unit)? = null,
+    onNavigateToCourier: (() -> Unit)? = null
 ) {
     val activeAlerts by viewModel?.activeAlerts?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
@@ -200,7 +202,7 @@ fun HomeScreen(
                         ServiceTile(Icons.Default.Notifications, "Alarm", MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_alarm)
                         ServiceTile(Icons.Default.Shield, "Identitas", statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_identity)
                         ServiceTile(Icons.Default.HelpOutline, "Bantuan", MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_help)
-                        ServiceTile(Icons.Default.Bolt, "Simulator", MaterialTheme.colorScheme.primary, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
+                        ServiceTile(Icons.Default.DirectionsBike, "Kurir", MaterialTheme.colorScheme.secondary, { onNavigateToCourier?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
                     }
                 }
             }

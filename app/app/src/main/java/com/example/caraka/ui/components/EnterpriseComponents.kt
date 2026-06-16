@@ -1,7 +1,11 @@
 package com.example.caraka.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -51,46 +58,63 @@ fun ServiceTile(
     modifier: Modifier = Modifier,
     @DrawableRes illustrationRes: Int? = null
 ) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue   = if (isPressed) 0.91f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness    = Spring.StiffnessMedium
+        ),
+        label = "service_tile_scale"
+    )
+
     Column(
         modifier = modifier
-            .heightIn(min = 92.dp)
-            .clickable(onClick = onClick)
+            .heightIn(min = 96.dp)
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication        = null,
+                onClick           = onClick
+            )
             .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(modifier = Modifier.size(58.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(62.dp), contentAlignment = Alignment.Center) {
             if (illustrationRes != null) {
                 Image(
-                    painter = painterResource(illustrationRes),
+                    painter           = painterResource(illustrationRes),
                     contentDescription = null,
-                    modifier = Modifier.size(58.dp)
+                    modifier          = Modifier.size(58.dp)
                 )
             } else {
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = color.copy(alpha = 0.12f),
-                    modifier = Modifier.size(48.dp)
+                    shape    = MaterialTheme.shapes.medium,
+                    color    = color.copy(alpha = 0.12f),
+                    modifier = Modifier.size(52.dp)
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.padding(12.dp)
+                        tint     = color,
+                        modifier = Modifier.padding(13.dp)
                     )
                 }
             }
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            text = label,
-            style = CarakaTextStyles.serviceLabel,
-            color = MaterialTheme.colorScheme.onSurface,
+            text     = label,
+            style    = CarakaTextStyles.serviceLabel,
+            color    = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
+
 
 @Composable
 fun EnterpriseMenuRow(

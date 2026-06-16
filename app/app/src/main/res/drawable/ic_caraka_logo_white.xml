@@ -6,40 +6,25 @@
     android:viewportHeight="108">
     <path
         android:fillColor="@android:color/transparent"
-        android:pathData="M25,40 C31,20 49,13 64,14 C71,14 77,17 82,21"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="butt"
-        android:strokeLineJoin="round"
-        android:strokeWidth="11" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:pathData="M25,68 C31,88 49,95 64,94 C72,94 78,91 83,87"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="butt"
-        android:strokeLineJoin="round"
-        android:strokeWidth="11" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:pathData="M38,54 L26,54 M65,43 L77,31 M65,65 L77,77"
+        android:pathData="M42,25 C55,18 73,22 82,34"
         android:strokeColor="#FFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:strokeWidth="5" />
+        android:strokeWidth="17" />
     <path
         android:fillColor="@android:color/transparent"
-        android:pathData="M54,39 A15,15 0,1 1,54,69 A15,15 0,1 1,54,39"
+        android:pathData="M29,63 C37,83 55,91 73,82"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="5" />
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="17" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,46 A8,8 0,1 1,54,62 A8,8 0,1 1,54,46" />
+        android:pathData="M27,39 A10,10 0,1 1,27,59 A10,10 0,1 1,27,39" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M25,46 A8,8 0,1 1,25,62 A8,8 0,1 1,25,46" />
+        android:pathData="M80,56 A10,10 0,1 1,80,76 A10,10 0,1 1,80,56" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M79,23 A8,8 0,1 1,79,39 A8,8 0,1 1,79,23" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M79,69 A8,8 0,1 1,79,85 A8,8 0,1 1,79,69" />
+        android:pathData="M54,47 A7,7 0,1 1,54,61 A7,7 0,1 1,54,47" />
 </vector>

@@ -54,6 +54,7 @@ import com.example.caraka.ui.prefs.UiPreferences
 import com.example.caraka.ui.prefs.UiPrefsState
 import com.example.caraka.ui.screens.AlertsScreen
 import com.example.caraka.ui.screens.ChatScreen
+import com.example.caraka.ui.screens.CourierScreen
 import com.example.caraka.ui.screens.HelpScreen
 import com.example.caraka.ui.screens.HomeScreen
 import com.example.caraka.ui.screens.MessagesScreen
@@ -63,6 +64,7 @@ import com.example.caraka.ui.screens.QrIdentityScreen
 import com.example.caraka.ui.screens.SettingsScreen
 import com.example.caraka.ui.screens.SosScreen
 import com.example.caraka.ui.theme.CarakaTheme
+import com.example.caraka.viewmodel.CourierViewModel
 import com.example.caraka.viewmodel.MainViewModel
 import com.example.caraka.viewmodel.MainViewModelFactory
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -75,6 +77,16 @@ class MainActivity : ComponentActivity() {
         MainViewModelFactory(app.repository, app.identityManager, app.transport, app.connectivityMonitor)
     }
 
+    private val courierViewModel: CourierViewModel by viewModels {
+        val app = application as CarakaApp
+        CourierViewModel.Factory(
+            app.courierManager,
+            app.courierRepository,
+            app.repository,
+            app.identityManager
+        )
+    }
+
     private lateinit var uiPrefs: UiPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +95,11 @@ class MainActivity : ComponentActivity() {
         uiPrefs = UiPreferences(applicationContext)
         enableEdgeToEdge()
         setContent {
-            CarakaRoot(viewModel = viewModel, uiPrefs = uiPrefs)
+            CarakaRoot(
+                viewModel = viewModel,
+                courierViewModel = courierViewModel,
+                uiPrefs = uiPrefs
+            )
         }
     }
 
@@ -120,7 +136,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
+private fun CarakaRoot(
+    viewModel: MainViewModel,
+    courierViewModel: CourierViewModel,
+    uiPrefs: UiPreferences
+) {
     val scope = rememberCoroutineScope()
 
     val language by uiPrefs.language.collectAsState(initial = "id")
@@ -149,6 +169,13 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
         snackbarFlow.collect { msg -> snackbarHostState.showSnackbar(msg) }
     }
 
+    // Relay courier snackbar messages ke snackbar bus
+    LaunchedEffect(courierViewModel) {
+        courierViewModel.snackbar.collect { msg ->
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
+
     CompositionLocalProvider(
         LocalUiPrefs provides prefsState,
         LocalSnackbar provides snackbarFlow
@@ -157,6 +184,7 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
             CarakaTheme(highContrast = highContrast, bigText = bigText) {
                 CarakaNav(
                     viewModel = viewModel,
+                    courierViewModel = courierViewModel,
                     uiPrefs = uiPrefs,
                     snackbarHostState = snackbarHostState,
                     onboardingDoneFlag = onboardingDone,
@@ -170,6 +198,7 @@ private fun CarakaRoot(viewModel: MainViewModel, uiPrefs: UiPreferences) {
 @Composable
 private fun CarakaNav(
     viewModel: MainViewModel,
+    courierViewModel: CourierViewModel,
     uiPrefs: UiPreferences,
     snackbarHostState: SnackbarHostState,
     onboardingDoneFlag: Boolean,
@@ -267,7 +296,8 @@ private fun CarakaNav(
                         onNavigateToNetwork = { navController.navigate(Screen.Network.route) },
                         onNavigateToProfile = { navController.navigate(Screen.Settings.route) },
                         onNavigateToQr = { navController.navigate(Screen.QrIdentity.route) },
-                        onNavigateToHelp = { navController.navigate(Screen.Help.route) }
+                        onNavigateToHelp = { navController.navigate(Screen.Help.route) },
+                        onNavigateToCourier = { navController.navigate(Screen.Courier.route) }
                     )
                 }
                 composable(Screen.Messages.route) {
@@ -355,6 +385,13 @@ private fun CarakaNav(
                 composable(Screen.Alerts.route) {
                     AlertsScreen(
                         viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                // ── Caraka Courier Mode ──────────────────────────────────────────────
+                composable(Screen.Courier.route) {
+                    CourierScreen(
+                        viewModel = courierViewModel,
                         onBack = { navController.popBackStack() }
                     )
                 }

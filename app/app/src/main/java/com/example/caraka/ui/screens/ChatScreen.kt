@@ -1,5 +1,9 @@
 package com.example.caraka.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -201,25 +204,35 @@ fun ChatScreen(
                     val timeFormatted = remember(msg.timestamp) {
                         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp))
                     }
-                    if (msg.isIncoming) {
-                        IncomingMessageBubble(
-                            sender = msg.senderName,
-                            message = msg.content,
-                            time = timeFormatted,
-                            isFlagged = msg.flagCount >= 3,
-                            flagCount = msg.flagCount,
-                            isAuthority = peer?.isAuthority == true,
-                            onLongPress = {
-                                flagTargetId = msg.id
-                                showFlagDialog = true
-                            }
-                        )
-                    } else {
-                        OutgoingMessageBubble(
-                            message = msg.content,
-                            time = timeFormatted,
-                            deliveryStatus = deriveMessageDeliveryStatus(msg.deliveryStatus, msg.isIncoming)
-                        )
+
+                    // Slide-in animation for each message bubble
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInVertically(
+                            animationSpec = tween(220),
+                            initialOffsetY = { it / 4 }
+                        ) + fadeIn(tween(220))
+                    ) {
+                        if (msg.isIncoming) {
+                            IncomingMessageBubble(
+                                sender      = msg.senderName,
+                                message     = msg.content,
+                                time        = timeFormatted,
+                                isFlagged   = msg.flagCount >= 3,
+                                flagCount   = msg.flagCount,
+                                isAuthority = peer?.isAuthority == true,
+                                onLongPress = {
+                                    flagTargetId = msg.id
+                                    showFlagDialog = true
+                                }
+                            )
+                        } else {
+                            OutgoingMessageBubble(
+                                message        = msg.content,
+                                time           = timeFormatted,
+                                deliveryStatus = deriveMessageDeliveryStatus(msg.deliveryStatus, msg.isIncoming)
+                            )
+                        }
                     }
                 }
             }
@@ -304,15 +317,30 @@ fun IncomingMessageBubble(
     onLongPress: (() -> Unit)? = null
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        // Avatar: colored circle with sender's first initial
+        val avatarColor = remember(sender) {
+            val hue = (sender.hashCode().and(0xFF) * 360f / 256f)
+            Color.hsl(hue, 0.55f, if (isAuthority) 0.38f else 0.46f)
+        }
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape)
-                .background(if (isAuthority) LocalStatusColors.current.authority.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(avatarColor.copy(alpha = if (isAuthority) 0.18f else 0.15f))
+                .then(
+                    if (isAuthority) Modifier.border(1.5.dp, avatarColor.copy(alpha = 0.5f), CircleShape)
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (isAuthority) {
                 VerifiedBadge(size = 20.dp)
             } else {
-                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(
+                    text  = sender.take(1).uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = avatarColor
+                )
             }
         }
         Spacer(modifier = Modifier.width(8.dp))

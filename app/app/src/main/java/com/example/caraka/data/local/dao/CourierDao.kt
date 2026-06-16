@@ -29,6 +29,10 @@ interface CourierDao {
     @Query("SELECT * FROM courier_bundle WHERE state = 'CARRYING' ORDER BY priority DESC, createdAt ASC")
     suspend fun getCarryingBundles(): List<CourierBundleEntity>
 
+    /** Flow dari semua bundle yang sedang dibawa — untuk UI reaktif. */
+    @Query("SELECT * FROM courier_bundle WHERE state = 'CARRYING' ORDER BY priority DESC, createdAt ASC")
+    fun getCarryingBundlesFlow(): Flow<List<CourierBundleEntity>>
+
     /** Bundle DIRECTED yang claimToken-nya cocok dengan peerId tertentu. */
     @Query("SELECT * FROM courier_bundle WHERE mode = 'DIRECTED' AND claimToken = :peerId AND state = 'CARRYING'")
     suspend fun getDirectedBundlesForPeer(peerId: String): List<CourierBundleEntity>

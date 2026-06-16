@@ -175,7 +175,9 @@ class CourierRepository(
     // ── Bundle Retrieval ──────────────────────────────────────────────────────────────────────
 
     suspend fun getBundleById(bundleId: String) = courierDao.getBundleById(bundleId)
-    suspend fun getCarryingBundles() = courierDao.getCarryingBundles()
+    suspend fun getCarryingBundlesList() = courierDao.getCarryingBundles()
+    /** Flow dari bundle yang sedang dibawa oleh node ini (untuk UI list). */
+    fun getCarryingBundles(): Flow<List<CourierBundleEntity>> = courierDao.getCarryingBundlesFlow()
     fun getActiveCarryCount(): Flow<Int> = courierDao.getActiveCarryCount()
     fun getActiveTasks(): Flow<List<CourierTaskEntity>> = courierDao.getActiveTasks()
 
@@ -371,4 +373,83 @@ class CourierRepository(
         courierEncNonce = bundle.encNonce,
         courierSenderPub = bundle.senderPub
     )
+    // ── Convenience wire-send methods (dipanggil dari ViewModel) ─────────────────────────────
+
+    /** B mengirim COURIER_ACCEPT ke A (transport). */
+    suspend fun sendAccept(fromPeerId: String, bundleId: String) {
+        val myId = identityManager.getPeerId()
+        val accept = MeshProtocol(
+            type = "COURIER_ACCEPT",
+            id = java.util.UUID.randomUUID().toString(),
+            senderId = myId,
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = fromPeerId,
+            content = "",
+            timestamp = System.currentTimeMillis(),
+            ttl = 1,
+            priority = "NORMAL",
+            courierBundleId = bundleId
+        )
+        transport?.sendToPeer(fromPeerId, accept.toJson())
+        Log.d(TAG, "COURIER_ACCEPT sent to $fromPeerId bundleId=$bundleId")
+    }
+
+    /** B mengirim COURIER_REJECT ke A (transport). */
+    suspend fun sendReject(fromPeerId: String, bundleId: String) {
+        val myId = identityManager.getPeerId()
+        val reject = MeshProtocol(
+            type = "COURIER_REJECT",
+            id = java.util.UUID.randomUUID().toString(),
+            senderId = myId,
+            senderName = identityManager.getDisplayName(),
+            senderRole = identityManager.getRole(),
+            recipientId = fromPeerId,
+            content = "",
+            timestamp = System.currentTimeMillis(),
+            ttl = 1,
+            priority = "NORMAL",
+            courierBundleId = bundleId
+        )
+        transport?.sendToPeer(fromPeerId, reject.toJson())
+        rejectBundle(bundleId)
+        Log.d(TAG, "COURIER_REJECT sent to $fromPeerId bundleId=$bundleId")
+    }
+
+    /**
+     * A membuat dan mengirim bundle Directed ke B (kurir).
+     * Menggabungkan createDirectedBundle + buildOffer + buildTransfer dalam satu call.
+     * @return bundleId jika berhasil
+     */
+    suspend fun sendDirectedBundle(
+        courierId: String,
+        recipientId: String,
+        message: String,
+        locationHintLat: Double? = null,
+        locationHintLon: Double? = null
+    ): String {
+        // Lookup Z's enc pub key from peer DB — harus sudah ada dari QR exchange
+        // Untuk sekarang kita pakai courierId sebagai recipientId untuk directed (B=Z scenario)
+        // Dalam implementasi penuh: lookup actual Z encPub dari peer DB
+        val recipientPeer = courierDao.getBundleById(recipientId) // dummy lookup
+        // Use recipientId as claimToken (directedBundle matching by peerId)
+        val bundle = createDirectedBundle(
+            content = message,
+            recipientPeerId = recipientId,
+            recipientEncPubB64 = "", // Will be resolved from peer DB in full implementation
+            locationHintLat = locationHintLat,
+            locationHintLon = locationHintLon
+        ) ?: throw Exception("Gagal membuat bundle")
+
+        val myId = identityManager.getPeerId()
+        val myName = identityManager.getDisplayName()
+        val myRole = identityManager.getRole()
+
+        // Kirim OFFER ke B (kurir)
+        val offer = buildOfferMessage(bundle, myId, myName, myRole, courierId)
+        transport?.sendToPeer(courierId, offer.toJson())
+        Log.d(TAG, "COURIER_OFFER sent to courier $courierId for bundle=${bundle.bundleId}")
+
+        return bundle.bundleId
+    }
 }

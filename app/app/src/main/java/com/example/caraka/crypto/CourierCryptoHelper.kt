@@ -255,4 +255,31 @@ object CourierCryptoHelper {
             null
         }
     }
+
+    // ── Extra helpers for ViewModel ──────────────────────────────────────────────────────────
+
+    /**
+     * Derive shared symmetric key dari dua key halves.
+     * output = BLAKE2b-32(privBytes || pubBytes)
+     */
+    fun deriveSymmetricKey(privBytes: ByteArray, pubBytes: ByteArray): ByteArray {
+        val input = privBytes + pubBytes
+        val out = ByteArray(32)
+        lazySodium.cryptoGenericHash(out, out.size, input, input.size.toLong(), null, 0)
+        return out
+    }
+
+    /**
+     * stealthDecrypt overload yang menerima raw ByteArray symKey.
+     * Dipakai oleh ViewModel yang sudah melakukan key derivation.
+     */
+    fun stealthDecrypt(encPayloadB64: String, encNonceB64: String, symKey: ByteArray): String? {
+        return try {
+            val nonce = Base64.decode(encNonceB64, Base64.NO_WRAP)
+            val ciphertext = String(Base64.decode(encPayloadB64, Base64.NO_WRAP), Charsets.UTF_8)
+            lazySodium.cryptoSecretBoxOpenEasy(ciphertext, nonce, Key.fromBytes(symKey))
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

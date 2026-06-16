@@ -2,26 +2,47 @@ package com.example.caraka.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// CARAKA Super App light surfaces.
-val CanvasLight = Color(0xFFF5F7FA)
-val SurfaceLow = Color(0xFFFFFFFF)
-val SurfaceMid = Color(0xFFF8FAFC)
-val SurfaceHigh = Color(0xFFEDF2F7)
+// ─── LIGHT SURFACES ────────────────────────────────────────────────────────
+val CanvasLight    = Color(0xFFF5F7FA)
+val SurfaceLow     = Color(0xFFFFFFFF)
+val SurfaceMid     = Color(0xFFF8FAFC)
+val SurfaceHigh    = Color(0xFFEDF2F7)
 
-// Brand and semantic palette.
-val TelegramBlue = Color(0xFF229ED9)
-val TelegramBlueStrong = Color(0xFF087DB5)
+// ─── DARK SURFACES ─────────────────────────────────────────────────────────
+val CanvasDarkBg       = Color(0xFF0D1117)   // deepest background
+val SurfaceDarkLow     = Color(0xFF161B22)   // cards / sheets
+val SurfaceDarkMid     = Color(0xFF1C2128)   // elevated surfaces
+val SurfaceDarkHigh    = Color(0xFF252B34)   // tooltips / dialogs
+
+// ─── BRAND & SEMANTIC ──────────────────────────────────────────────────────
+val TelegramBlue          = Color(0xFF229ED9)
+val TelegramBlueStrong    = Color(0xFF087DB5)
 val TelegramBlueContainer = Color(0xFFE5F4FB)
-val SuccessGreen = Color(0xFF168A4B)
-val WarningAmber = Color(0xFFD98200)
-val DangerRed = Color(0xFFD93025)
-val InfoBlue = Color(0xFF3478F6)
+val TelegramBlueDark      = Color(0xFF58B8E8)   // lighter for dark mode
+val TelegramBlueDarkCont  = Color(0xFF0E2D3F)   // container for dark mode
 
-val TextPrimary = Color(0xFF111827)
-val TextSecondary = Color(0xFF64748B)
-val TextTertiary = Color(0xFF8792A2)
-val BorderSubtle = Color(0xFFDDE3EA)
-val DividerSubtle = Color(0xFFE8ECF1)
+val SuccessGreen      = Color(0xFF168A4B)
+val SuccessGreenDark  = Color(0xFF34D47A)
+val WarningAmber      = Color(0xFFD98200)
+val WarningAmberDark  = Color(0xFFFFC043)
+val DangerRed         = Color(0xFFD93025)
+val DangerRedDark     = Color(0xFFFF6B6B)
+val InfoBlue          = Color(0xFF3478F6)
+val InfoBlueDark      = Color(0xFF6EA6FF)
+
+// ─── LIGHT TEXT & BORDERS ──────────────────────────────────────────────────
+val TextPrimary    = Color(0xFF111827)
+val TextSecondary  = Color(0xFF64748B)
+val TextTertiary   = Color(0xFF8792A2)
+val BorderSubtle   = Color(0xFFDDE3EA)
+val DividerSubtle  = Color(0xFFE8ECF1)
+
+// ─── DARK TEXT & BORDERS ───────────────────────────────────────────────────
+val TextPrimaryDark   = Color(0xFFE6EDF3)
+val TextSecondaryDark = Color(0xFF8B949E)
+val TextTertiaryDark  = Color(0xFF6E7681)
+val BorderSubtleDark  = Color(0xFF30363D)
+val DividerSubtleDark = Color(0xFF21262D)
 
 // Compatibility aliases retained while screens migrate to semantic M3 roles.
 val CanvasDark = CanvasLight

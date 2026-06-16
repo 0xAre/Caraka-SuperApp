@@ -2,16 +2,31 @@
 
 package com.example.caraka.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -27,7 +42,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +60,7 @@ import com.example.caraka.viewmodel.MainViewModel
 import com.example.caraka.viewmodel.MeshNodeUi
 import com.example.caraka.viewmodel.NetworkDiscoveryPhase
 import kotlinx.coroutines.delay
+
 
 @Composable
 fun NetworkScreen(
@@ -129,60 +147,156 @@ private fun EmergencyHotspotCard(
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isHost = state.role == "HOST"
+    val isHost   = state.role == "HOST"
     val isClient = state.role == "CLIENT"
+    val statusColors = LocalStatusColors.current
+
+    // Pulsing indicator for HOST active state
+    val infiniteTransition = rememberInfiniteTransition(label = "hotspot_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue  = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "hotspot_pulse_alpha"
+    )
+
+    val cardBg by animateColorAsState(
+        targetValue = when {
+            isHost   -> statusColors.online.copy(alpha = 0.07f)
+            isClient -> MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+            else     -> MaterialTheme.colorScheme.surface
+        },
+        label = "hotspot_bg"
+    )
+
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        shape    = MaterialTheme.shapes.medium,
+        color    = cardBg,
+        border   = BorderStroke(
+            1.dp,
+            when {
+                isHost   -> statusColors.online.copy(alpha = 0.35f)
+                isClient -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                else     -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            }
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                stringResource(R.string.hotspot_title),
-                style = CarakaTextStyles.listTitle,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                stringResource(R.string.hotspot_subtitle),
-                style = CarakaTextStyles.listSubtitle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (state.status.isNotBlank()) {
-                Text(
-                    state.status,
-                    style = CarakaTextStyles.statusPrimary,
-                    color = if (isHost || isClient) LocalStatusColors.current.online
-                            else MaterialTheme.colorScheme.primary
-                )
-            }
-            if (isHost && state.ssid != null) {
-                Text(
-                    stringResource(R.string.hotspot_ssid, state.ssid),
-                    style = CarakaTextStyles.monoData,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                state.passphrase?.let { pass ->
+            // Header row with status chip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.hotspot_pass, pass),
-                        style = CarakaTextStyles.monoData,
+                        stringResource(R.string.hotspot_title),
+                        style = CarakaTextStyles.listTitle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Text(
+                        stringResource(R.string.hotspot_subtitle),
+                        style = CarakaTextStyles.listSubtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // Status chip
+                when {
+                    isHost -> {
+                        Row(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .background(statusColors.online.copy(alpha = 0.12f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(statusColors.online.copy(alpha = pulseAlpha))
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Host Aktif",
+                                style = CarakaTextStyles.badge,
+                                color = statusColors.online
+                            )
+                        }
+                    }
+                    isClient -> {
+                        Row(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.WifiTethering,
+                                contentDescription = null,
+                                tint     = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                "Terhubung",
+                                style = CarakaTextStyles.badge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
-            Spacer(Modifier.height(4.dp))
+
+            // SSID & Pass info (HOST only)
+            if (isHost && state.ssid != null) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.hotspot_ssid, state.ssid),
+                            style = CarakaTextStyles.monoData,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        state.passphrase?.let { pass ->
+                            Text(
+                                stringResource(R.string.hotspot_pass, pass),
+                                style = CarakaTextStyles.monoData,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Status message for CLIENT
+            if (isClient && state.status.isNotBlank()) {
+                Text(
+                    state.status,
+                    style = CarakaTextStyles.statusSecondary,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             Button(
-                onClick = { if (isHost) onStop() else onStart() },
-                enabled = !isClient,
+                onClick  = { if (isHost) onStop() else onStart() },
+                enabled  = !isClient,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
+                colors   = ButtonDefaults.buttonColors(
                     containerColor = if (isHost) MaterialTheme.colorScheme.error
-                                     else MaterialTheme.colorScheme.primary
+                                     else MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 )
             ) {
                 Text(
@@ -193,6 +307,7 @@ private fun EmergencyHotspotCard(
         }
     }
 }
+
 
 @Composable
 private fun NodeDetailBottomSheet(
