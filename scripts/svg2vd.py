@@ -1,15 +1,45 @@
 import xml.etree.ElementTree as ET
-import sys
-import os
+import re
+
+def scale_path(path_str):
+    # Tokens are M, c, z, and numbers (which may be negative or decimal)
+    tokens = re.findall(r'[Mcz]|[-+]?\d*\.?\d+', path_str)
+    out = []
+    
+    current_cmd = None
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+        if t in ('M', 'c', 'z'):
+            current_cmd = t
+            out.append(t)
+            i += 1
+            continue
+            
+        if current_cmd == 'M':
+            x = float(tokens[i])
+            y = float(tokens[i+1])
+            new_x = x * 0.1
+            new_y = y * -0.1 + 1000.0
+            out.append(f"{new_x:.2f}")
+            out.append(f"{new_y:.2f}")
+            i += 2
+        elif current_cmd == 'c':
+            x = float(tokens[i])
+            y = float(tokens[i+1])
+            new_x = x * 0.1
+            new_y = y * -0.1
+            out.append(f"{new_x:.2f}")
+            out.append(f"{new_y:.2f}")
+            i += 2
+            
+    return " ".join(out)
 
 def convert_svg_to_vd(svg_file, out_xml_file, width_dp, height_dp, is_white=False):
     tree = ET.parse(svg_file)
     root = tree.getroot()
-    
-    # SVG namespace
     ns = '{http://www.w3.org/2000/svg}'
     
-    # Extract viewport/width from SVG
     width = float(root.attrib.get('width', '1000').replace('pt', ''))
     height = float(root.attrib.get('height', '1000').replace('pt', ''))
     
@@ -20,38 +50,25 @@ def convert_svg_to_vd(svg_file, out_xml_file, width_dp, height_dp, is_white=Fals
         'android:viewportWidth': str(width),
         'android:viewportHeight': str(height)
     })
-    
-    # Check if there's a main group with transform
+
+    # Find the group to see if we should extract fill
     group = root.find(f'.//{ns}g')
-    if group is not None and 'transform' in group.attrib:
-        transform = group.attrib['transform']
-        # Very specific parsing for "translate(0.000000,1000.000000) scale(0.100000,-0.100000)"
-        vd_group = ET.SubElement(vd_root, 'group', {
-            'android:translateX': '0',
-            'android:translateY': '1000',
-            'android:scaleX': '0.1',
-            'android:scaleY': '-0.1'
-        })
-        parent = vd_group
-    else:
-        parent = vd_root
 
     for path in root.findall(f'.//{ns}path'):
         d = path.attrib.get('d', '')
-        # Determine fill
-        fill = path.attrib.get('fill')
-        if not fill:
-            if group is not None and 'fill' in group.attrib:
-                fill = group.attrib['fill']
-            else:
-                fill = '#000000'
+        scaled_d = scale_path(d)
+        
+        # Adaptive color logic
+        fill = "@color/caraka_logo_adaptive"
                 
         if is_white:
-            fill = '#FFFFFF'
+            # But the user asked for white specifically for the app icon,
+            # wait, if is_white is true, it is for ic_caraka_logo_white.xml
+            fill = "#FFFFFF"
             
-        ET.SubElement(parent, 'path', {
+        ET.SubElement(vd_root, 'path', {
             'android:fillColor': fill,
-            'android:pathData': d
+            'android:pathData': scaled_d
         })
         
     xml_str = ET.tostring(vd_root, encoding='utf-8', xml_declaration=True).decode('utf-8')
@@ -61,8 +78,9 @@ def convert_svg_to_vd(svg_file, out_xml_file, width_dp, height_dp, is_white=Fals
         f.write(xml_str)
         
 if __name__ == '__main__':
-    # _16_ is black, _17_ is white
-    convert_svg_to_vd('docs/brand/Untitled-design-_16_.svg', 'app/app/src/main/res/drawable/ic_caraka_logo.xml', 108, 108, is_white=False)
-    convert_svg_to_vd('docs/brand/Untitled-design-_17_.svg', 'app/app/src/main/res/drawable/ic_caraka_logo_white.xml', 108, 108, is_white=True)
+    # ic_caraka_logo is the main one, we use adaptive color
+    convert_svg_to_vd('docs/brand/caraka-logo-black.svg', 'app/app/src/main/res/drawable/ic_caraka_logo.xml', 108, 108, is_white=False)
+    # ic_caraka_logo_white is explicitly white (for launcher inset)
+    convert_svg_to_vd('docs/brand/caraka-logo-white.svg', 'app/app/src/main/res/drawable/ic_caraka_logo_white.xml', 108, 108, is_white=True)
     
     print("Vector Drawables generated successfully.")
