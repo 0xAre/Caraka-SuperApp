@@ -200,31 +200,42 @@ object CourierCryptoHelper {
     }
 
     /**
-     * Z membuat proof kepemilikan EPK_priv dengan menandatangani challenge dari B.
-     * sign(challengeNonce, EPK_priv_as_signing_key)
+     * Derive Ed25519 verify-key dari seed EPK_priv (X25519 secret, 32 byte).
      *
-     * Catatan: kami sign dengan Ed25519 yang di-derive dari EPK_priv (X25519) via
-     * crypto_sign_seed_keypair(EPK_priv) — standar NaCl.
+     * Dipakai saat A membuat bundle Stealth: A menyimpan verify-key INI di field
+     * `epkPub` bundle sehingga B (yang tidak punya EPK_priv) bisa memverifikasi
+     * COURIER_PROOF tanpa harus mengonversi X25519→Ed25519 (yang tidak tersedia di
+     * libsodium dan menjadi sumber bug verifikasi sebelumnya).
+     *
+     * Deterministik: seed yang sama selalu menghasilkan pasangan Ed25519 yang sama,
+     * jadi konsisten dengan [signChallenge] yang memakai seed identik.
      */
-    fun signChallenge(challengeB64: String, epkPriv: Key): String {
-        // Derive Ed25519 signing key dari X25519 private key seed
-        val signKp = lazySodium.cryptoSignSeedKeypair(epkPriv.asBytes.take(Sign.SEEDBYTES).toByteArray())
-        val signed = lazySodium.cryptoSignDetached(challengeB64, signKp.secretKey)
-        return signed
+    fun deriveVerifyKey(epkPriv: Key): Key {
+        val seed = epkPriv.asBytes.take(Sign.SEEDBYTES).toByteArray()
+        return lazySodium.cryptoSignSeedKeypair(seed).publicKey
     }
 
     /**
-     * B verifikasi proof dari Z menggunakan EPK_pub yang tersimpan di bundle.
+     * Z membuat proof kepemilikan EPK_priv dengan menandatangani challenge dari B.
+     * sign(challengeNonce, Ed25519_sk) di mana Ed25519 di-derive dari seed EPK_priv.
+     *
+     * Catatan: seed = EPK_priv (X25519 secret 32 byte) → crypto_sign_seed_keypair.
+     * B memverifikasi dengan Ed25519 verify-key yang tersimpan di bundle (lihat
+     * [deriveVerifyKey]) — bukan dari epkPub X25519.
+     */
+    fun signChallenge(challengeB64: String, epkPriv: Key): String {
+        val signKp = lazySodium.cryptoSignSeedKeypair(epkPriv.asBytes.take(Sign.SEEDBYTES).toByteArray())
+        return lazySodium.cryptoSignDetached(challengeB64, signKp.secretKey)
+    }
+
+    /**
+     * B verifikasi proof dari Z menggunakan Ed25519 verify-key yang tersimpan di
+     * bundle (field `epkPub` untuk Stealth = output [deriveVerifyKey]).
      * Jika valid → Z terbukti memiliki EPK_priv yang sesuai → kirim payload.
      */
-    fun verifyChallenge(challengeB64: String, proofSignature: String, epkPub: Key): Boolean {
+    fun verifyChallenge(challengeB64: String, proofSignature: String, verifyKeyEd25519: Key): Boolean {
         return try {
-            // Derive Ed25519 verify key dari X25519 public key
-            val verifyKeyBytes = ByteArray(Sign.PUBLICKEYBYTES)
-            lazySodium.convertPublicKeyEd25519ToCurve25519(verifyKeyBytes, epkPub.asBytes)
-            // Fallback: gunakan epkPub langsung jika konversi tidak valid
-            val verifyKey = try { Key.fromBytes(verifyKeyBytes) } catch (e: Exception) { epkPub }
-            lazySodium.cryptoSignVerifyDetached(proofSignature, challengeB64, verifyKey)
+            lazySodium.cryptoSignVerifyDetached(proofSignature, challengeB64, verifyKeyEd25519)
         } catch (e: Exception) {
             false
         }
@@ -251,6 +262,33 @@ object CourierCryptoHelper {
                 Base64.encodeToString(nonce, Base64.NO_WRAP),
                 Base64.encodeToString(nonce, Base64.NO_WRAP) // nonce juga jadi encNonce
             )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Dekripsi payload Directed di sisi Z menggunakan crypto_box_open (X25519+XSalsa20).
+     *
+     * Mengembalikan ekspektasi format penyimpanan dari CourierRepository.createDirectedBundle:
+     *   encPayload = Base64( UTF8( hexCiphertext ) ),  encNonce = Base64( nonce )
+     * di mana hexCiphertext adalah keluaran lazySodium.cryptoBoxEasy(...) (string hex).
+     *
+     * @param senderEncPub  X25519 enc_pub milik A (dari field senderPub bundle)
+     * @param myEncPriv     X25519 enc_sk milik Z (penerima)
+     * @return inner payload JSON (berisi content+signerPub+signature), atau null jika gagal.
+     */
+    fun directedDecrypt(
+        encPayloadB64: String,
+        encNonceB64: String,
+        senderEncPub: Key,
+        myEncPriv: Key
+    ): String? {
+        return try {
+            val nonce = Base64.decode(encNonceB64, Base64.NO_WRAP)
+            val cipherHex = String(Base64.decode(encPayloadB64, Base64.NO_WRAP), Charsets.UTF_8)
+            val keyPair = KeyPair(senderEncPub, myEncPriv)
+            lazySodium.cryptoBoxOpenEasy(cipherHex, nonce, keyPair)
         } catch (e: Exception) {
             null
         }

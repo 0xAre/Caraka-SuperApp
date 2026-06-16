@@ -24,6 +24,13 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "CourierViewModel"
 
+/** Kredensial Stealth yang harus A bagikan ke Z lewat jalur aman (QR / chat). */
+data class StealthCredentials(
+    val bundleId: String,
+    val epkPrivB64: String,
+    val nonceSecretB64: String
+)
+
 /** UI State untuk dialog/bottom sheet yang sedang terbuka. */
 sealed class CourierDialogState {
     object None : CourierDialogState()
@@ -94,6 +101,12 @@ class CourierViewModel(
     private val _snackbar = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val snackbar: SharedFlow<String> = _snackbar.asSharedFlow()
 
+    // ── Kredensial Stealth terakhir (EPK_priv + nonce) untuk dibagikan A → Z out-of-band ─────
+    // UI sharing (QR / chat) akan mengonsumsi state ini; dikerjakan di UI layer terpisah.
+    private val _stealthCredentials = MutableStateFlow<StealthCredentials?>(null)
+    val stealthCredentials: StateFlow<StealthCredentials?> = _stealthCredentials.asStateFlow()
+    fun clearStealthCredentials() { _stealthCredentials.value = null }
+
     // ── My bundles (B sedang membawa) ────────────────────────────────────────────────────────
     val carryingBundles: StateFlow<List<CourierBundleEntity>> =
         courierRepository.getCarryingBundles()
@@ -127,10 +140,11 @@ class CourierViewModel(
                 )
             }
             is CourierEvent.OfferAccepted -> {
-                // A tahu B sudah accept — sekarang A kirim transfer via UI action
-                Log.d(TAG, "Event: OfferAccepted by ${event.byPeerId}")
+                // A tahu B sudah accept — sekarang A KIRIM bundle (COURIER_TRANSFER) ke B.
+                Log.d(TAG, "Event: OfferAccepted by ${event.byPeerId} — mengirim TRANSFER")
                 viewModelScope.launch {
-                    _snackbar.emit("Kurir ${event.byPeerId.take(8)} siap membawa pesan!")
+                    courierRepository.sendTransfer(event.bundleId, event.byPeerId)
+                    _snackbar.emit("Kurir ${event.byPeerId.take(8)} menerima — bundle dikirim.")
                 }
             }
             is CourierEvent.OfferRejected -> {
@@ -207,33 +221,83 @@ class CourierViewModel(
         _dialogState.value = CourierDialogState.SendRequest(connectedPeers.value)
     }
 
-    /** A mengirim bundle kurir ke kurir terpilih. */
+    /** A mengirim bundle kurir ke kurir terpilih. Signature dijaga tetap (dipakai UI). */
     fun sendCourierRequest(
         courierId: String,
         recipientId: String,
         message: String,
         mode: String,          // "DIRECTED" | "STEALTH"
-        epkPrivB64: String?,   // hanya untuk Stealth — EPK_priv Z yang sudah di-share ke A
+        epkPrivB64: String?,   // opsional: EPK_priv yang sudah disepakati (Stealth). Jika null → auto-generate.
         locationHintLat: Double? = null,
         locationHintLon: Double? = null
     ) {
         viewModelScope.launch {
             try {
-                val bundleId = courierRepository.sendDirectedBundle(
-                    courierId = courierId,
-                    recipientId = recipientId,
-                    message = message,
-                    locationHintLat = locationHintLat,
-                    locationHintLon = locationHintLon
-                )
-                _snackbar.emit("📤 Permintaan kurir terkirim! Bundle: ${bundleId.take(8)}")
-                Log.d(TAG, "Courier bundle sent: $bundleId to carrier=$courierId")
+                if (mode == "STEALTH") {
+                    sendStealthRequest(courierId, message, epkPrivB64, locationHintLat, locationHintLon)
+                } else {
+                    sendDirectedRequest(courierId, recipientId, message, locationHintLat, locationHintLon)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send courier bundle", e)
                 _snackbar.emit("Gagal mengirim permintaan kurir: ${e.message}")
             }
             dismissDialog()
         }
+    }
+
+    /** DIRECTED — resolve enc_pub Z dari peer DB (hasil QR exchange) lalu kirim OFFER. */
+    private suspend fun sendDirectedRequest(
+        courierId: String,
+        recipientId: String,
+        message: String,
+        locationHintLat: Double?,
+        locationHintLon: Double?
+    ) {
+        val peer = meshRepository.getPeerById(recipientId)
+        if (peer == null || peer.publicKey.isBlank()) {
+            _snackbar.emit("Tidak bisa kirim Directed: kunci publik penerima belum ada. Lakukan QR exchange dulu.")
+            Log.w(TAG, "sendDirectedRequest: enc_pub Z tidak ditemukan untuk $recipientId")
+            return
+        }
+        val bundle = courierRepository.createDirectedBundle(
+            content = message,
+            recipientPeerId = recipientId,
+            recipientEncPubB64 = peer.publicKey,
+            locationHintLat = locationHintLat,
+            locationHintLon = locationHintLon
+        ) ?: throw Exception("Gagal membuat bundle directed")
+        courierRepository.sendOffer(bundle, courierId)
+        _snackbar.emit("📤 Permintaan kurir terkirim! Bundle: ${bundle.bundleId.take(8)}")
+        Log.d(TAG, "Directed bundle sent: ${bundle.bundleId} to carrier=$courierId")
+    }
+
+    /**
+     * STEALTH — A men-generate ephemeral key + nonce rahasia, membuat bundle, kirim OFFER.
+     * Kredensial (EPK_priv + nonce) diekspos via [stealthCredentials] agar A dapat
+     * membagikannya ke Z out-of-band (QR / chat). UI sharing menyusul (dikerjakan UI layer).
+     */
+    private suspend fun sendStealthRequest(
+        courierId: String,
+        message: String,
+        providedEpkPrivB64: String?,
+        locationHintLat: Double?,
+        locationHintLon: Double?
+    ) {
+        val epkPrivB64 = providedEpkPrivB64?.takeIf { it.isNotBlank() }
+            ?: CourierCryptoHelper.encodePrivKey(CourierCryptoHelper.generateEphemeralKeyPair().secretKey)
+        val nonceSecretB64 = CourierCryptoHelper.generateChallenge() // 32 byte acak → nonce rahasia
+        val bundle = courierRepository.createStealthBundle(
+            content = message,
+            nonceSecretB64 = nonceSecretB64,
+            epkPrivB64 = epkPrivB64,
+            locationHintLat = locationHintLat,
+            locationHintLon = locationHintLon
+        ) ?: throw Exception("Gagal membuat bundle stealth")
+        courierRepository.sendOffer(bundle, courierId)
+        _stealthCredentials.value = StealthCredentials(bundle.bundleId, epkPrivB64, nonceSecretB64)
+        _snackbar.emit("🔮 Bundle stealth dibuat. Bagikan EPK_priv + nonce ke Z secara out-of-band.")
+        Log.d(TAG, "STEALTH bundle=${bundle.bundleId} EPK_PRIV=$epkPrivB64 NONCE=$nonceSecretB64")
     }
 
     /** B accept tawaran kurir dari A. */
@@ -277,42 +341,27 @@ class CourierViewModel(
         dismissDialog()
     }
 
-    /** Z mendekripsi payload Directed dengan private key-nya. Suspend karena getEncryptionKeyPair() is suspend. */
+    /**
+     * Z mendekripsi payload Directed (crypto_box_open) + verifikasi signature A (anti-scam).
+     * Mengembalikan konten plaintext, atau null jika dekripsi/verifikasi gagal.
+     * Suspend karena butuh enc-keypair Z. Signature dijaga tetap (dipakai UI).
+     */
     suspend fun decryptDirectedDelivery(
         bundleId: String,
         encPayload: String,
         encNonce: String,
         senderPub: String?
-    ): String? {
-        return try {
-            val myPriv = identityManager.getEncryptionKeyPair().secretKey.asBytes
-            val symKey = if (senderPub != null) {
-                CourierCryptoHelper.deriveSymmetricKey(myPriv, CourierCryptoHelper.decodeKey(senderPub).asBytes)
-            } else {
-                myPriv // fallback
-            }
-            CourierCryptoHelper.stealthDecrypt(encPayload, encNonce, symKey)
-        } catch (e: Exception) {
-            Log.e(TAG, "Decrypt Directed failed", e)
-            null
-        }
-    }
+    ): String? = courierRepository.decryptDirectedDelivery(encPayload, encNonce, senderPub)
 
-    /** Z mendekripsi payload Stealth dengan EPK_priv milik Z. */
+    /**
+     * Z mendekripsi payload Stealth (secretbox dengan KDF(EPK_priv)) + verifikasi signature A.
+     * Mengembalikan konten plaintext, atau null jika gagal.
+     */
     fun decryptStealthDelivery(
         encPayload: String,
         encNonce: String,
         epkPrivB64: String
-    ): String? {
-        return try {
-            val epkPriv = CourierCryptoHelper.decodeKey(epkPrivB64)
-            val symKey = CourierCryptoHelper.deriveSymmetricKey(epkPriv.asBytes, epkPriv.asBytes)
-            CourierCryptoHelper.stealthDecrypt(encPayload, encNonce, symKey)
-        } catch (e: Exception) {
-            Log.e(TAG, "Decrypt Stealth failed", e)
-            null
-        }
-    }
+    ): String? = courierRepository.decryptStealthDelivery(encPayload, encNonce, epkPrivB64)
 
     /** Tutup dialog apapun yang sedang terbuka. */
     fun dismissDialog() {

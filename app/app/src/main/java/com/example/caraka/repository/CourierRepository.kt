@@ -131,12 +131,16 @@ class CourierRepository(
             val bundleId = UUID.randomUUID().toString()
 
             val epkPriv = CourierCryptoHelper.decodeKey(epkPrivB64)
-            val epkPub = CourierCryptoHelper.derivePublicFromPrivate(epkPriv)
-            val epkPubB64 = Base64.encodeToString(epkPub.asBytes, Base64.NO_WRAP)
+            // X25519 pub: dipakai HANYA untuk derivasi claim token (BLAKE2b).
+            val epkPubX = CourierCryptoHelper.derivePublicFromPrivate(epkPriv)
+            // Ed25519 verify-key: disimpan di field epkPub agar B bisa verifikasi COURIER_PROOF
+            // tanpa konversi X25519→Ed25519 (sumber bug verifikasi sebelumnya).
+            val verifyKey = CourierCryptoHelper.deriveVerifyKey(epkPriv)
+            val verifyKeyB64 = Base64.encodeToString(verifyKey.asBytes, Base64.NO_WRAP)
 
-            // Claim token: BLAKE2b(EPK_pub || nonce_rahasia) — B tidak bisa reverse-engineer siapapun
+            // Claim token: BLAKE2b(EPK_pub_X25519 || nonce_rahasia) — B tidak bisa reverse-engineer siapapun
             val nonceSecret = Base64.decode(nonceSecretB64, Base64.NO_WRAP)
-            val claimToken = CourierCryptoHelper.deriveClaimToken(epkPub.asBytes, nonceSecret)
+            val claimToken = CourierCryptoHelper.deriveClaimToken(epkPubX.asBytes, nonceSecret)
 
             // 1. Signed inner payload — signature A ada di DALAM ciphertext
             val mySignPubB64 = Base64.encodeToString(mySignKeys.publicKey.asBytes, Base64.NO_WRAP)
@@ -152,7 +156,7 @@ class CourierRepository(
                 mode = "STEALTH",
                 state = "PENDING_ACCEPT",
                 claimToken = claimToken,
-                epkPub = epkPubB64,
+                epkPub = verifyKeyB64,      // Ed25519 verify-key (untuk B verifikasi proof)
                 encPayload = encPayload,
                 encNonce = encNonce,
                 senderPub = null,       // Stealth: tidak ada identitas A
@@ -417,39 +421,95 @@ class CourierRepository(
     }
 
     /**
-     * A membuat dan mengirim bundle Directed ke B (kurir).
-     * Menggabungkan createDirectedBundle + buildOffer + buildTransfer dalam satu call.
-     * @return bundleId jika berhasil
+     * A mengirim COURIER_OFFER (metadata saja) ke kurir B untuk bundle yang sudah dibuat.
+     * Dipanggil setelah createDirectedBundle / createStealthBundle.
      */
-    suspend fun sendDirectedBundle(
-        courierId: String,
-        recipientId: String,
-        message: String,
-        locationHintLat: Double? = null,
-        locationHintLon: Double? = null
-    ): String {
-        // Lookup Z's enc pub key from peer DB — harus sudah ada dari QR exchange
-        // Untuk sekarang kita pakai courierId sebagai recipientId untuk directed (B=Z scenario)
-        // Dalam implementasi penuh: lookup actual Z encPub dari peer DB
-        val recipientPeer = courierDao.getBundleById(recipientId) // dummy lookup
-        // Use recipientId as claimToken (directedBundle matching by peerId)
-        val bundle = createDirectedBundle(
-            content = message,
-            recipientPeerId = recipientId,
-            recipientEncPubB64 = "", // Will be resolved from peer DB in full implementation
-            locationHintLat = locationHintLat,
-            locationHintLon = locationHintLon
-        ) ?: throw Exception("Gagal membuat bundle")
-
+    suspend fun sendOffer(bundle: CourierBundleEntity, courierId: String) {
         val myId = identityManager.getPeerId()
-        val myName = identityManager.getDisplayName()
-        val myRole = identityManager.getRole()
-
-        // Kirim OFFER ke B (kurir)
-        val offer = buildOfferMessage(bundle, myId, myName, myRole, courierId)
+        val offer = buildOfferMessage(
+            bundle, myId, identityManager.getDisplayName(), identityManager.getRole(), courierId
+        )
         transport?.sendToPeer(courierId, offer.toJson())
-        Log.d(TAG, "COURIER_OFFER sent to courier $courierId for bundle=${bundle.bundleId}")
+        Log.d(TAG, "COURIER_OFFER sent to courier $courierId for bundle=${bundle.bundleId} mode=${bundle.mode}")
+    }
 
-        return bundle.bundleId
+    /**
+     * A mengirim COURIER_TRANSFER (ciphertext bundle) ke B setelah B accept.
+     * Dipanggil dari ViewModel saat menerima event OfferAccepted.
+     */
+    suspend fun sendTransfer(bundleId: String, courierId: String) {
+        val bundle = courierDao.getBundleById(bundleId) ?: run {
+            Log.w(TAG, "sendTransfer: bundle tidak ditemukan: $bundleId")
+            return
+        }
+        val myId = identityManager.getPeerId()
+        val transfer = buildTransferMessage(
+            bundle, myId, identityManager.getDisplayName(), identityManager.getRole(), courierId
+        )
+        transport?.sendToPeer(courierId, transfer.toJson())
+        Log.d(TAG, "COURIER_TRANSFER sent to courier $courierId for bundle=$bundleId")
+    }
+
+    // ── Dekripsi + Verifikasi Anti-Scam (sisi Z) ─────────────────────────────────────────────
+
+    /**
+     * Z mendekripsi payload DIRECTED (crypto_box_open) lalu memverifikasi signature A
+     * yang tertanam di dalam inner payload (signed-then-encrypted).
+     *
+     * @return konten plaintext jika dekripsi + verifikasi signature berhasil; null jika
+     *         dekripsi gagal ATAU signature tidak valid (tolak — kemungkinan scam).
+     */
+    suspend fun decryptDirectedDelivery(
+        encPayload: String,
+        encNonce: String,
+        senderEncPubB64: String?
+    ): String? {
+        if (senderEncPubB64 == null) {
+            Log.w(TAG, "decryptDirectedDelivery: senderPub null — tidak bisa box_open")
+            return null
+        }
+        val myPriv = identityManager.getEncryptionKeyPair().secretKey
+        val senderPub = CourierCryptoHelper.decodeKey(senderEncPubB64)
+        val innerJson = CourierCryptoHelper.directedDecrypt(encPayload, encNonce, senderPub, myPriv)
+            ?: run { Log.w(TAG, "decryptDirectedDelivery: gagal box_open"); return null }
+        return verifyInnerPayload(innerJson)
+    }
+
+    /**
+     * Z mendekripsi payload STEALTH (crypto_secretbox dengan sym_key = BLAKE2b32(EPK_priv))
+     * lalu memverifikasi signature A di dalam inner payload.
+     */
+    fun decryptStealthDelivery(
+        encPayload: String,
+        encNonce: String,
+        epkPrivB64: String
+    ): String? {
+        val epkPriv = CourierCryptoHelper.decodeKey(epkPrivB64)
+        val innerJson = CourierCryptoHelper.stealthDecrypt(encPayload, encNonce, epkPriv)
+            ?: run { Log.w(TAG, "decryptStealthDelivery: gagal secretbox_open"); return null }
+        return verifyInnerPayload(innerJson)
+    }
+
+    /**
+     * Parse inner payload {content,signerPub,signature} dan verifikasi Ed25519 signature A.
+     * @return content jika signature valid; null jika format salah atau signature invalid (anti-scam).
+     */
+    private fun verifyInnerPayload(innerJson: String): String? {
+        val inner = CourierCryptoHelper.parseInnerPayload(innerJson) ?: run {
+            Log.w(TAG, "verifyInnerPayload: format inner payload tidak valid")
+            return null
+        }
+        val signerKey = try {
+            cryptoManager.keyFromBase64(inner.signerPub)
+        } catch (e: Exception) {
+            Log.w(TAG, "verifyInnerPayload: signerPub tidak valid", e); return null
+        }
+        val valid = cryptoManager.verifySignature(inner.content, inner.signature, signerKey)
+        if (!valid) {
+            Log.w(TAG, "SECURITY: signature A tidak valid — tolak pesan (kemungkinan scam). signerPub=${inner.signerPub}")
+            return null
+        }
+        Log.d(TAG, "Inner payload verified ✓ signerPub=${inner.signerPub}")
+        return inner.content
     }
 }

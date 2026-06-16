@@ -19,16 +19,16 @@ def scale_path(path_str):
         if current_cmd == 'M':
             x = float(tokens[i])
             y = float(tokens[i+1])
-            new_x = x * 0.1
-            new_y = y * -0.1 + 1000.0
+            new_x = x * 0.043 + 335.59
+            new_y = y * -0.043 + 551.88
             out.append(f"{new_x:.2f}")
             out.append(f"{new_y:.2f}")
             i += 2
         elif current_cmd == 'c':
             x = float(tokens[i])
             y = float(tokens[i+1])
-            new_x = x * 0.1
-            new_y = y * -0.1
+            new_x = x * 0.043
+            new_y = y * -0.043
             out.append(f"{new_x:.2f}")
             out.append(f"{new_y:.2f}")
             i += 2

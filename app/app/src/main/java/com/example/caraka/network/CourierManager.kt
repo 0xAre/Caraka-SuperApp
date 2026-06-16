@@ -67,6 +67,14 @@ class CourierManager(
     // bundleId → (challengeNonce, claimantPeerId, timestamp)
     private val pendingChallenges = ConcurrentHashMap<String, Triple<String, String, Long>>()
 
+    // ── Asal bundle (Directed) — bundleId → A.peerId ─────────────────────────────────────────
+    // Best-effort di memori: dipakai untuk mengirim COURIER_RECEIPT balik ke A setelah delivered.
+    // Hilang saat proses restart (sesuai sifat receipt yang opsional di plan).
+    private val bundleSenders = ConcurrentHashMap<String, String>()
+
+    // ── Dedup COURIER_DELIVER (anti-replay sisi Z) ───────────────────────────────────────────
+    private val deliveredBundleIds = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
     // ── Mode flags ────────────────────────────────────────────────────────────────────────────
     /** True jika node B sedang dalam "Caraka Mode" (Stealth broadcast aktif). */
     private val _carakaModeActive = MutableStateFlow(false)
@@ -205,6 +213,8 @@ class CourierManager(
             locationHintLon = protocol.courierLocationHintLon
         )
 
+        // Catat asal bundle (A) untuk pengiriman receipt balik (Directed, best-effort).
+        bundleSenders[bundleId] = protocol.senderId
         // 1. Upsert bundle ke DB (state = CARRYING) — B langsung mulai membawa
         courierRepository.upsertBundle(bundle)
         // 2. Buat courier_task untuk tracking
@@ -402,17 +412,24 @@ class CourierManager(
 
         Log.d(TAG, "Received COURIER_DELIVER bundleId=$bundleId mode=$mode")
 
-        // Emit ke UI — Z perlu input kunci (EPK_priv untuk Stealth, atau otomatis Directed)
-        _courierEvents.emit(
-            CourierEvent.DeliveryReceived(
-                bundleId = bundleId,
-                mode = mode,
-                encPayload = encPayload,
-                encNonce = encNonce,
-                senderPub = protocol.courierSenderPub,
-                fromPeerId = protocol.senderId
+        // Anti-replay: proses payload hanya sekali per bundleId. Replay tetap di-ACK
+        // (jaga-jaga ACK pertama hilang) tapi tidak di-emit ulang ke UI.
+        val firstTime = deliveredBundleIds.add(bundleId)
+        if (firstTime) {
+            // Emit ke UI — Z perlu input kunci (EPK_priv untuk Stealth, atau otomatis Directed)
+            _courierEvents.emit(
+                CourierEvent.DeliveryReceived(
+                    bundleId = bundleId,
+                    mode = mode,
+                    encPayload = encPayload,
+                    encNonce = encNonce,
+                    senderPub = protocol.courierSenderPub,
+                    fromPeerId = protocol.senderId
+                )
             )
-        )
+        } else {
+            Log.w(TAG, "COURIER_DELIVER duplikat untuk bundle=$bundleId — abaikan payload, kirim ulang ACK")
+        }
 
         // Kirim ACK ke B
         val myId = identityManager.getPeerId()
@@ -438,14 +455,33 @@ class CourierManager(
         val bundleId = protocol.courierBundleId ?: return
         Log.d(TAG, "COURIER_ACK received — bundle delivered! bundleId=$bundleId")
 
+        // Baca bundle SEBELUM dihapus agar tahu mode-nya (markBundleDelivered menghapus bundle).
+        val bundle = courierRepository.getBundleById(bundleId)
+        val senderId = bundleSenders.remove(bundleId)
+
         courierRepository.markBundleDelivered(bundleId)
         _courierEvents.emit(CourierEvent.DeliverySuccess(bundleId))
 
-        // Kirim COURIER_RECEIPT ke A jika bundle adalah Directed dan A masih reachable
-        // (best-effort — A mungkin sudah tidak ada di sekitar)
-        val bundle = courierRepository.getBundleById(bundleId)
-        // Jika bundle sudah dihapus (markBundleDelivered hapus bundle), kita tidak bisa kirim receipt
-        // Ini adalah trade-off yang diterima: receipt adalah best-effort
+        // COURIER_RECEIPT ke A — best-effort, HANYA untuk Directed.
+        // Stealth sengaja TIDAK mengirim receipt: B tidak tahu siapa A (anonimitas).
+        if (bundle?.mode == "DIRECTED" && senderId != null) {
+            val myId = identityManager.getPeerId()
+            val receipt = MeshProtocol(
+                type = "COURIER_RECEIPT",
+                id = UUID.randomUUID().toString(),
+                senderId = myId,
+                senderName = identityManager.getDisplayName(),
+                senderRole = identityManager.getRole(),
+                recipientId = senderId,
+                content = "",
+                timestamp = System.currentTimeMillis(),
+                ttl = MeshPolicy.COURIER_BROADCAST_TTL,
+                priority = "NORMAL",
+                courierBundleId = bundleId
+            )
+            transport.sendToPeer(senderId, receipt.toJson())
+            Log.d(TAG, "COURIER_RECEIPT sent to A=$senderId for bundle=$bundleId")
+        }
     }
 
     // ── COURIER_RECEIPT: B → A ────────────────────────────────────────────────────────────────
