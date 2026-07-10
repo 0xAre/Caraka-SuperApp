@@ -60,7 +60,10 @@ import com.example.caraka.ui.prefs.UiPreferences
 import com.example.caraka.ui.prefs.UiPrefsState
 import com.example.caraka.ui.screens.AlertsScreen
 import com.example.caraka.ui.screens.ChatScreen
-import com.example.caraka.ui.screens.CourierScreen
+import com.example.caraka.ui.courier.CarakaSendSheet
+import com.example.caraka.ui.courier.CourierOfferDialog
+import com.example.caraka.ui.courier.DeliveryReceivedSheet
+import com.example.caraka.ui.courier.DeliverySuccessSheet
 import com.example.caraka.ui.screens.CourierHistoryScreen
 import com.example.caraka.ui.screens.HelpScreen
 import com.example.caraka.ui.screens.HomeScreen
@@ -71,6 +74,7 @@ import com.example.caraka.ui.screens.QrIdentityScreen
 import com.example.caraka.ui.screens.SettingsScreen
 import com.example.caraka.ui.screens.SosScreen
 import com.example.caraka.ui.theme.CarakaTheme
+import com.example.caraka.viewmodel.CourierDialogState
 import com.example.caraka.viewmodel.CourierViewModel
 import com.example.caraka.viewmodel.MainViewModel
 import com.example.caraka.viewmodel.MainViewModelFactory
@@ -90,7 +94,8 @@ class MainActivity : ComponentActivity() {
             app.courierManager,
             app.courierRepository,
             app.repository,
-            app.identityManager
+            app.identityManager,
+            UiPreferences(applicationContext)
         )
     }
 
@@ -285,8 +290,7 @@ private fun CarakaNav(
         Screen.Network.route,
         Screen.Sos.route,
         Screen.Settings.route,
-        Screen.Alerts.route,
-        Screen.Courier.route
+        Screen.Alerts.route
     )
 
     // The chat screen owns its own bottom inset (IME + nav bar) via a sticky composer,
@@ -327,28 +331,27 @@ private fun CarakaNav(
                     .consumeWindowInsets(contentPadding)
             ) {
                 composable(Screen.Home.route) {
-                    val courierCarryCount by courierViewModel.activeCarryCount.collectAsState()
                     HomeScreen(
                         viewModel = viewModel,
-                        courierCarryCount = courierCarryCount,
                         onNavigateToSos = { navController.navigate(Screen.Sos.route) },
                         onNavigateToAlerts = { navController.navigate(Screen.Alerts.route) },
                         onNavigateToMessages = { navController.navigate(Screen.Messages.route) },
                         onNavigateToNetwork = { navController.navigate(Screen.Network.route) },
                         onNavigateToProfile = { navController.navigate(Screen.Settings.route) },
                         onNavigateToQr = { navController.navigate(Screen.QrIdentity.route) },
-                        onNavigateToHelp = { navController.navigate(Screen.Help.route) },
-                        onNavigateToCourier = { navController.navigate(Screen.Courier.route) }
+                        onNavigateToHelp = { navController.navigate(Screen.Help.route) }
                     )
                 }
                 composable(Screen.Messages.route) {
                     MessagesScreen(
                         viewModel = viewModel,
+                        courierViewModel = courierViewModel,
                         uiPrefs = uiPrefs,
                         onNavigateToChat = { peerId ->
                             navController.navigate(Screen.chatRoute(peerId))
                         },
-                        onNavigateToNetwork = { navController.navigate(Screen.Network.route) }
+                        onNavigateToNetwork = { navController.navigate(Screen.Network.route) },
+                        onNavigateToHistory = { navController.navigate(Screen.CourierHistory.route) }
                     )
                 }
                 composable(
@@ -429,14 +432,7 @@ private fun CarakaNav(
                         onBack = { navController.popBackStack() }
                     )
                 }
-                // ── Caraka Courier Mode ──────────────────────────────────────────────
-                composable(Screen.Courier.route) {
-                    CourierScreen(
-                        viewModel = courierViewModel,
-                        onBack = { navController.popBackStack() },
-                        onNavigateToHistory = { navController.navigate(Screen.CourierHistory.route) }
-                    )
-                }
+                // ── Caraka Mode: Riwayat (tab Caraka ada di layar Pesan) ─────────────
                 composable(Screen.CourierHistory.route) {
                     CourierHistoryScreen(
                         viewModel = courierViewModel,
@@ -445,6 +441,10 @@ private fun CarakaNav(
                 }
             }
         }
+
+        // Dialog Caraka app-wide — OFFER (B) / DELIVERY (Z) / SUCCESS / RECEIPT muncul di
+        // layar mana pun, plus send-sheet yang dipicu dari tab Caraka.
+        CourierDialogHost(viewModel = courierViewModel)
 
         FloatingChatAlert(
             alert = chatAlert,
@@ -476,5 +476,58 @@ private fun CarakaNav(
                 onDismiss = { viewModel.dismissConnectionRequestDialog() }
             )
         }
+    }
+}
+
+/**
+ * Host dialog Caraka (Directed) app-wide: send-sheet (dari tab Caraka), OFFER ke kurir B,
+ * DELIVERY ke penerima Z, sukses, dan receipt. Dialog Stealth tidak dirender (UI Stealth dihapus).
+ */
+@Composable
+private fun CourierDialogHost(viewModel: CourierViewModel) {
+    val dialogState by viewModel.dialogState.collectAsState()
+    val scope = rememberCoroutineScope()
+    when (val state = dialogState) {
+        is CourierDialogState.SendRequest -> {
+            CarakaSendSheet(
+                viewModel = viewModel,
+                preselectCourierId = state.preselectCourierId,
+                onDismiss = { viewModel.dismissDialog() }
+            )
+        }
+        is CourierDialogState.OfferReceived -> {
+            CourierOfferDialog(
+                fromPeerName = state.fromPeerName,
+                mode = state.mode,
+                expiryMs = state.expiryMs,
+                locationHintLat = state.locationHintLat,
+                locationHintLon = state.locationHintLon,
+                note = state.note,
+                onAccept = { viewModel.acceptOffer(state.bundleId, state.fromPeerId) },
+                onReject = { viewModel.rejectOffer(state.bundleId, state.fromPeerId) }
+            )
+        }
+        is CourierDialogState.DeliveryReceived -> {
+            DeliveryReceivedSheet(
+                bundleId = state.bundleId,
+                mode = state.mode,
+                encPayload = state.encPayload,
+                encNonce = state.encNonce,
+                senderPub = state.senderPub,
+                fromPeerId = state.fromPeerId,
+                onDecryptDirected = { enc, nonce, pub, onResult ->
+                    scope.launch { onResult(viewModel.decryptDirectedDelivery(state.bundleId, enc, nonce, pub)) }
+                },
+                onDecryptStealth = { enc, nonce, epkPriv -> viewModel.decryptStealthDelivery(enc, nonce, epkPriv) },
+                onDismiss = { viewModel.dismissDeliverySuccess(state.bundleId) }
+            )
+        }
+        is CourierDialogState.DeliverySuccess -> {
+            DeliverySuccessSheet(bundleId = state.bundleId, onDismiss = { viewModel.dismissDeliverySuccess(state.bundleId) })
+        }
+        is CourierDialogState.ReceiptReceived -> {
+            DeliverySuccessSheet(bundleId = state.bundleId, carrierName = state.carrierName, onDismiss = { viewModel.dismissDialog() })
+        }
+        else -> { /* None / Stealth states — tidak dirender */ }
     }
 }

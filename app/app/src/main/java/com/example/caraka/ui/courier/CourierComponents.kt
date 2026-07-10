@@ -385,6 +385,7 @@ fun CourierOfferDialog(
     expiryMs: Long,
     locationHintLat: Double?,
     locationHintLon: Double?,
+    note: String? = null,
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
@@ -457,6 +458,13 @@ fun CourierOfferDialog(
                         icon = Icons.Default.Map,
                         label = stringResource(R.string.courier_offer_location_label),
                         value = "%.4f, %.4f".format(locationHintLat, locationHintLon)
+                    )
+                }
+                if (!note.isNullOrBlank()) {
+                    InfoRow(
+                        icon = Icons.Default.Message,
+                        label = stringResource(R.string.caraka_note_from_sender),
+                        value = note
                     )
                 }
 

@@ -434,10 +434,10 @@
 
     <!-- ───── Caraka Courier ───── -->
     <string name="cd_back">Back</string>
-    <string name="courier_title">Caraka Courier</string>
-    <string name="courier_subtitle">Send messages via a trusted courier</string>
-    <string name="cd_courier_history">Courier history</string>
-    <string name="courier_fab_send">Send via courier</string>
+    <string name="courier_title">Caraka</string>
+    <string name="courier_subtitle">Entrust a message to a trusted courier</string>
+    <string name="cd_courier_history">Caraka history</string>
+    <string name="courier_fab_send">Send via Caraka</string>
     <string name="courier_carrying_section">Carried bundles</string>
     <string name="courier_mode_title">Caraka Mode</string>
     <string name="courier_mode_active_title">Caraka Mode active</string>
@@ -459,8 +459,8 @@
     <string name="courier_stealth_recipient_note">The courier does not need to know the recipient. Z will claim it with the EPK_priv you shared.</string>
     <string name="courier_message_label">Secret message</string>
     <string name="courier_message_placeholder">Write the message to be encrypted…</string>
-    <string name="courier_assign_btn">Assign courier</string>
-    <string name="courier_offer_title">Courier request</string>
+    <string name="courier_assign_btn">Send via Caraka</string>
+    <string name="courier_offer_title">Caraka request</string>
     <string name="courier_offer_intro_format">%1$s asks you to be a courier.</string>
     <string name="courier_offer_content_label">Contents</string>
     <string name="courier_offer_content_value">Encrypted — you cannot read it</string>
@@ -500,7 +500,7 @@
     <string name="cd_courier_qr">Stealth credential QR</string>
     <string name="courier_share_via_chat">Or send via CARAKA chat to a contact:</string>
     <string name="courier_copy_format">Copy %1$s</string>
-    <string name="courier_history_title">Courier history</string>
+    <string name="courier_history_title">Caraka history</string>
     <string name="courier_history_empty">No history yet</string>
     <string name="courier_history_empty_desc">Courier tasks you accept and complete will appear here.</string>
     <string name="courier_history_status_delivered">Delivered</string>
@@ -509,6 +509,30 @@
     <string name="courier_history_status_cancelled">Cancelled</string>
     <string name="courier_history_received_format">Received: %1$s</string>
     <string name="courier_history_received_done_format">Received: %1$s · Done: %2$s</string>
+
+    <!-- ───── Caraka Mode (tab in Messages) ───── -->
+    <string name="tab_messages">Messages</string>
+    <string name="tab_caraka">Caraka</string>
+    <string name="caraka_section_carriers">Available couriers</string>
+    <string name="caraka_no_carriers_title">No connected devices</string>
+    <string name="caraka_no_carriers_desc">Connect to another device first to entrust a message to a courier.</string>
+    <string name="caraka_pick_carrier">Choose courier (connected)</string>
+    <string name="caraka_pick_target">Choose destination</string>
+    <string name="caraka_add_contact">Add contact</string>
+    <string name="caraka_no_contacts">No contacts yet. Scan a QR or connect first, or add manually.</string>
+    <string name="caraka_needs_connection">needs connection</string>
+    <string name="caraka_needs_connection_hint">Contacts without a key can only be sent to after connecting / scanning their QR.</string>
+    <string name="caraka_msg_for_target">Message for recipient</string>
+    <string name="caraka_msg_for_target_ph">Secret message to be encrypted for the recipient…</string>
+    <string name="caraka_note_for_carrier">Message for courier</string>
+    <string name="caraka_note_for_carrier_ph">e.g. please deliver to the location…</string>
+    <string name="caraka_note_hint">This note is readable by the courier — do not write secrets.</string>
+    <string name="caraka_note_from_sender">Message from sender</string>
+    <string name="caraka_add_contact_title">Add Contact</string>
+    <string name="caraka_peerid_label">Peer ID</string>
+    <string name="caraka_peerid_ph">Paste the contact Peer ID…</string>
+    <string name="caraka_contact_name_label">Name</string>
+    <string name="caraka_add">Add</string>
 
     <!-- ───── Help Screen (additional) ───── -->
     <string name="help_tour_title">Interactive Tour</string>

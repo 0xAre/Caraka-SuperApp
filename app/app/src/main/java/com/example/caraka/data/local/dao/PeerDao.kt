@@ -89,8 +89,12 @@ interface PeerDao {
     @Query("DELETE FROM peers WHERE id = :peerId")
     suspend fun deletePeer(peerId: String)
 
-    /** Remove unverified peers (e.g. on app launch) so stale names from old sessions don't linger. */
-    @Query("DELETE FROM peers WHERE isVerified = 0")
+    /**
+     * Remove stale discovery entries on app launch — peer yang BELUM pernah ber-kunci & belum
+     * QR-verified. Peer ber-kunci (publicKey != '') = pernah handshake/terhubung → DIPERTAHANKAN
+     * sebagai kontak Caraka persisten; peer QR (isVerified=1) juga dipertahankan.
+     */
+    @Query("DELETE FROM peers WHERE isVerified = 0 AND publicKey = ''")
     suspend fun deleteUnverifiedPeers()
 
     @Query("DELETE FROM peers")

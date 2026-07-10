@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,6 +28,7 @@ class UiPreferences(private val context: Context) {
         val highContrast   = booleanPreferencesKey("high_contrast")
         val haptics        = booleanPreferencesKey("haptics")
         val onboardingDone = booleanPreferencesKey("onboarding_done")
+        val manualContacts = stringSetPreferencesKey("manual_contacts") // entri "peerIdnama"
     }
 
     val language: Flow<String> = context.uiPrefsDataStore.data.map { it[Keys.language] ?: "id" }
@@ -61,4 +63,39 @@ class UiPreferences(private val context: Context) {
                 } else null
             }.toMap()
         }
+
+    // ── Kontak Caraka yang ditambah manual (peerId belum tentu punya kunci) ───────────────────
+    // Disimpan sebagai set string "peerIdnama". Persisten lintas restart tanpa migrasi DB.
+
+    private val manualSep = ""
+
+    /** Daftar kontak manual: pasangan (peerId, nama). */
+    fun observeManualContacts(): Flow<List<Pair<String, String>>> =
+        context.uiPrefsDataStore.data.map { prefs ->
+            (prefs[Keys.manualContacts] ?: emptySet()).mapNotNull { entry ->
+                val parts = entry.split(manualSep, limit = 2)
+                val id = parts.getOrNull(0)?.trim().orEmpty()
+                if (id.isBlank()) null else id to (parts.getOrNull(1)?.trim().orEmpty())
+            }
+        }
+
+    /** Tambah/timpa kontak manual by peerId. */
+    suspend fun addManualContact(peerId: String, name: String) {
+        val id = peerId.trim()
+        if (id.isBlank()) return
+        context.uiPrefsDataStore.edit { prefs ->
+            val current = prefs[Keys.manualContacts] ?: emptySet()
+            val kept = current.filterNot { it.substringBefore(manualSep) == id }.toSet()
+            prefs[Keys.manualContacts] = kept + "$id$manualSep${name.trim()}"
+        }
+    }
+
+    /** Hapus kontak manual (mis. saat sudah jadi peer ber-kunci). */
+    suspend fun removeManualContact(peerId: String) {
+        val id = peerId.trim()
+        context.uiPrefsDataStore.edit { prefs ->
+            val current = prefs[Keys.manualContacts] ?: return@edit
+            prefs[Keys.manualContacts] = current.filterNot { it.substringBefore(manualSep) == id }.toSet()
+        }
+    }
 }

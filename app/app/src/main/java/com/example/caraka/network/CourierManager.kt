@@ -163,7 +163,8 @@ class CourierManager(
                 mode = mode,
                 expiryMs = expiry,
                 locationHintLat = protocol.courierLocationHintLat,
-                locationHintLon = protocol.courierLocationHintLon
+                locationHintLon = protocol.courierLocationHintLon,
+                note = protocol.courierNote
             )
         )
     }
@@ -505,7 +506,8 @@ sealed class CourierEvent {
         val mode: String,
         val expiryMs: Long,
         val locationHintLat: Double?,
-        val locationHintLon: Double?
+        val locationHintLon: Double?,
+        val note: String? = null
     ) : CourierEvent()
 
     data class OfferAccepted(val bundleId: String, val byPeerId: String) : CourierEvent()

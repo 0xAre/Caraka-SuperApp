@@ -123,7 +123,10 @@ data class MeshProtocol(
 
     /** Hint lokasi tujuan (opsional) — hanya tampil ke B sebagai panduan arah. */
     val courierLocationHintLat: Double? = null,
-    val courierLocationHintLon: Double? = null
+    val courierLocationHintLon: Double? = null,
+
+    /** Catatan plaintext dari A untuk kurir B (ditampilkan di COURIER_OFFER). Bukan rahasia. */
+    val courierNote: String? = null
 ) {
     companion object {
         private val gson = Gson()

@@ -276,13 +276,14 @@ class CourierRepository(
 
     // ── Wire Message Builders ─────────────────────────────────────────────────────────────────
 
-    /** Buat COURIER_OFFER wire message: A → B. Hanya metadata, tidak ada isi. */
+    /** Buat COURIER_OFFER wire message: A → B. Metadata + catatan plaintext untuk kurir. */
     fun buildOfferMessage(
         bundle: CourierBundleEntity,
         myId: String,
         myName: String,
         myRole: String,
-        targetBId: String
+        targetBId: String,
+        note: String? = null
     ): MeshProtocol = MeshProtocol(
         type = "COURIER_OFFER",
         id = UUID.randomUUID().toString(),
@@ -298,7 +299,8 @@ class CourierRepository(
         courierMode = bundle.mode,
         courierExpiry = bundle.expiry,
         courierLocationHintLat = bundle.locationHintLat,
-        courierLocationHintLon = bundle.locationHintLon
+        courierLocationHintLon = bundle.locationHintLon,
+        courierNote = note?.takeIf { it.isNotBlank() }
     )
 
     /** Buat COURIER_TRANSFER: A → B (setelah B accept). Berisi ciphertext bundle. */
@@ -438,10 +440,10 @@ class CourierRepository(
      * A mengirim COURIER_OFFER (metadata saja) ke kurir B untuk bundle yang sudah dibuat.
      * Dipanggil setelah createDirectedBundle / createStealthBundle.
      */
-    suspend fun sendOffer(bundle: CourierBundleEntity, courierId: String) {
+    suspend fun sendOffer(bundle: CourierBundleEntity, courierId: String, note: String? = null) {
         val myId = identityManager.getPeerId()
         val offer = buildOfferMessage(
-            bundle, myId, identityManager.getDisplayName(), identityManager.getRole(), courierId
+            bundle, myId, identityManager.getDisplayName(), identityManager.getRole(), courierId, note
         )
         transport?.sendToPeer(courierId, offer.toJson())
         Log.d(TAG, "COURIER_OFFER sent to courier $courierId for bundle=${bundle.bundleId} mode=${bundle.mode}")

@@ -434,10 +434,10 @@
 
     <!-- ───── Caraka Courier ───── -->
     <string name="cd_back">Kembali</string>
-    <string name="courier_title">Caraka Kurir</string>
-    <string name="courier_subtitle">Kirim pesan lewat kurir terpercaya</string>
-    <string name="cd_courier_history">Riwayat kurir</string>
-    <string name="courier_fab_send">Kirim via Kurir</string>
+    <string name="courier_title">Caraka</string>
+    <string name="courier_subtitle">Titip pesan lewat kurir tepercaya</string>
+    <string name="cd_courier_history">Riwayat Caraka</string>
+    <string name="courier_fab_send">Kirim via Caraka</string>
     <string name="courier_carrying_section">Bundle Dibawa</string>
     <string name="courier_mode_title">Caraka Mode</string>
     <string name="courier_mode_active_title">Caraka Mode Aktif</string>
@@ -459,8 +459,8 @@
     <string name="courier_stealth_recipient_note">Penerima tidak perlu diketahui kurir. Z akan klaim dengan EPK_priv yang sudah kamu bagikan.</string>
     <string name="courier_message_label">Pesan Rahasia</string>
     <string name="courier_message_placeholder">Tulis pesan yang akan dienkripsi…</string>
-    <string name="courier_assign_btn">Tugaskan Kurir</string>
-    <string name="courier_offer_title">Permintaan Kurir</string>
+    <string name="courier_assign_btn">Kirim via Caraka</string>
+    <string name="courier_offer_title">Permintaan Caraka</string>
     <string name="courier_offer_intro_format">%1$s memintamu menjadi kurir.</string>
     <string name="courier_offer_content_label">Isinya</string>
     <string name="courier_offer_content_value">Terenkripsi — kamu tidak bisa membacanya</string>
@@ -500,7 +500,7 @@
     <string name="cd_courier_qr">QR kredensial stealth</string>
     <string name="courier_share_via_chat">Atau kirim via chat CARAKA ke kontak:</string>
     <string name="courier_copy_format">Salin %1$s</string>
-    <string name="courier_history_title">Riwayat Kurir</string>
+    <string name="courier_history_title">Riwayat Caraka</string>
     <string name="courier_history_empty">Belum ada riwayat</string>
     <string name="courier_history_empty_desc">Tugas kurir yang kamu terima dan selesaikan akan muncul di sini.</string>
     <string name="courier_history_status_delivered">Terkirim</string>
@@ -509,6 +509,30 @@
     <string name="courier_history_status_cancelled">Dibatalkan</string>
     <string name="courier_history_received_format">Diterima: %1$s</string>
     <string name="courier_history_received_done_format">Diterima: %1$s · Selesai: %2$s</string>
+
+    <!-- ───── Caraka Mode (tab di layar Pesan) ───── -->
+    <string name="tab_messages">Pesan</string>
+    <string name="tab_caraka">Caraka</string>
+    <string name="caraka_section_carriers">Kurir tersedia</string>
+    <string name="caraka_no_carriers_title">Belum ada perangkat terhubung</string>
+    <string name="caraka_no_carriers_desc">Hubungkan ke perangkat lain dulu untuk menitipkan pesan lewat kurir.</string>
+    <string name="caraka_pick_carrier">Pilih kurir (yang terhubung)</string>
+    <string name="caraka_pick_target">Pilih tujuan</string>
+    <string name="caraka_add_contact">Tambah kontak</string>
+    <string name="caraka_no_contacts">Belum ada kontak. Scan QR atau terhubung dulu, atau tambah manual.</string>
+    <string name="caraka_needs_connection">perlu terhubung</string>
+    <string name="caraka_needs_connection_hint">Kontak tanpa kunci hanya bisa dikirimi setelah pernah terhubung / scan QR.</string>
+    <string name="caraka_msg_for_target">Pesan untuk penerima</string>
+    <string name="caraka_msg_for_target_ph">Pesan rahasia yang akan dienkripsi untuk penerima…</string>
+    <string name="caraka_note_for_carrier">Pesan untuk kurir</string>
+    <string name="caraka_note_for_carrier_ph">mis. tolong antar ke lokasi…</string>
+    <string name="caraka_note_hint">Catatan ini terbaca kurir — jangan tulis rahasia.</string>
+    <string name="caraka_note_from_sender">Pesan dari pengirim</string>
+    <string name="caraka_add_contact_title">Tambah Kontak</string>
+    <string name="caraka_peerid_label">Peer ID</string>
+    <string name="caraka_peerid_ph">Tempel Peer ID kontak…</string>
+    <string name="caraka_contact_name_label">Nama</string>
+    <string name="caraka_add">Tambah</string>
 
     <!-- ───── Help Screen (additional) ───── -->
     <string name="help_tour_title">Tur Interaktif</string>

@@ -13,6 +13,8 @@ import com.example.caraka.network.CourierEvent
 import com.example.caraka.network.CourierManager
 import com.example.caraka.repository.CourierRepository
 import com.example.caraka.repository.MeshRepository
+import com.example.caraka.ui.prefs.UiPreferences
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,12 +34,26 @@ data class StealthCredentials(
     val nonceSecretB64: String
 )
 
+/**
+ * Kontak Caraka untuk picker tujuan. [hasKey] = punya enc_pub (dari QR/pernah-terhubung) →
+ * bisa jadi tujuan Directed. Kontak manual tanpa kunci ([hasKey]=false) ditandai "perlu terhubung".
+ */
+data class CarakaContact(
+    val peerId: String,
+    val name: String,
+    val role: String,
+    val hasKey: Boolean
+)
+
 /** UI State untuk dialog/bottom sheet yang sedang terbuka. */
 sealed class CourierDialogState {
     object None : CourierDialogState()
 
-    /** A membuka sheet untuk memilih mode, kurir, dan menulis pesan. */
-    data class SendRequest(val availablePeers: List<PeerEntity>) : CourierDialogState()
+    /** A membuka sheet untuk memilih kurir, tujuan, dan menulis pesan. */
+    data class SendRequest(
+        val availablePeers: List<PeerEntity>,
+        val preselectCourierId: String? = null
+    ) : CourierDialogState()
 
     /** B menerima penawaran — dialog accept/reject. */
     data class OfferReceived(
@@ -47,7 +63,8 @@ sealed class CourierDialogState {
         val mode: String,
         val expiryMs: Long,
         val locationHintLat: Double?,
-        val locationHintLon: Double?
+        val locationHintLon: Double?,
+        val note: String? = null
     ) : CourierDialogState()
 
     /** Z menerima broadcast stealth token — pilih token yang cocok. */
@@ -85,7 +102,8 @@ class CourierViewModel(
     private val courierManager: CourierManager,
     private val courierRepository: CourierRepository,
     private val meshRepository: MeshRepository,
-    private val identityManager: IdentityManager
+    private val identityManager: IdentityManager,
+    private val uiPreferences: UiPreferences
 ) : ViewModel() {
 
     // ── Dialog state ─────────────────────────────────────────────────────────────────────────
@@ -134,6 +152,31 @@ class CourierViewModel(
     val historyTasks: StateFlow<List<CourierTaskEntity>> = courierRepository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // ── Kontak (tujuan Z) = peer ber-kunci (QR/pernah-terhubung) + entri manual ──────────────
+    val contacts: StateFlow<List<CarakaContact>> = combine(
+        meshRepository.getAllPeers(),
+        uiPreferences.observeManualContacts()
+    ) { peers, manual ->
+        val keyed = peers.filter { it.publicKey.isNotBlank() }.map {
+            CarakaContact(
+                peerId = it.id,
+                name = it.displayName.ifBlank { it.id.take(8) },
+                role = it.role,
+                hasKey = true
+            )
+        }
+        val keyedIds = keyed.map { it.peerId }.toSet()
+        val manualOnly = manual.filter { it.first !in keyedIds }.map { (id, name) ->
+            CarakaContact(peerId = id, name = name.ifBlank { id.take(8) }, role = "", hasKey = false)
+        }
+        (keyed + manualOnly).sortedBy { it.name.lowercase() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Tambah kontak manual via PeerID (belum tentu punya kunci → ditandai "perlu terhubung"). */
+    fun addManualContact(peerId: String, name: String) {
+        viewModelScope.launch { uiPreferences.addManualContact(peerId, name) }
+    }
+
     init {
         // Dengarkan CourierEvent dari manager
         viewModelScope.launch {
@@ -154,7 +197,8 @@ class CourierViewModel(
                     mode = event.mode,
                     expiryMs = event.expiryMs,
                     locationHintLat = event.locationHintLat,
-                    locationHintLon = event.locationHintLon
+                    locationHintLon = event.locationHintLon,
+                    note = event.note
                 )
             }
             is CourierEvent.OfferAccepted -> {
@@ -234,9 +278,9 @@ class CourierViewModel(
 
     // ── Actions ──────────────────────────────────────────────────────────────────────────────
 
-    /** A membuka sheet permintaan kurir. */
-    fun openSendRequest() {
-        _dialogState.value = CourierDialogState.SendRequest(connectedPeers.value)
+    /** A membuka sheet permintaan Caraka (opsional preselect kurir). */
+    fun openSendRequest(preselectCourierId: String? = null) {
+        _dialogState.value = CourierDialogState.SendRequest(connectedPeers.value, preselectCourierId)
     }
 
     /** A mengirim bundle kurir ke kurir terpilih. Signature dijaga tetap (dipakai UI). */
@@ -247,18 +291,19 @@ class CourierViewModel(
         mode: String,          // "DIRECTED" | "STEALTH"
         epkPrivB64: String?,   // opsional: EPK_priv yang sudah disepakati (Stealth). Jika null → auto-generate.
         locationHintLat: Double? = null,
-        locationHintLon: Double? = null
+        locationHintLon: Double? = null,
+        note: String? = null   // catatan plaintext untuk kurir B (Directed)
     ) {
         viewModelScope.launch {
             try {
                 if (mode == "STEALTH") {
                     sendStealthRequest(courierId, message, epkPrivB64, locationHintLat, locationHintLon)
                 } else {
-                    sendDirectedRequest(courierId, recipientId, message, locationHintLat, locationHintLon)
+                    sendDirectedRequest(courierId, recipientId, message, locationHintLat, locationHintLon, note)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send courier bundle", e)
-                _snackbar.emit("Gagal mengirim permintaan kurir: ${e.message}")
+                _snackbar.emit("Gagal mengirim permintaan Caraka: ${e.message}")
             }
             dismissDialog()
         }
@@ -270,11 +315,12 @@ class CourierViewModel(
         recipientId: String,
         message: String,
         locationHintLat: Double?,
-        locationHintLon: Double?
+        locationHintLon: Double?,
+        note: String? = null
     ) {
         val peer = meshRepository.getPeerById(recipientId)
         if (peer == null || peer.publicKey.isBlank()) {
-            _snackbar.emit("Tidak bisa kirim Directed: kunci publik penerima belum ada. Lakukan QR exchange dulu.")
+            _snackbar.emit("Tidak bisa kirim: kunci publik penerima belum ada. Lakukan QR exchange / terhubung dulu.")
             Log.w(TAG, "sendDirectedRequest: enc_pub Z tidak ditemukan untuk $recipientId")
             return
         }
@@ -285,8 +331,8 @@ class CourierViewModel(
             locationHintLat = locationHintLat,
             locationHintLon = locationHintLon
         ) ?: throw Exception("Gagal membuat bundle directed")
-        courierRepository.sendOffer(bundle, courierId)
-        _snackbar.emit("📤 Permintaan kurir terkirim! Bundle: ${bundle.bundleId.take(8)}")
+        courierRepository.sendOffer(bundle, courierId, note)
+        _snackbar.emit("📤 Permintaan Caraka terkirim! Bundle: ${bundle.bundleId.take(8)}")
         Log.d(TAG, "Directed bundle sent: ${bundle.bundleId} to carrier=$courierId")
     }
 
@@ -398,12 +444,13 @@ class CourierViewModel(
         private val courierManager: CourierManager,
         private val courierRepository: CourierRepository,
         private val meshRepository: MeshRepository,
-        private val identityManager: IdentityManager
+        private val identityManager: IdentityManager,
+        private val uiPreferences: UiPreferences
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CourierViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return CourierViewModel(courierManager, courierRepository, meshRepository, identityManager) as T
+                return CourierViewModel(courierManager, courierRepository, meshRepository, identityManager, uiPreferences) as T
             }
             throw IllegalArgumentException("Unknown ViewModel: $modelClass")
         }

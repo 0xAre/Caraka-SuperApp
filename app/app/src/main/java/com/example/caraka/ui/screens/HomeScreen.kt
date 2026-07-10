@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Notifications
@@ -75,15 +74,13 @@ import com.example.caraka.viewmodel.MainViewModel
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel? = null,
-    courierCarryCount: Int = 0,
     onNavigateToSos: (() -> Unit)? = null,
     onNavigateToAlerts: (() -> Unit)? = null,
     onNavigateToMessages: (() -> Unit)? = null,
     onNavigateToNetwork: (() -> Unit)? = null,
     onNavigateToProfile: (() -> Unit)? = null,
     onNavigateToQr: (() -> Unit)? = null,
-    onNavigateToHelp: (() -> Unit)? = null,
-    onNavigateToCourier: (() -> Unit)? = null
+    onNavigateToHelp: (() -> Unit)? = null
 ) {
     val activeAlerts by viewModel?.activeAlerts?.collectAsStateWithLifecycle(initialValue = emptyList())
         ?: remember { mutableStateOf(emptyList()) }
@@ -203,26 +200,7 @@ fun HomeScreen(
                         ServiceTile(Icons.Default.Notifications, stringResource(R.string.service_label_alerts), MaterialTheme.colorScheme.tertiary, { onNavigateToAlerts?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_alarm)
                         ServiceTile(Icons.Default.Shield, stringResource(R.string.service_label_identity), statusColors.authority, { onNavigateToProfile?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_identity)
                         ServiceTile(Icons.Default.HelpOutline, stringResource(R.string.service_label_help), MaterialTheme.colorScheme.primary, { onNavigateToHelp?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_help)
-                        if (courierCarryCount > 0) {
-                            BadgedBox(
-                                modifier = Modifier.weight(1f),
-                                badge = {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.secondary,
-                                        contentColor = MaterialTheme.colorScheme.onSecondary
-                                    ) {
-                                        Text(
-                                            if (courierCarryCount > 99) "99+" else "$courierCarryCount",
-                                            style = CarakaTextStyles.badge
-                                        )
-                                    }
-                                }
-                            ) {
-                                ServiceTile(Icons.Default.DirectionsBike, stringResource(R.string.service_label_courier), MaterialTheme.colorScheme.secondary, { onNavigateToCourier?.invoke() }, Modifier.fillMaxWidth(), R.drawable.ill_service_simulator)
-                            }
-                        } else {
-                            ServiceTile(Icons.Default.DirectionsBike, stringResource(R.string.service_label_courier), MaterialTheme.colorScheme.secondary, { onNavigateToCourier?.invoke() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
-                        }
+                        ServiceTile(Icons.Default.Bolt, stringResource(R.string.service_label_simulator), MaterialTheme.colorScheme.secondary, { viewModel?.toggleAttackSim() }, Modifier.weight(1f), R.drawable.ill_service_simulator)
                     }
                 }
             }
