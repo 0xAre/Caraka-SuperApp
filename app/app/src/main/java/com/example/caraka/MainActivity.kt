@@ -69,10 +69,10 @@ import com.example.caraka.ui.screens.HelpScreen
 import com.example.caraka.ui.screens.HomeScreen
 import com.example.caraka.ui.screens.MessagesScreen
 import com.example.caraka.ui.screens.NetworkScreen
-import com.example.caraka.ui.screens.ProfileSetupScreen
 import com.example.caraka.ui.screens.QrIdentityScreen
 import com.example.caraka.ui.screens.SettingsScreen
 import com.example.caraka.ui.screens.SosScreen
+import com.example.caraka.ui.screens.onboarding.OnboardingWizardScreen
 import com.example.caraka.ui.theme.CarakaTheme
 import com.example.caraka.viewmodel.CourierDialogState
 import com.example.caraka.viewmodel.CourierViewModel
@@ -159,8 +159,6 @@ private fun CarakaRoot(
     val bigText by uiPrefs.bigText.collectAsState(initial = false)
     val highContrast by uiPrefs.highContrast.collectAsState(initial = false)
     val haptics by uiPrefs.haptics.collectAsState(initial = true)
-    val onboardingDone by uiPrefs.onboardingDone.collectAsState(initial = true)
-
     val prefsState = UiPrefsState(
         language = language,
         bigText = bigText,
@@ -199,7 +197,6 @@ private fun CarakaRoot(
                     courierViewModel = courierViewModel,
                     uiPrefs = uiPrefs,
                     snackbarHostState = snackbarHostState,
-                    onboardingDoneFlag = onboardingDone,
                     onOnboardingDismissed = { scope.launch { uiPrefs.setOnboardingDone(true) } }
                 )
             }
@@ -213,16 +210,9 @@ private fun CarakaNav(
     courierViewModel: CourierViewModel,
     uiPrefs: UiPreferences,
     snackbarHostState: SnackbarHostState,
-    onboardingDoneFlag: Boolean,
     onOnboardingDismissed: () -> Unit
 ) {
     val hasIdentity by viewModel.hasIdentity.collectAsStateWithLifecycle()
-
-    if (!hasIdentity) {
-        ProfileSetupScreen { name, role -> viewModel.setupIdentity(name, role) }
-        return
-    }
-
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val activity = ctx as? MainActivity
 
@@ -230,7 +220,7 @@ private fun CarakaNav(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> activity?.startMeshService() }
 
-    LaunchedEffect(Unit) {
+    fun requestMeshPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -252,6 +242,21 @@ private fun CarakaNav(
         else permissionLauncher.launch(notGranted.toTypedArray())
     }
 
+    if (!hasIdentity) {
+        OnboardingWizardScreen(
+            onRequestPermissions = { requestMeshPermissions() },
+            onComplete = { name, role ->
+                viewModel.setupIdentity(name, role)
+                onOnboardingDismissed()
+            }
+        )
+        return
+    }
+
+    LaunchedEffect(Unit) {
+        requestMeshPermissions()
+    }
+
     val navController = rememberNavController()
 
     var chatAlert by remember {
@@ -265,7 +270,7 @@ private fun CarakaNav(
         }
     }
 
-    var showTour by remember(onboardingDoneFlag) { mutableStateOf(!onboardingDoneFlag) }
+    var showTour by remember { mutableStateOf(false) }
 
     val sosAlerts by viewModel.activeAlerts.collectAsStateWithLifecycle(initialValue = emptyList())
     val lastMessagesPerPeer by viewModel.lastMessagesPerPeer.collectAsStateWithLifecycle(initialValue = emptyMap())

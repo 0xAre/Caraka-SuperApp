@@ -30,6 +30,14 @@
     <string name="setup_btn_authorize">AUTHORIZE &amp; JOIN</string>
     <string name="setup_show_password">Show password</string>
     <string name="setup_hide_password">Hide password</string>
+    <string name="onboarding_welcome_headline">Stay connected when primary networks are unavailable</string>
+    <string name="onboarding_welcome_subheadline">CARAKA helps you communicate through a nearby mesh network.</string>
+    <string name="onboarding_welcome_cta">Continue</string>
+    <string name="onboarding_permission_title">Enable nearby connections</string>
+    <string name="onboarding_permission_desc">CARAKA uses Location, Bluetooth, and nearby Wi-Fi to find devices and build an offline mesh, not to track you.</string>
+    <string name="onboarding_permission_cta">Allow &amp; Continue</string>
+    <string name="onboarding_permission_hint">You can enable these later in Settings</string>
+    <string name="onboarding_finish_cta">Start Using CARAKA</string>
 
     <!-- ───── Home Screen ───── -->
     <string name="home_status_online">Online · Mesh standby</string>

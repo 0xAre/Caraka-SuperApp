@@ -45,16 +45,7 @@ import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.ui.theme.LocalCarakaShapes
 import com.example.caraka.ui.theme.TextPrimary
 import com.example.caraka.ui.theme.TextSecondary
-
-private data class TourStep(val titleRes: Int, val descRes: Int)
-
-private val tourSteps = listOf(
-    TourStep(R.string.tour_step1_title, R.string.tour_step1_desc),
-    TourStep(R.string.tour_step2_title, R.string.tour_step2_desc),
-    TourStep(R.string.tour_step3_title, R.string.tour_step3_desc),
-    TourStep(R.string.tour_step4_title, R.string.tour_step4_desc),
-    TourStep(R.string.tour_step5_title, R.string.tour_step5_desc)
-)
+import com.example.caraka.ui.screens.onboarding.tourSteps
 
 @Composable
 fun OnboardingTourOverlay(

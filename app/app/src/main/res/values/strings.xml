@@ -30,6 +30,14 @@
     <string name="setup_btn_authorize">OTORISASI &amp; GABUNG</string>
     <string name="setup_show_password">Tampilkan kata sandi</string>
     <string name="setup_hide_password">Sembunyikan kata sandi</string>
+    <string name="onboarding_welcome_headline">Tetap terhubung saat jaringan utama tidak tersedia</string>
+    <string name="onboarding_welcome_subheadline">CARAKA membantu Anda berkomunikasi melalui jaringan mesh di sekitar.</string>
+    <string name="onboarding_welcome_cta">Lanjut</string>
+    <string name="onboarding_permission_title">Aktifkan koneksi perangkat sekitar</string>
+    <string name="onboarding_permission_desc">CARAKA menggunakan Lokasi, Bluetooth, dan Wi-Fi sekitar untuk menemukan perangkat dan membangun mesh offline, bukan untuk melacak Anda.</string>
+    <string name="onboarding_permission_cta">Izinkan &amp; Lanjutkan</string>
+    <string name="onboarding_permission_hint">Bisa diaktifkan lagi nanti lewat Settings</string>
+    <string name="onboarding_finish_cta">Mulai Pakai CARAKA</string>
 
     <!-- ───── Home Screen ───── -->
     <string name="home_status_online">Online · Mesh siaga</string>
