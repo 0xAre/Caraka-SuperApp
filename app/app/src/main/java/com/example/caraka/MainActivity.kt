@@ -95,7 +95,8 @@ class MainActivity : ComponentActivity() {
             app.courierRepository,
             app.repository,
             app.identityManager,
-            UiPreferences(applicationContext)
+            UiPreferences(applicationContext),
+            applicationContext
         )
     }
 

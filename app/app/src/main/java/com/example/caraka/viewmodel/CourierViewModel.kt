@@ -1,9 +1,11 @@
 package com.example.caraka.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.caraka.R
 import com.example.caraka.crypto.CourierCryptoHelper
 import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.crypto.QrIdentityManager
@@ -104,7 +106,8 @@ class CourierViewModel(
     private val courierRepository: CourierRepository,
     private val meshRepository: MeshRepository,
     private val identityManager: IdentityManager,
-    private val uiPreferences: UiPreferences
+    private val uiPreferences: UiPreferences,
+    private val context: Context
 ) : ViewModel() {
 
     // ── Dialog state ─────────────────────────────────────────────────────────────────────────
@@ -132,10 +135,20 @@ class CourierViewModel(
         viewModelScope.launch {
             try {
                 meshRepository.sendDirectMessage(recipientId, payloadJson)
-                _snackbar.emit("Kredensial dikirim ke ${recipientId.take(8)} via chat terenkripsi.")
+                _snackbar.emit(
+                    context.getString(
+                        R.string.courier_toast_connection_info_sent,
+                        recipientId.take(8)
+                    )
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "shareCredentialsViaChat gagal", e)
-                _snackbar.emit("Gagal kirim kredensial via chat: ${e.message}")
+                _snackbar.emit(
+                    context.getString(
+                        R.string.courier_toast_connection_info_failed,
+                        e.message.orEmpty()
+                    )
+                )
             }
         }
     }
@@ -188,7 +201,7 @@ class CourierViewModel(
                 encPubKey = payload.encPub,
                 signPubKey = payload.signPub
             )
-            _snackbar.emit("Kontak ${payload.name} ditambahkan.")
+            _snackbar.emit(context.getString(R.string.courier_toast_contact_added, payload.name))
         }
     }
 
@@ -225,26 +238,31 @@ class CourierViewModel(
                 Log.d(TAG, "Event: OfferAccepted by ${event.byPeerId} — mengirim TRANSFER")
                 viewModelScope.launch {
                     courierRepository.sendTransfer(event.bundleId, event.byPeerId)
-                    _snackbar.emit("Kurir ${event.byPeerId.take(8)} menerima — bundle dikirim.")
+                    _snackbar.emit(
+                        context.getString(
+                            R.string.courier_toast_offer_accepted,
+                            event.byPeerId.take(8)
+                        )
+                    )
                 }
             }
             is CourierEvent.OfferRejected -> {
                 Log.d(TAG, "Event: OfferRejected by ${event.byPeerId}")
                 viewModelScope.launch {
-                    _snackbar.emit("Kurir menolak untuk membawa pesan.")
+                    _snackbar.emit(context.getString(R.string.courier_toast_offer_rejected))
                 }
                 dismissDialog()
             }
             is CourierEvent.BundleReceived -> {
                 Log.d(TAG, "Event: BundleReceived ${event.bundleId}")
                 viewModelScope.launch {
-                    _snackbar.emit("📦 Bundle kurir diterima. Kamu sedang membawa ${event.mode} bundle.")
+                    _snackbar.emit(context.getString(R.string.courier_toast_delivery_received))
                 }
             }
             is CourierEvent.CarakaModeActivated -> {
                 Log.d(TAG, "Event: CarakaModeActivated")
                 viewModelScope.launch {
-                    _snackbar.emit("🔁 Caraka Mode aktif — broadcast stealth token ke sekitar.")
+                    _snackbar.emit(context.getString(R.string.courier_toast_caraka_mode_active))
                 }
             }
             is CourierEvent.StealthBroadcastReceived -> {
@@ -289,7 +307,9 @@ class CourierViewModel(
             is CourierEvent.DeliveryFailed -> {
                 Log.w(TAG, "Event: DeliveryFailed ${event.bundleId}: ${event.reason}")
                 viewModelScope.launch {
-                    _snackbar.emit("❌ Pengiriman gagal: ${event.reason}")
+                    _snackbar.emit(
+                        context.getString(R.string.courier_toast_delivery_failed, event.reason)
+                    )
                 }
             }
         }
@@ -322,7 +342,12 @@ class CourierViewModel(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send courier bundle", e)
-                _snackbar.emit("Gagal mengirim permintaan Caraka: ${e.message}")
+                _snackbar.emit(
+                    context.getString(
+                        R.string.courier_toast_request_failed,
+                        e.message.orEmpty()
+                    )
+                )
             }
             dismissDialog()
         }
@@ -339,7 +364,7 @@ class CourierViewModel(
     ) {
         val peer = meshRepository.getPeerById(recipientId)
         if (peer == null || peer.publicKey.isBlank()) {
-            _snackbar.emit("Tidak bisa kirim: kunci publik penerima belum ada. Lakukan QR exchange / terhubung dulu.")
+            _snackbar.emit(context.getString(R.string.courier_toast_recipient_not_verified))
             Log.w(TAG, "sendDirectedRequest: enc_pub Z tidak ditemukan untuk $recipientId")
             return
         }
@@ -351,7 +376,9 @@ class CourierViewModel(
             locationHintLon = locationHintLon
         ) ?: throw Exception("Gagal membuat bundle directed")
         courierRepository.sendOffer(bundle, courierId, note)
-        _snackbar.emit("📤 Permintaan Caraka terkirim! Bundle: ${bundle.bundleId.take(8)}")
+        _snackbar.emit(
+            context.getString(R.string.courier_toast_request_sent, bundle.bundleId.take(8))
+        )
         Log.d(TAG, "Directed bundle sent: ${bundle.bundleId} to carrier=$courierId")
     }
 
@@ -379,7 +406,7 @@ class CourierViewModel(
         ) ?: throw Exception("Gagal membuat bundle stealth")
         courierRepository.sendOffer(bundle, courierId)
         _stealthCredentials.value = StealthCredentials(bundle.bundleId, epkPrivB64, nonceSecretB64)
-        _snackbar.emit("🔮 Bundle stealth dibuat. Bagikan EPK_priv + nonce ke Z secara out-of-band.")
+        _snackbar.emit(context.getString(R.string.courier_toast_private_delivery_created))
         Log.d(TAG, "STEALTH bundle=${bundle.bundleId} EPK_PRIV=$epkPrivB64 NONCE=$nonceSecretB64")
     }
 
@@ -390,7 +417,7 @@ class CourierViewModel(
                 fromPeerId = fromPeerId,
                 bundleId = bundleId
             )
-            _snackbar.emit("✅ Kamu siap menjadi kurir.")
+            _snackbar.emit(context.getString(R.string.courier_toast_ready))
         }
         dismissDialog()
     }
@@ -464,12 +491,20 @@ class CourierViewModel(
         private val courierRepository: CourierRepository,
         private val meshRepository: MeshRepository,
         private val identityManager: IdentityManager,
-        private val uiPreferences: UiPreferences
+        private val uiPreferences: UiPreferences,
+        private val context: Context
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CourierViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return CourierViewModel(courierManager, courierRepository, meshRepository, identityManager, uiPreferences) as T
+                return CourierViewModel(
+                    courierManager,
+                    courierRepository,
+                    meshRepository,
+                    identityManager,
+                    uiPreferences,
+                    context.applicationContext
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel: $modelClass")
         }
