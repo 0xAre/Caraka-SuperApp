@@ -42,3 +42,6 @@ docs/RENCANA_IMPLEMENTASI_13JUNI.md
 # Local review artifacts & recordings (too large / ephemeral for git)
 tmp/
 screenshots/
+
+__pycache__/
+*.pyc
