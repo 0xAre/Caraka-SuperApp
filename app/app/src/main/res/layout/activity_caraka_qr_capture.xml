@@ -31,7 +31,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/bg_qr_scanner_button"
-            android:contentDescription="Tutup scanner"
+            android:contentDescription="@string/qr_capture_close_cd"
             android:fontFamily="@font/manrope_bold"
             android:gravity="center"
             android:insetLeft="0dp"
@@ -55,7 +55,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:background="@drawable/bg_qr_scanner_button"
-            android:contentDescription="Nyalakan flash"
+            android:contentDescription="@string/qr_flash_turn_on_cd"
             android:fontFamily="@font/manrope_bold"
             android:gravity="center"
             android:insetLeft="0dp"
@@ -66,7 +66,7 @@
             android:minHeight="48dp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:text="Flash"
+            android:text="@string/qr_flash_off"
             android:textAllCaps="false"
             android:textColor="@color/caraka_qr_scanner_text"
             android:textSize="12sp" />
@@ -145,7 +145,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/manrope_bold"
-            android:text="Scan QR identitas"
+            android:text="@string/qr_capture_title"
             android:textColor="@color/caraka_qr_scanner_text"
             android:textSize="18sp" />
 
@@ -155,7 +155,7 @@
             android:layout_marginTop="6dp"
             android:fontFamily="@font/inter_regular"
             android:lineSpacingExtra="2dp"
-            android:text="Pegang HP tetap tegak. Posisikan QR peer di dalam kotak sampai terbaca otomatis."
+            android:text="@string/qr_capture_instruction"
             android:textColor="@color/caraka_qr_scanner_text_muted"
             android:textSize="14sp" />
     </LinearLayout>

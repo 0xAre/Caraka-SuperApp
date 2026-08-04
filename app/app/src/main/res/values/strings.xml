@@ -12,7 +12,6 @@
 
     <!-- ───── Profile Setup ───── -->
     <string name="setup_title">Pengaturan profil</string>
-    <string name="setup_welcome">Selamat Datang di CARAKA</string>
     <string name="setup_subtitle">Atur identitas Anda sebelum bergabung ke jaringan.</string>
     <string name="setup_select_role">Pilih Peran:</string>
     <string name="setup_role_civilian">Warga Sipil</string>
@@ -187,7 +186,7 @@
     <!-- ───── Settings ───── -->
     <string name="settings_title">PENGATURAN</string>
     <string name="settings_peer_id">ID Peer</string>
-    <string name="settings_qr_btn">Lihat / Scan QR Identitas</string>
+    <string name="settings_qr_btn">Bagikan atau pindai QR identitas</string>
     <string name="identity_copied">ID peer disalin</string>
     <string name="identity_copy">Salin ID peer</string>
     <string name="identity_qr_shortcut">Buka QR identitas</string>
@@ -198,13 +197,13 @@
     <string name="settings_go_intent">GO Intent</string>
 
     <!-- ───── QR Identity ───── -->
-    <string name="qr_screen_title">Identitas QR</string>
-    <string name="qr_my_identity_title">QR IDENTITAS SAYA</string>
-    <string name="qr_show_hint">Tunjukkan QR ini kepada peer untuk verifikasi identitas tatap muka</string>
-    <string name="qr_trust_warning">Scan hanya dari perangkat yang Anda percaya</string>
+    <string name="qr_screen_title">QR identitas</string>
+    <string name="qr_my_identity_title">Bagikan identitas Anda</string>
+    <string name="qr_show_hint">Tunjukkan kode ini kepada orang yang sedang bersama Anda agar mereka dapat menambahkan identitas CARAKA Anda.</string>
+    <string name="qr_trust_warning">Bagikan hanya saat bertemu langsung, lalu cocokkan kode verifikasi.</string>
     <string name="qr_cd_identity">QR Identitas %1$s</string>
     <string name="qr_image_cd">QR identitas %1$s</string>
-    <string name="qr_verbal_fingerprint">Verifikasi verbal: %1$s</string>
+    <string name="qr_verbal_fingerprint">Kode verifikasi: %1$s</string>
     <string name="trust_sheet_title">Konfirmasi Kepercayaan</string>
     <string name="trust_sheet_warning">Pastikan Anda mengenal orang ini secara langsung sebelum menyimpan sebagai kontak terverifikasi.</string>
     <string name="trust_label_name">Nama</string>
@@ -283,7 +282,7 @@
     <string name="help_q_offline_flag">Bisakah melaporkan hoaks saat offline?</string>
     <string name="help_offline_flag">Laporkan hoaks dengan long-press pesan, bahkan saat offline.</string>
     <string name="help_q_offline_qr">Bagaimana verifikasi identitas tanpa server?</string>
-    <string name="help_offline_qr">Verifikasi identitas peer secara tatap muka dengan scan QR — tidak perlu server pusat.</string>
+    <string name="help_offline_qr">Pindai QR identitas saat bertemu langsung — tanpa server pusat.</string>
 
     <!-- ───── Onboarding Tour ───── -->
     <string name="tour_skip">Lewati</string>
@@ -433,7 +432,7 @@
     <string name="service_label_sos">SOS</string>
     <string name="service_label_messages">Pesan</string>
     <string name="service_label_network">Jaringan</string>
-    <string name="service_label_qr">Scan QR</string>
+    <string name="service_label_qr">Pindai QR</string>
     <string name="service_label_alerts">Alarm</string>
     <string name="service_label_identity">Identitas</string>
     <string name="service_label_help">Bantuan</string>
@@ -540,7 +539,7 @@
     <string name="caraka_pick_carrier">Pilih kurir (yang terhubung)</string>
     <string name="caraka_pick_target">Pilih tujuan</string>
     <string name="caraka_add_contact">Tambah kontak</string>
-    <string name="caraka_scan_qr_btn">Scan QR</string>
+    <string name="caraka_scan_qr_btn">Pindai QR</string>
     <string name="caraka_remove_contact">Hapus kontak</string>
     <string name="caraka_no_contacts">Belum ada kontak. Scan QR atau terhubung dulu, atau tambah manual.</string>
     <string name="caraka_needs_connection">perlu terhubung</string>
@@ -563,15 +562,15 @@
     <string name="help_tour_start">Mulai</string>
 
     <!-- ───── QR Identity (additional) ───── -->
-    <string name="qr_scan_cancelled">Scan dibatalkan</string>
-    <string name="qr_scan_invalid">QR tidak valid — bukan identitas CARAKA</string>
-    <string name="qr_scan_peer_title">Pindai QR peer</string>
-    <string name="qr_scan_instructions">Pegang HP tetap tegak, lalu arahkan kamera sampai QR peer berada di dalam kotak.</string>
-    <string name="qr_hint_portrait">Mode tegak</string>
-    <string name="qr_hint_fill_box">Isi kotak</string>
-    <string name="qr_scan_prompt">Arahkan kamera ke QR identitas CARAKA</string>
-    <string name="qr_scan_now_btn">Scan QR sekarang</string>
-    <string name="qr_connected_toast">Terhubung dengan %1$s ✓</string>
+    <string name="qr_scan_cancelled">Pemindaian dibatalkan</string>
+    <string name="qr_scan_invalid">QR ini bukan identitas CARAKA yang valid.</string>
+    <string name="qr_scan_peer_title">Tambahkan kontak lewat QR</string>
+    <string name="qr_scan_instructions">Pindai QR dari orang yang sedang bersama Anda. Setelah terbaca, CARAKA menyimpan kontak dan membuka percakapan.</string>
+    <string name="qr_hint_portrait">Ponsel tegak</string>
+    <string name="qr_hint_fill_box">QR di dalam bingkai</string>
+    <string name="qr_scan_prompt">Posisikan QR identitas di dalam bingkai</string>
+    <string name="qr_scan_now_btn">Pindai QR identitas</string>
+    <string name="qr_connected_toast">Kontak %1$s ditambahkan. Membuka percakapan.</string>
 
     <!-- ───── SOS Screen (additional) ───── -->
     <string name="sos_select_emergency_title">Pilih jenis keadaan darurat</string>
@@ -597,6 +596,9 @@
     <string name="qr_flash_off">Flash</string>
     <string name="qr_flash_turn_off_cd">Matikan flash</string>
     <string name="qr_flash_turn_on_cd">Nyalakan flash</string>
+    <string name="qr_capture_close_cd">Tutup pemindai QR</string>
+    <string name="qr_capture_title">Pindai QR identitas</string>
+    <string name="qr_capture_instruction">Posisikan QR di dalam bingkai. Pemindaian berjalan otomatis.</string>
 
     <!-- ───── Chat date separators ───── -->
     <string name="chat_date_today">Hari ini</string>

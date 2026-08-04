@@ -110,7 +110,7 @@ fun IdentityStep(onNext: (name: String, role: String) -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    stringResource(R.string.setup_welcome),
+                    stringResource(R.string.setup_title),
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.titleLarge
                 )

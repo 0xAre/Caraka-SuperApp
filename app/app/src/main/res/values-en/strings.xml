@@ -12,7 +12,6 @@
 
     <!-- ───── Profile Setup ───── -->
     <string name="setup_title">Profile setup</string>
-    <string name="setup_welcome">Welcome to CARAKA</string>
     <string name="setup_subtitle">Set up your identity before joining the network.</string>
     <string name="setup_select_role">Select Role:</string>
     <string name="setup_role_civilian">Civilian</string>
@@ -187,7 +186,7 @@
     <!-- ───── Settings ───── -->
     <string name="settings_title">SETTINGS</string>
     <string name="settings_peer_id">Peer ID</string>
-    <string name="settings_qr_btn">View / Scan QR Identity</string>
+    <string name="settings_qr_btn">Share or scan an identity QR</string>
     <string name="identity_copied">Peer ID copied</string>
     <string name="identity_copy">Copy peer ID</string>
     <string name="identity_qr_shortcut">Open QR identity</string>
@@ -198,13 +197,13 @@
     <string name="settings_go_intent">GO Intent</string>
 
     <!-- ───── QR Identity ───── -->
-    <string name="qr_screen_title">QR Identity</string>
-    <string name="qr_my_identity_title">MY IDENTITY QR</string>
-    <string name="qr_show_hint">Show this QR to a peer for in-person identity verification</string>
-    <string name="qr_trust_warning">Only scan from devices you trust</string>
+    <string name="qr_screen_title">Identity QR</string>
+    <string name="qr_my_identity_title">Share your identity</string>
+    <string name="qr_show_hint">Show this code to the person with you so they can add your CARAKA identity.</string>
+    <string name="qr_trust_warning">Share it only in person, then compare the verification code.</string>
     <string name="qr_cd_identity">Identity QR for %1$s</string>
     <string name="qr_image_cd">Identity QR for %1$s</string>
-    <string name="qr_verbal_fingerprint">Verbal verify: %1$s</string>
+    <string name="qr_verbal_fingerprint">Verification code: %1$s</string>
     <string name="trust_sheet_title">Confirm Trust</string>
     <string name="trust_sheet_warning">Make sure you know this person in person before saving as a verified contact.</string>
     <string name="trust_label_name">Name</string>
@@ -283,7 +282,7 @@
     <string name="help_q_offline_flag">Can I report hoaxes while offline?</string>
     <string name="help_offline_flag">Report hoaxes by long-pressing messages, even when offline.</string>
     <string name="help_q_offline_qr">How to verify identity without a server?</string>
-    <string name="help_offline_qr">Verify peer identity in person via QR scan — no central server needed.</string>
+    <string name="help_offline_qr">Scan an identity QR in person — no central server required.</string>
 
     <!-- ───── Onboarding Tour ───── -->
     <string name="tour_skip">Skip</string>
@@ -433,7 +432,7 @@
     <string name="service_label_sos">SOS</string>
     <string name="service_label_messages">Messages</string>
     <string name="service_label_network">Network</string>
-    <string name="service_label_qr">Scan QR</string>
+    <string name="service_label_qr">Scan identity QR</string>
     <string name="service_label_alerts">Alerts</string>
     <string name="service_label_identity">Identity</string>
     <string name="service_label_help">Help</string>
@@ -540,7 +539,7 @@
     <string name="caraka_pick_carrier">Choose courier (connected)</string>
     <string name="caraka_pick_target">Choose destination</string>
     <string name="caraka_add_contact">Add contact</string>
-    <string name="caraka_scan_qr_btn">Scan QR</string>
+    <string name="caraka_scan_qr_btn">Scan identity QR</string>
     <string name="caraka_remove_contact">Remove contact</string>
     <string name="caraka_no_contacts">No contacts yet. Scan a QR or connect first, or add manually.</string>
     <string name="caraka_needs_connection">needs connection</string>
@@ -564,14 +563,14 @@
 
     <!-- ───── QR Identity (additional) ───── -->
     <string name="qr_scan_cancelled">Scan cancelled</string>
-    <string name="qr_scan_invalid">Invalid QR — not a CARAKA identity</string>
-    <string name="qr_scan_peer_title">Scan peer QR</string>
-    <string name="qr_scan_instructions">Hold your phone upright, then aim the camera until the peer\'s QR is inside the box.</string>
-    <string name="qr_hint_portrait">Portrait mode</string>
-    <string name="qr_hint_fill_box">Fill the box</string>
-    <string name="qr_scan_prompt">Aim the camera at a CARAKA identity QR</string>
-    <string name="qr_scan_now_btn">Scan QR now</string>
-    <string name="qr_connected_toast">Connected with %1$s ✓</string>
+    <string name="qr_scan_invalid">This is not a valid CARAKA identity QR.</string>
+    <string name="qr_scan_peer_title">Add a contact by QR</string>
+    <string name="qr_scan_instructions">Scan the QR from the person with you. CARAKA will save the contact and open the conversation.</string>
+    <string name="qr_hint_portrait">Hold upright</string>
+    <string name="qr_hint_fill_box">Fit QR inside frame</string>
+    <string name="qr_scan_prompt">Position the identity QR inside the frame</string>
+    <string name="qr_scan_now_btn">Scan identity QR</string>
+    <string name="qr_connected_toast">Added %1$s to contacts. Opening the conversation.</string>
 
     <!-- ───── SOS Screen (additional) ───── -->
     <string name="sos_select_emergency_title">Select the type of emergency</string>
@@ -597,6 +596,9 @@
     <string name="qr_flash_off">Flash</string>
     <string name="qr_flash_turn_off_cd">Turn off flash</string>
     <string name="qr_flash_turn_on_cd">Turn on flash</string>
+    <string name="qr_capture_close_cd">Close QR scanner</string>
+    <string name="qr_capture_title">Scan identity QR</string>
+    <string name="qr_capture_instruction">Position the QR inside the frame. Scanning starts automatically.</string>
 
     <!-- ───── Chat date separators ───── -->
     <string name="chat_date_today">Today</string>
