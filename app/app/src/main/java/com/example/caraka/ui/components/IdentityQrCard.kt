@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,13 +35,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.caraka.R
-import com.example.caraka.ui.components.CarakaBody
+import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.ui.theme.CarakaTextStyles
-import com.example.caraka.ui.theme.CyanAccent
-import com.example.caraka.ui.theme.DangerRed
-import com.example.caraka.ui.theme.DisasterBlue
 import com.example.caraka.ui.theme.LocalCarakaShapes
-import com.example.caraka.ui.theme.NeonMint
 
 @Composable
 fun IdentityQrCard(
@@ -79,6 +76,16 @@ fun IdentityQrCard(
             )
         }
 
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            displayName.ifBlank { "—" },
+            color = MaterialTheme.colorScheme.onSurface,
+            style = CarakaTextStyles.dialogTitle,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        roleBadge(role)
         Spacer(Modifier.height(16.dp))
 
         AnimatedVisibility(
@@ -90,7 +97,8 @@ fun IdentityQrCard(
                     modifier = Modifier
                         .size(240.dp)
                         .clip(shapes.md)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, shapes.md)
                         .padding(8.dp)
                 ) {
                     Image(
@@ -121,57 +129,61 @@ fun IdentityQrCard(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            displayName.ifBlank { "—" },
-            color = MaterialTheme.colorScheme.onSurface,
-            style = CarakaTextStyles.dialogTitle
-        )
-        Spacer(Modifier.height(4.dp))
-        roleBadge(role)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            peerId.take(24) + if (peerId.length > 24) "…" else "",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = CarakaTextStyles.monoData,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
             stringResource(R.string.qr_verbal_fingerprint, fingerprint),
             color = MaterialTheme.colorScheme.primary,
             style = CarakaTextStyles.monoData.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         CarakaBody(
             stringResource(R.string.qr_show_hint),
             muted = true,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.qr_trust_warning),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            style = CarakaTextStyles.statLabel,
-            textAlign = TextAlign.Center
-        )
+        Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shapes.sm)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.VerifiedUser,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.qr_trust_warning),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = CarakaTextStyles.statLabel
+            )
+        }
     }
 }
 
 @Composable
 private fun RoleBadgeDefault(role: String) {
     val shapes = LocalCarakaShapes.current
-    val (color, label) = when (role) {
-        "BPBD"  -> DisasterBlue to "BPBD"
-        "POLRI" -> CyanAccent   to "POLRI"
-        "PMI"   -> DangerRed    to "PMI"
-        else    -> NeonMint     to "Civilian"
+    val label = when (role) {
+        IdentityManager.ROLE_BPBD -> "BPBD"
+        IdentityManager.ROLE_POLRI -> "POLRI"
+        IdentityManager.ROLE_PMI -> "PMI"
+        else -> stringResource(R.string.setup_role_civilian)
     }
     Box(
         modifier = Modifier
             .clip(shapes.sm)
-            .background(color.copy(alpha = 0.15f))
-            .border(1.dp, color.copy(alpha = 0.5f), shapes.sm)
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), shapes.sm)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
-        Text(label, color = color, style = CarakaTextStyles.serviceLabel)
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = CarakaTextStyles.serviceLabel
+        )
     }
 }

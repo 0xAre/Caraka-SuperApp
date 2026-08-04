@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,7 +54,6 @@ fun QrIdentityScreen(
     var qrVisible by remember { mutableStateOf(false) }
 
     var scanError by remember { mutableStateOf<String?>(null) }
-    val scanCancelledMsg = stringResource(R.string.qr_scan_cancelled)
     val scanInvalidMsg = stringResource(R.string.qr_scan_invalid)
     val scanPrompt = stringResource(R.string.qr_scan_prompt)
     val connectedToastTpl = stringResource(R.string.qr_connected_toast)
@@ -75,7 +72,7 @@ fun QrIdentityScreen(
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result: ScanIntentResult ->
         val raw = result.contents
         if (raw == null) {
-            scanError = scanCancelledMsg
+            scanError = null
             return@rememberLauncherForActivityResult
         }
         val parsed = QrIdentityManager.parseQrPayload(raw)

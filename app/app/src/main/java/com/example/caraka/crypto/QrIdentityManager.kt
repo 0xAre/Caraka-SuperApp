@@ -118,14 +118,14 @@ object QrIdentityManager {
      *
      * @param content  The JSON payload string (from [buildPayload])
      * @param sizePx   Output bitmap size in pixels (default 512)
-     * @param darkColor Dark module color (default black = 0xFF000000)
-     * @param lightColor Light module color (default white = 0xFFFFFFFF)
+     * @param darkColor Dark module color (default CARAKA near-black)
+     * @param lightColor Light module color (default white for maximum scan contrast)
      */
     fun generateQrBitmap(
         content: String,
         sizePx: Int = 512,
-        darkColor: Int = 0xFF0A1628.toInt(),   // NavyBackground
-        lightColor: Int = 0xFFF59E0B.toInt()   // AmberAccent — tactical feel
+        darkColor: Int = 0xFF0D1117.toInt(),
+        lightColor: Int = 0xFFFFFFFF.toInt()
     ): Bitmap? {
         return try {
             val hints = mapOf(
