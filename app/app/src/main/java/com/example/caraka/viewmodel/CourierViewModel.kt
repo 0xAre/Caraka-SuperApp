@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.caraka.crypto.CourierCryptoHelper
 import com.example.caraka.crypto.IdentityManager
+import com.example.caraka.crypto.QrIdentityManager
 import com.example.caraka.data.local.entity.CourierBundleEntity
 import com.example.caraka.data.local.entity.CourierTaskEntity
 import com.example.caraka.data.local.entity.PeerEntity
@@ -175,6 +176,24 @@ class CourierViewModel(
     /** Tambah kontak manual via PeerID (belum tentu punya kunci → ditandai "perlu terhubung"). */
     fun addManualContact(peerId: String, name: String) {
         viewModelScope.launch { uiPreferences.addManualContact(peerId, name) }
+    }
+
+    /** Simpan kontak terverifikasi beserta kunci publiknya dari QR identitas. */
+    fun addContactViaQr(payload: QrIdentityManager.QrIdentityPayload) {
+        viewModelScope.launch {
+            meshRepository.saveVerifiedPeer(
+                peerId = payload.peerId,
+                displayName = payload.name,
+                role = payload.role,
+                encPubKey = payload.encPub,
+                signPubKey = payload.signPub
+            )
+            _snackbar.emit("Kontak ${payload.name} ditambahkan.")
+        }
+    }
+
+    fun removeContact(peerId: String) {
+        viewModelScope.launch { uiPreferences.removeManualContact(peerId) }
     }
 
     init {

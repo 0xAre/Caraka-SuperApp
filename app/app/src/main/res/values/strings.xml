@@ -519,6 +519,8 @@
     <string name="caraka_pick_carrier">Pilih kurir (yang terhubung)</string>
     <string name="caraka_pick_target">Pilih tujuan</string>
     <string name="caraka_add_contact">Tambah kontak</string>
+    <string name="caraka_scan_qr_btn">Scan QR</string>
+    <string name="caraka_remove_contact">Hapus kontak</string>
     <string name="caraka_no_contacts">Belum ada kontak. Scan QR atau terhubung dulu, atau tambah manual.</string>
     <string name="caraka_needs_connection">perlu terhubung</string>
     <string name="caraka_needs_connection_hint">Kontak tanpa kunci hanya bisa dikirimi setelah pernah terhubung / scan QR.</string>

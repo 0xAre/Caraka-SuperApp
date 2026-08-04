@@ -3,6 +3,7 @@ package com.example.caraka.ui.prefs
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -29,6 +30,7 @@ class UiPreferences(private val context: Context) {
         val haptics        = booleanPreferencesKey("haptics")
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val manualContacts = stringSetPreferencesKey("manual_contacts") // entri "peerIdnama"
+        val lastMessagesTab = intPreferencesKey("last_messages_tab")
     }
 
     val language: Flow<String> = context.uiPrefsDataStore.data.map { it[Keys.language] ?: "id" }
@@ -42,6 +44,13 @@ class UiPreferences(private val context: Context) {
     suspend fun setHighContrast(value: Boolean){ context.uiPrefsDataStore.edit { it[Keys.highContrast] = value } }
     suspend fun setHaptics(value: Boolean)     { context.uiPrefsDataStore.edit { it[Keys.haptics] = value } }
     suspend fun setOnboardingDone(value: Boolean) { context.uiPrefsDataStore.edit { it[Keys.onboardingDone] = value } }
+
+    fun observeLastMessagesTab(): Flow<Int> =
+        context.uiPrefsDataStore.data.map { prefs -> prefs[Keys.lastMessagesTab] ?: 0 }
+
+    suspend fun setLastMessagesTab(index: Int) {
+        context.uiPrefsDataStore.edit { prefs -> prefs[Keys.lastMessagesTab] = index }
+    }
 
     // ── Per-peer last-read timestamps (UI-only unread tracking) ──────────────
 

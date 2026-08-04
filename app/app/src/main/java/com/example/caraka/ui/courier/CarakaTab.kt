@@ -2,6 +2,7 @@
 
 package com.example.caraka.ui.courier
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +22,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,14 +55,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.caraka.R
+import com.example.caraka.crypto.QrIdentityManager
 import com.example.caraka.data.local.entity.CourierBundleEntity
 import com.example.caraka.data.local.entity.PeerEntity
 import com.example.caraka.ui.components.CarakaBody
 import com.example.caraka.ui.components.CarakaCard
 import com.example.caraka.ui.components.CarakaListTitle
+import com.example.caraka.ui.scanner.CarakaQrCaptureActivity
 import com.example.caraka.ui.theme.CarakaTextStyles
 import com.example.caraka.viewmodel.CarakaContact
 import com.example.caraka.viewmodel.CourierViewModel
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanIntentResult
+import com.journeyapps.barcodescanner.ScanOptions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -239,6 +247,7 @@ fun CarakaSendSheet(
     if (showAddContact) {
         AddContactDialog(
             onAdd = { pid, name -> viewModel.addManualContact(pid, name); showAddContact = false },
+            onAddViaQr = { payload -> viewModel.addContactViaQr(payload); showAddContact = false },
             onDismiss = { showAddContact = false }
         )
     }
@@ -297,7 +306,21 @@ fun CarakaSendSheet(
                             subtitle = if (c.hasKey) c.role else stringResource(R.string.caraka_needs_connection),
                             selected = targetId == c.peerId,
                             enabled = c.hasKey,
-                            onClick = { if (c.hasKey) targetId = c.peerId }
+                            onClick = { if (c.hasKey) targetId = c.peerId },
+                            trailing = if (!c.hasKey) {
+                                {
+                                    IconButton(onClick = {
+                                        viewModel.removeContact(c.peerId)
+                                        if (targetId == c.peerId) targetId = ""
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.caraka_remove_contact),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            } else null
                         )
                     }
                 }
@@ -354,7 +377,14 @@ fun CarakaSendSheet(
 }
 
 @Composable
-private fun PickRow(title: String, subtitle: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun PickRow(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    trailing: @Composable (() -> Unit)? = null
+) {
     val bg = when {
         selected -> MaterialTheme.colorScheme.primaryContainer
         !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -384,20 +414,64 @@ private fun PickRow(title: String, subtitle: String, selected: Boolean, enabled:
                     Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            trailing?.invoke()
         }
     }
 }
 
 @Composable
-private fun AddContactDialog(onAdd: (peerId: String, name: String) -> Unit, onDismiss: () -> Unit) {
+private fun AddContactDialog(
+    onAdd: (peerId: String, name: String) -> Unit,
+    onAddViaQr: (QrIdentityManager.QrIdentityPayload) -> Unit,
+    onDismiss: () -> Unit
+) {
     var peerId by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    val scanInvalidMsg = stringResource(R.string.qr_scan_invalid)
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result: ScanIntentResult ->
+        val raw = result.contents ?: return@rememberLauncherForActivityResult
+        val parsed = QrIdentityManager.parseQrPayload(raw)
+        if (parsed == null) {
+            scanError = scanInvalidMsg
+        } else {
+            scanError = null
+            onAddViaQr(parsed)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         title = { Text(stringResource(R.string.caraka_add_contact_title), style = CarakaTextStyles.dialogTitle) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = {
+                        scanError = null
+                        val options = ScanOptions().apply {
+                            setCaptureActivity(CarakaQrCaptureActivity::class.java)
+                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            setBeepEnabled(true)
+                            setOrientationLocked(true)
+                        }
+                        scanLauncher.launch(options)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.caraka_scan_qr_btn), style = CarakaTextStyles.buttonLabel)
+                }
+                scanError?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
                 OutlinedTextField(
                     value = peerId,
                     onValueChange = { peerId = it.trim() },

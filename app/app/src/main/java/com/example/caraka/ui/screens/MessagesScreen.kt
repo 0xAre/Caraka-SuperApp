@@ -30,6 +30,7 @@ import com.example.caraka.viewmodel.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,9 @@ fun MessagesScreen(
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle(initialValue = "IDLE")
     val carryCount by courierViewModel.activeCarryCount.collectAsStateWithLifecycle(initialValue = 0)
 
-    var selectedTab by remember { mutableStateOf(0) }
+    val lastTab by uiPrefs.observeLastMessagesTab().collectAsState(initial = 0)
+    var selectedTab by remember(lastTab) { mutableStateOf(lastTab) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -80,12 +83,18 @@ fun MessagesScreen(
             ) {
                 Tab(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = {
+                        selectedTab = 0
+                        scope.launch { uiPrefs.setLastMessagesTab(0) }
+                    },
                     text = { Text(stringResource(R.string.tab_messages)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = {
+                        selectedTab = 1
+                        scope.launch { uiPrefs.setLastMessagesTab(1) }
+                    },
                     text = {
                         if (carryCount > 0) {
                             BadgedBox(badge = {

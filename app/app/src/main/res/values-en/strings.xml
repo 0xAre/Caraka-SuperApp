@@ -519,6 +519,8 @@
     <string name="caraka_pick_carrier">Choose courier (connected)</string>
     <string name="caraka_pick_target">Choose destination</string>
     <string name="caraka_add_contact">Add contact</string>
+    <string name="caraka_scan_qr_btn">Scan QR</string>
+    <string name="caraka_remove_contact">Remove contact</string>
     <string name="caraka_no_contacts">No contacts yet. Scan a QR or connect first, or add manually.</string>
     <string name="caraka_needs_connection">needs connection</string>
     <string name="caraka_needs_connection_hint">Contacts without a key can only be sent to after connecting / scanning their QR.</string>
