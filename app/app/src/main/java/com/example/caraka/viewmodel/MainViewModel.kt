@@ -269,6 +269,14 @@ class MainViewModel(
     /** Stop hosting the emergency hotspot. */
     fun stopEmergencyHotspot() = transport.stopEmergencyHotspot()
 
+    /**
+     * Join a host's emergency hotspot using credentials read out-of-band from a scanned QR. This is
+     * the deterministic "scan → connect" bootstrap: once joined, both devices share one subnet and
+     * the LAN backbone auto-meshes them (no WiFi-Direct discovery needed).
+     */
+    fun joinEmergencyHotspot(ssid: String, passphrase: String, hostPeerId: String?) =
+        transport.joinHotspot(ssid, passphrase, hostPeerId)
+
     fun startPeerScan() {
         if (!canStartPeerScan(connectionState.value)) return
         transport.startPeerDiscoverySession()

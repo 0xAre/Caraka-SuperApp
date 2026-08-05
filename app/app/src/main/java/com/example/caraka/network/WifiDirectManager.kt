@@ -278,8 +278,17 @@ class WifiDirectManager(
      */
     @Volatile private var priorityPeerId: String? = null
 
+    /**
+     * When the priority peer was set (from a QR scan). Bounds the speculative WiFi-Direct
+     * connect-and-validate fallback to a short window after an explicit scan, so we never blindly
+     * dial nearby P2P devices during idle discovery (which would reintroduce BUG-01 — inviting TVs).
+     */
+    @Volatile private var priorityPeerSetAt = 0L
+    private val PRIORITY_CONNECT_WINDOW_MS = 60_000L
+
     override fun setPriorityPeerId(peerId: String) {
         priorityPeerId = peerId
+        priorityPeerSetAt = System.currentTimeMillis()
         lastConnectAttemptMs = 0L
         Log.d(TAG, "Priority peer set: $peerId — cooldown reset, connecting on next scan")
         discoverPeers()  // trigger immediate discovery
@@ -823,10 +832,13 @@ class WifiDirectManager(
                 repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
                 sendToPeer(peerId, com.google.gson.Gson().toJson(request))
             } else {
-                // No LAN path. Broadcast the request (in case they surface on the LAN)...
+                // No LAN path. sendToPeer still broadcasts when the IP is unknown (in case they
+                // surface on the LAN) — same as before — but ALSO adds the hotspot client->gateway
+                // uplink copy when we're on a shared emergency hotspot, so the host can relay this
+                // toward the target even before we've learned their IP ourselves.
                 repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.PENDING_REQUEST)
                 Log.d(TAG, "No LAN path for $peerId — broadcasting CONNECTION_REQUEST (autoAccept=$autoAccept)")
-                sendMessage(com.google.gson.Gson().toJson(request))
+                sendToPeer(peerId, com.google.gson.Gson().toJson(request))
 
                 // ...and if we know their WiFi-Direct MAC, kick off a P2P connection now (offline path).
                 val mac = peer.macAddress?.takeIf { it.isNotBlank() && !it.startsWith("lan:") }
@@ -978,13 +990,26 @@ class WifiDirectManager(
                     it.isCarakaDevice() && it.status != WifiP2pDevice.CONNECTED
                 }
 
-                val candidate = dnsVerified ?: handshakeVerified ?: carakaByName
+                // Tier 4 (bounded): right after a QR scan we KNOW the user wants a specific CARAKA
+                // peer, but OEM ROMs (Tecno/HiOS) often expose neither a CRK: name nor DNS-SD. As an
+                // explicit-intent fallback, try connect-and-validate to a nearby P2P device; the 10s
+                // CARAKA HANDSHAKE timeout (startCarakaValidation) drops it if it isn't ours. Gated to
+                // a 60s window so it never fires during idle discovery.
+                val priorityActive = priorityPeerId != null &&
+                    (now - priorityPeerSetAt) < PRIORITY_CONNECT_WINDOW_MS
+                val priorityFallback = if (priorityActive) {
+                    peers.firstOrNull { it.status == WifiP2pDevice.AVAILABLE }
+                        ?: peers.firstOrNull { it.status != WifiP2pDevice.CONNECTED }
+                } else null
+
+                val candidate = dnsVerified ?: handshakeVerified ?: carakaByName ?: priorityFallback
                 if (candidate != null) {
                     lastConnectAttemptMs = now
                     val tier = when (candidate) {
                         dnsVerified -> "DNS-SD"
                         handshakeVerified -> "HANDSHAKE-verified"
-                        else -> "CRK:-name"
+                        carakaByName -> "CRK:-name"
+                        else -> "QR-priority-validate"
                     }
                     Log.d(TAG, "Auto-connecting to CARAKA peer ${candidate.deviceName} [$tier] (${candidate.deviceAddress})")
                     connectToPeer(candidate)
@@ -1208,20 +1233,32 @@ class WifiDirectManager(
         try {
             DatagramSocket().use { socket ->
                 socket.broadcast = true
+                var anySent = false
                 addresses.forEach { address ->
-                    val packet = DatagramPacket(bytes, bytes.size, address, LAN_DISCOVERY_PORT)
-                    socket.send(packet)
-                    Log.d(
-                        TAG,
-                        "LAN_TX mode=broadcast dst=${address.hostAddress}:$LAN_DISCOVERY_PORT " +
-                            "bytes=${bytes.size} type=${protocol?.type} id=${protocol?.id?.take(12)} " +
-                            "sender=${protocol?.senderId?.take(12)} recipient=${protocol?.recipientId?.take(12)} " +
-                            "ttl=${protocol?.ttl}"
-                    )
+                    // Per-address isolation: the limited broadcast 255.255.255.255 throws ENETUNREACH
+                    // when the device has no default route (offline / host alone). That MUST NOT abort
+                    // the remaining targets — notably the SoftAP subnet broadcast (192.168.x.255) that
+                    // carries the emergency-hotspot host's beacon + HOTSPOT_OFFER to its clients. A
+                    // single shared try/catch here previously killed the whole loop on the first miss.
+                    try {
+                        val packet = DatagramPacket(bytes, bytes.size, address, LAN_DISCOVERY_PORT)
+                        socket.send(packet)
+                        anySent = true
+                        Log.d(
+                            TAG,
+                            "LAN_TX mode=broadcast dst=${address.hostAddress}:$LAN_DISCOVERY_PORT " +
+                                "bytes=${bytes.size} type=${protocol?.type} id=${protocol?.id?.take(12)} " +
+                                "sender=${protocol?.senderId?.take(12)} recipient=${protocol?.recipientId?.take(12)} " +
+                                "ttl=${protocol?.ttl}"
+                        )
+                    } catch (e: Exception) {
+                        Log.v(TAG, "LAN_TX skip dst=${address.hostAddress} (${e.message})")
+                    }
                 }
+                if (!anySent) Log.d(TAG, "LAN broadcast: no reachable address yet (offline / no shared iface)")
             }
         } catch (e: Exception) {
-            Log.d(TAG, "LAN broadcast skipped (${e.message})")
+            Log.d(TAG, "LAN broadcast socket error (${e.message})")
         }
     }
 
@@ -1784,7 +1821,13 @@ class WifiDirectManager(
                     "MESH_RELAY type=TEXT id=${protocol.id.take(12)} " +
                         "recipient=${protocol.recipientId.take(12)} ttl=${protocol.ttl}->${relayed.ttl}"
                 )
-                sendMessage(relayed.toJson())
+                // Route AT the recipient (sendToPeer), not a blind sendMessage() broadcast — mirrors
+                // handleAck's relay below. sendToPeer still broadcasts when the IP is unknown (no
+                // regression) but ALSO unicasts when known and adds the hotspot client->gateway uplink
+                // copy. Without that, a client relaying onward on an AP-isolated emergency hotspot has
+                // its broadcast blocked at its own radio before it ever reaches the host to forward —
+                // the relay silently dies even though direct sends (which use sendToPeer) work fine.
+                sendToPeer(protocol.recipientId, relayed.toJson())
                 _relayedMessageCount.value++
             }
             repository.carryBundle(relayed) // carry regardless — reliability layer (Phase 2)

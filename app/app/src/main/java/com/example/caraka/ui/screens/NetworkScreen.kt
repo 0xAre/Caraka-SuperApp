@@ -32,6 +32,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -66,7 +67,8 @@ import kotlinx.coroutines.delay
 fun NetworkScreen(
     viewModel: MainViewModel,
     onRequestPermissions: () -> Unit = {},
-    onOpenWifiSettings: () -> Unit = {}
+    onOpenWifiSettings: () -> Unit = {},
+    onOpenLocationSettings: () -> Unit = {}
 ) {
     val uiState by viewModel.networkDiscoveryUiState.collectAsStateWithLifecycle()
     val hotspotState by viewModel.hotspotState.collectAsStateWithLifecycle()
@@ -120,6 +122,7 @@ fun NetworkScreen(
                 state = hotspotState,
                 onStart = viewModel::startEmergencyHotspot,
                 onStop = viewModel::stopEmergencyHotspot,
+                onEnableLocation = onOpenLocationSettings,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             PeerDiscoveryExperience(
@@ -145,6 +148,7 @@ private fun EmergencyHotspotCard(
     state: HotspotUiState,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    onEnableLocation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isHost   = state.role == "HOST"
@@ -278,13 +282,33 @@ private fun EmergencyHotspotCard(
                 }
             }
 
-            // Status message for CLIENT
-            if (isClient && state.status.isNotBlank()) {
+            // Status / guidance message (client join status, host errors, location prompts, …).
+            if (state.status.isNotBlank()) {
                 Text(
                     state.status,
                     style = CarakaTextStyles.statusSecondary,
-                    color = MaterialTheme.colorScheme.primary
+                    color = if (state.needsLocation) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
                 )
+            }
+
+            // When hosting, remind the host that its identity QR now also shares hotspot access.
+            if (isHost) {
+                Text(
+                    stringResource(R.string.hotspot_share_qr_hint),
+                    style = CarakaTextStyles.listSubtitle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Shortcut to system Location settings when hosting was blocked by Location being OFF.
+            if (state.needsLocation) {
+                TextButton(
+                    onClick = onEnableLocation,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.hotspot_enable_location))
+                }
             }
 
             Button(

@@ -394,6 +394,8 @@
     <string name="hotspot_pass">Password: %1$s</string>
     <string name="hotspot_start">Create Emergency Hotspot</string>
     <string name="hotspot_stop">Stop Hotspot</string>
+    <string name="hotspot_enable_location">Enable Location (GPS)</string>
+    <string name="hotspot_share_qr_hint">Show your identity QR — others scan it to join this hotspot automatically.</string>
 
     <!-- ───── Settings (additional) ───── -->
     <string name="settings_profile_subtitle">Identity, security, and CARAKA preferences</string>
@@ -571,6 +573,8 @@
     <string name="qr_scan_prompt">Position the identity QR inside the frame</string>
     <string name="qr_scan_now_btn">Scan identity QR</string>
     <string name="qr_connected_toast">Added %1$s to contacts. Opening the conversation.</string>
+    <string name="qr_hotspot_share_hint">Emergency hotspot is on — this QR also carries the Wi-Fi password. Others just scan it to join automatically.</string>
+    <string name="qr_hotspot_joining">Joining hotspot %1$s… approve the Wi-Fi dialog if it appears.</string>
 
     <!-- ───── SOS Screen (additional) ───── -->
     <string name="sos_select_emergency_title">Select the type of emergency</string>

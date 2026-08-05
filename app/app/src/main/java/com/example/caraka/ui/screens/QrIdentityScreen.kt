@@ -49,6 +49,13 @@ fun QrIdentityScreen(
     val displayName by viewModel.displayName.collectAsStateWithLifecycle()
     val myRole by viewModel.myRole.collectAsStateWithLifecycle()
     val myPeerId by viewModel.myPeerId.collectAsStateWithLifecycle()
+    val hotspotState by viewModel.hotspotState.collectAsStateWithLifecycle()
+
+    // When this device is hosting the emergency hotspot, fold its credentials into the identity QR so
+    // a peer that scans it joins the hotspot in one step (deterministic, OEM-independent bootstrap).
+    val isHostingHotspot = hotspotState.role == "HOST"
+    val hotspotSsid = hotspotState.ssid?.takeIf { isHostingHotspot }
+    val hotspotPass = hotspotState.passphrase?.takeIf { isHostingHotspot }
 
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var qrVisible by remember { mutableStateOf(false) }
@@ -57,12 +64,16 @@ fun QrIdentityScreen(
     val scanInvalidMsg = stringResource(R.string.qr_scan_invalid)
     val scanPrompt = stringResource(R.string.qr_scan_prompt)
     val connectedToastTpl = stringResource(R.string.qr_connected_toast)
+    val joiningHotspotTpl = stringResource(R.string.qr_hotspot_joining)
 
-    LaunchedEffect(myPeerId, displayName, myRole) {
+    LaunchedEffect(myPeerId, displayName, myRole, hotspotSsid, hotspotPass) {
         if (myPeerId.isBlank()) return@LaunchedEffect
         val encPub = viewModel.getEncPubBase64()
         val signPub = viewModel.getSignPubBase64()
-        val payload = QrIdentityManager.buildPayload(myPeerId, displayName, myRole, encPub, signPub)
+        val payload = QrIdentityManager.buildPayload(
+            myPeerId, displayName, myRole, encPub, signPub,
+            hotspotSsid = hotspotSsid, hotspotPass = hotspotPass
+        )
         qrBitmap = withContext(Dispatchers.Default) {
             QrIdentityManager.generateQrBitmap(payload, sizePx = 480)
         }
@@ -83,6 +94,15 @@ fun QrIdentityScreen(
         // Scan QR in person = consent. Verify + connect + jump straight into chat — no extra taps.
         scanError = null
         scope.launch {
+            // If the host folded its emergency-hotspot creds into the QR, join it FIRST. This puts
+            // both phones on one subnet where the LAN backbone auto-meshes them — the reliable path
+            // when WiFi-Direct discovery is flaky (OEM ROMs). Harmless when the fields are absent.
+            val ssid = parsed.hotspotSsid
+            val pass = parsed.hotspotPass
+            if (!ssid.isNullOrBlank() && !pass.isNullOrBlank()) {
+                viewModel.joinEmergencyHotspot(ssid, pass, parsed.peerId)
+                snackbar.tryEmit(String.format(joiningHotspotTpl, ssid))
+            }
             viewModel.saveVerifiedPeer(parsed)               // trust + store their public keys
             viewModel.requestConnectionToPeer(parsed.peerId, autoAccept = true) // proactively link
             viewModel.triggerPriorityConnect(parsed.peerId)  // fast-track WiFi-Direct fallback path
@@ -128,6 +148,26 @@ fun QrIdentityScreen(
                 qrBitmap = qrBitmap,
                 qrVisible = qrVisible
             )
+
+            if (isHostingHotspot && hotspotSsid != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(LocalCarakaShapes.current.sm)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), LocalCarakaShapes.current.sm)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.WifiTethering, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.qr_hotspot_share_hint),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = CarakaTextStyles.bodyDefault
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier

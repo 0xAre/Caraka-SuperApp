@@ -400,6 +400,9 @@ private fun CarakaNav(
                         },
                         onOpenWifiSettings = {
                             ctx.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                        },
+                        onOpenLocationSettings = {
+                            ctx.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                         }
                     )
                 }

@@ -334,4 +334,17 @@ class MeshManager(
         hotspotOfferJob?.cancel(); hotspotOfferJob = null
         localHotspotManager.stopHosting()
     }
+
+    /**
+     * Join a host's emergency hotspot from out-of-band credentials (QR scan). Unlike the passive
+     * [LocalHotspotManager.onOfferReceived] path — which is intentionally cautious about hopping —
+     * this is an explicit user action, so we join directly. Requires API 29+ (WifiNetworkSpecifier).
+     */
+    override fun joinHotspot(ssid: String, passphrase: String, hostPeerId: String?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            localHotspotManager.joinHotspot(ssid, passphrase, hostPeerId)
+        } else {
+            Log.w(TAG, "joinHotspot needs Android 10+ (WifiNetworkSpecifier); ignoring on this device")
+        }
+    }
 }

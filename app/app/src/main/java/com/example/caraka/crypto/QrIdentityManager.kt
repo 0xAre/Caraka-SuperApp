@@ -42,7 +42,15 @@ object QrIdentityManager {
         val name: String,
         val role: String,
         val encPub: String,   // X25519 public key, Base64
-        val signPub: String   // Ed25519 public key, Base64
+        val signPub: String,  // Ed25519 public key, Base64
+        // ── Emergency-hotspot bootstrap (optional) ───────────────────────────────────────────────
+        // Present only when this device is currently HOSTING an emergency LocalOnlyHotspot. Scanning
+        // such a QR lets the other phone join the host's AP directly — a deterministic, OEM-independent
+        // way to converge both nodes onto ONE subnet (no WiFi-Direct name/DNS-SD negotiation needed).
+        // Framework-random creds shown in-person via QR = same trust surface as the on-screen SSID/pass.
+        val hotspotSsid: String? = null,
+        val hotspotPass: String? = null,
+        val lanIp: String? = null   // host's last-known LAN IP (pre-seed for directed traffic); optional
     )
 
     /**
@@ -70,14 +78,20 @@ object QrIdentityManager {
         name: String,
         role: String,
         encPub: String,
-        signPub: String
+        signPub: String,
+        hotspotSsid: String? = null,
+        hotspotPass: String? = null,
+        lanIp: String? = null
     ): String {
         val payload = QrIdentityPayload(
             peerId = peerId,
             name = name,
             role = role,
             encPub = encPub,
-            signPub = signPub
+            signPub = signPub,
+            hotspotSsid = hotspotSsid?.takeIf { it.isNotBlank() },
+            hotspotPass = hotspotPass?.takeIf { it.isNotBlank() },
+            lanIp = lanIp?.takeIf { it.isNotBlank() }
         )
         return json.encodeToString(payload)
     }

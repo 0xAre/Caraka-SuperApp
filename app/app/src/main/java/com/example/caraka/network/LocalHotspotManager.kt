@@ -26,7 +26,9 @@ data class HotspotUiState(
     val passphrase: String? = null,     // shown to the HOST only (so it can relay creds / show a QR)
     val gatewayIp: String? = null,       // AP/host address used by CLIENT for application-level relay
     val hostPeerId: String? = null,      // identity from HOTSPOT_OFFER; fallback lookup when no route gateway
-    val status: String = ""
+    val status: String = "",
+    /** True when hosting was blocked because system Location (GPS) is OFF — the UI offers a shortcut. */
+    val needsLocation: Boolean = false
 )
 
 /**
@@ -78,6 +80,19 @@ class LocalHotspotManager(
     fun startHosting() {
         if (reservation != null) { Log.d(TAG, "Already hosting"); return }
         leave() // cannot host and be a client at once
+
+        // startLocalOnlyHotspot() fails with a generic error on virtually all devices when system
+        // Location (GPS) is OFF. Detect this up-front and guide the user instead of surfacing an
+        // opaque "code 1". (Empirically the #1 cause of "hotspot won't open" on OEM ROMs.)
+        if (!isLocationEnabled()) {
+            Log.w(TAG, "Location services OFF — LocalOnlyHotspot would fail; asking user to enable")
+            _state.value = HotspotUiState(
+                status = "Aktifkan Lokasi (GPS) dulu, lalu buka hotspot lagi.",
+                needsLocation = true
+            )
+            return
+        }
+
         _state.value = HotspotUiState(status = "Memulai hotspot darurat…")
         try {
             wifiManager.startLocalOnlyHotspot(object : WifiManager.LocalOnlyHotspotCallback() {
@@ -101,9 +116,13 @@ class LocalHotspotManager(
                 }
 
                 override fun onFailed(reason: Int) {
-                    Log.w(TAG, "LocalOnlyHotspot failed: $reason")
+                    Log.w(TAG, "LocalOnlyHotspot failed: $reason (${reasonLabel(reason)})")
                     reservation = null
-                    _state.value = HotspotUiState(status = "Gagal memulai hotspot (kode $reason)")
+                    _state.value = HotspotUiState(
+                        status = failureMessage(reason),
+                        // ERROR_GENERIC is most often a location/permission gate — offer the shortcut.
+                        needsLocation = reason == WifiManager.LocalOnlyHotspotCallback.ERROR_GENERIC && !isLocationEnabled()
+                    )
                 }
             }, mainHandler)
         } catch (e: Exception) {
@@ -119,6 +138,48 @@ class LocalHotspotManager(
     }
 
     fun isHosting(): Boolean = reservation != null
+
+    /** System Location (GPS) toggle. LocalOnlyHotspot + WiFi-Direct discovery both need it ON. */
+    private fun isLocationEnabled(): Boolean {
+        return try {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                ?: return true // can't tell → don't block; let the framework decide
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                lm.isLocationEnabled
+            } else {
+                @Suppress("DEPRECATION")
+                val mode = android.provider.Settings.Secure.getInt(
+                    context.contentResolver,
+                    android.provider.Settings.Secure.LOCATION_MODE,
+                    android.provider.Settings.Secure.LOCATION_MODE_OFF
+                )
+                mode != android.provider.Settings.Secure.LOCATION_MODE_OFF
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "isLocationEnabled check failed", e); true
+        }
+    }
+
+    private fun reasonLabel(reason: Int): String = when (reason) {
+        WifiManager.LocalOnlyHotspotCallback.ERROR_NO_CHANNEL -> "ERROR_NO_CHANNEL"
+        WifiManager.LocalOnlyHotspotCallback.ERROR_GENERIC -> "ERROR_GENERIC"
+        WifiManager.LocalOnlyHotspotCallback.ERROR_INCOMPATIBLE_MODE -> "ERROR_INCOMPATIBLE_MODE"
+        WifiManager.LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED -> "ERROR_TETHERING_DISALLOWED"
+        else -> "UNKNOWN($reason)"
+    }
+
+    private fun failureMessage(reason: Int): String = when (reason) {
+        WifiManager.LocalOnlyHotspotCallback.ERROR_NO_CHANNEL ->
+            "Gagal: tidak ada kanal Wi-Fi tersedia. Matikan Wi-Fi lain / hotspot bawaan, lalu coba lagi."
+        WifiManager.LocalOnlyHotspotCallback.ERROR_INCOMPATIBLE_MODE ->
+            "Gagal: matikan hotspot/tethering bawaan HP dan sambungan Wi-Fi aktif, lalu coba lagi."
+        WifiManager.LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED ->
+            "Gagal: tethering diblokir oleh perangkat/operator. Cek pengaturan hotspot bawaan."
+        WifiManager.LocalOnlyHotspotCallback.ERROR_GENERIC ->
+            if (!isLocationEnabled()) "Aktifkan Lokasi (GPS) dulu, lalu buka hotspot lagi."
+            else "Gagal memulai hotspot. Pastikan Wi-Fi menyala & tidak ada hotspot bawaan aktif, lalu coba lagi."
+        else -> "Gagal memulai hotspot (kode $reason)."
+    }
 
     @Suppress("DEPRECATION")
     private fun extractCredentials(res: WifiManager.LocalOnlyHotspotReservation): HotspotCredentials? {

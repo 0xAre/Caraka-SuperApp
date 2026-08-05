@@ -75,6 +75,14 @@ interface MeshTransport {
     /** Stop hosting the emergency hotspot. */
     fun stopEmergencyHotspot() {}
 
+    /**
+     * Join a neighbour's emergency hotspot using out-of-band credentials (typically obtained by
+     * scanning that host's QR). Deterministic bootstrap that needs no WiFi-Direct discovery: once
+     * joined, both devices share one subnet and the LAN backbone auto-meshes them. Default no-op so
+     * the plain WiFi-Direct fallback (no [LocalHotspotManager]) is unaffected.
+     */
+    fun joinHotspot(ssid: String, passphrase: String, hostPeerId: String? = null) {}
+
     companion object {
         /** Shared inactive flow so the default [hotspot] getter allocates nothing per call. */
         val INACTIVE_HOTSPOT: StateFlow<HotspotUiState> = MutableStateFlow(HotspotUiState())

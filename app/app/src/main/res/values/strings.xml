@@ -394,6 +394,8 @@
     <string name="hotspot_pass">Sandi: %1$s</string>
     <string name="hotspot_start">Buat Hotspot Darurat</string>
     <string name="hotspot_stop">Hentikan Hotspot</string>
+    <string name="hotspot_enable_location">Aktifkan Lokasi (GPS)</string>
+    <string name="hotspot_share_qr_hint">Tunjukkan QR identitas Anda — perangkat lain memindainya untuk bergabung otomatis ke hotspot ini.</string>
 
     <!-- ───── Settings (additional) ───── -->
     <string name="settings_profile_subtitle">Identitas, keamanan, dan preferensi CARAKA</string>
@@ -571,6 +573,8 @@
     <string name="qr_scan_prompt">Posisikan QR identitas di dalam bingkai</string>
     <string name="qr_scan_now_btn">Pindai QR identitas</string>
     <string name="qr_connected_toast">Kontak %1$s ditambahkan. Membuka percakapan.</string>
+    <string name="qr_hotspot_share_hint">Hotspot darurat aktif — QR ini juga memuat sandi Wi-Fi. Perangkat lain cukup memindainya untuk bergabung otomatis.</string>
+    <string name="qr_hotspot_joining">Bergabung ke hotspot %1$s… setujui dialog Wi-Fi bila muncul.</string>
 
     <!-- ───── SOS Screen (additional) ───── -->
     <string name="sos_select_emergency_title">Pilih jenis keadaan darurat</string>
