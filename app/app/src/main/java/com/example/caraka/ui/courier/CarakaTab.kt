@@ -243,6 +243,11 @@ fun CarakaSendSheet(
     var message by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var showAddContact by remember { mutableStateOf(false) }
+    var step by remember { mutableStateOf(0) }
+
+    val eligibleCarriers = carriers.filterNot { it.id == targetId }
+    val selectedTarget = contacts.firstOrNull { it.peerId == targetId }
+    val selectedCourier = carriers.firstOrNull { it.id == courierId && it.id != targetId }
 
     if (showAddContact) {
         AddContactDialog(
@@ -273,104 +278,181 @@ fun CarakaSendSheet(
                 }
             }
 
-            // 1. Kurir (B)
-            Text(stringResource(R.string.caraka_pick_carrier), style = CarakaTextStyles.fieldLabel)
-            LazyColumn(modifier = Modifier.fillMaxWidth().height(96.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(carriers, key = { it.id }) { peer ->
-                    PickRow(
-                        title = peer.displayName.ifBlank { peer.id.take(8) },
-                        subtitle = peer.role,
-                        selected = courierId == peer.id,
-                        enabled = true,
-                        onClick = { courierId = peer.id }
-                    )
-                }
-            }
+            CarakaFlowProgress(currentStep = step)
 
-            // 2. Tujuan (Z) dari kontak
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.caraka_pick_target), style = CarakaTextStyles.fieldLabel, modifier = Modifier.weight(1f))
-                TextButton(onClick = { showAddContact = true }) {
-                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.caraka_add_contact))
+            when (step) {
+                0 -> {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.caraka_pick_target), style = CarakaTextStyles.fieldLabel)
+                            CarakaBody(stringResource(R.string.caraka_step_target_hint), muted = true)
+                        }
+                        TextButton(onClick = { showAddContact = true }) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.caraka_add_contact))
+                        }
+                    }
+                    if (contacts.isEmpty()) {
+                        InfoCard(stringResource(R.string.caraka_no_contacts), stringResource(R.string.caraka_needs_connection_hint))
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(contacts, key = { it.peerId }) { contact ->
+                                PickRow(
+                                    title = contact.name,
+                                    subtitle = if (contact.hasKey) contact.role else stringResource(R.string.caraka_needs_connection),
+                                    selected = targetId == contact.peerId,
+                                    enabled = contact.hasKey,
+                                    onClick = {
+                                        if (contact.hasKey) {
+                                            targetId = contact.peerId
+                                            if (courierId == contact.peerId) courierId = ""
+                                        }
+                                    },
+                                    trailing = if (!contact.hasKey) {
+                                        {
+                                            IconButton(onClick = { viewModel.removeContact(contact.peerId) }) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = stringResource(R.string.caraka_remove_contact),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = { step = 1 },
+                        enabled = selectedTarget?.hasKey == true,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.caraka_continue)) }
                 }
-            }
-            if (contacts.isEmpty()) {
-                CarakaBody(stringResource(R.string.caraka_no_contacts), muted = true)
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth().height(120.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(contacts, key = { it.peerId }) { c ->
-                        PickRow(
-                            title = c.name,
-                            subtitle = if (c.hasKey) c.role else stringResource(R.string.caraka_needs_connection),
-                            selected = targetId == c.peerId,
-                            enabled = c.hasKey,
-                            onClick = { if (c.hasKey) targetId = c.peerId },
-                            trailing = if (!c.hasKey) {
-                                {
-                                    IconButton(onClick = {
-                                        viewModel.removeContact(c.peerId)
-                                        if (targetId == c.peerId) targetId = ""
-                                    }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = stringResource(R.string.caraka_remove_contact),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            } else null
-                        )
+
+                1 -> {
+                    Text(stringResource(R.string.caraka_pick_carrier), style = CarakaTextStyles.fieldLabel)
+                    CarakaBody(stringResource(R.string.caraka_step_carrier_hint), muted = true)
+                    if (eligibleCarriers.isEmpty()) {
+                        InfoCard(stringResource(R.string.caraka_no_carriers_title), stringResource(R.string.caraka_carrier_must_differ))
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(eligibleCarriers, key = { it.id }) { peer ->
+                                PickRow(
+                                    title = peer.displayName.ifBlank { peer.id.take(8) },
+                                    subtitle = peer.role,
+                                    selected = courierId == peer.id,
+                                    enabled = true,
+                                    onClick = { courierId = peer.id }
+                                )
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { step = 0 }, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.caraka_back))
+                        }
+                        Button(
+                            onClick = { step = 2 },
+                            enabled = selectedCourier != null,
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.caraka_continue)) }
+                    }
+                }
+
+                else -> {
+                    CarakaCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(stringResource(R.string.caraka_route_summary), style = CarakaTextStyles.fieldLabel)
+                            Text(
+                                stringResource(
+                                    R.string.caraka_route_format,
+                                    selectedCourier?.displayName ?: "-",
+                                    selectedTarget?.name ?: "-"
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = message,
+                        onValueChange = { if (it.length <= 512) message = it },
+                        modifier = Modifier.fillMaxWidth().height(112.dp),
+                        label = { Text(stringResource(R.string.caraka_msg_for_target)) },
+                        placeholder = { Text(stringResource(R.string.caraka_msg_for_target_ph)) },
+                        leadingIcon = { Icon(Icons.Default.Message, contentDescription = null) },
+                        shape = MaterialTheme.shapes.medium,
+                        maxLines = 4
+                    )
+                    OutlinedTextField(
+                        value = note,
+                        onValueChange = { if (it.length <= 200) note = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.caraka_note_for_carrier)) },
+                        placeholder = { Text(stringResource(R.string.caraka_note_for_carrier_ph)) },
+                        leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                        shape = MaterialTheme.shapes.medium,
+                        maxLines = 2,
+                        supportingText = { Text(stringResource(R.string.caraka_note_hint), style = MaterialTheme.typography.labelSmall) }
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { step = 1 }, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.caraka_back))
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.sendCourierRequest(
+                                    courierId = courierId,
+                                    recipientId = targetId,
+                                    message = message,
+                                    mode = "DIRECTED",
+                                    epkPrivB64 = null,
+                                    note = note
+                                )
+                            },
+                            modifier = Modifier.weight(2f),
+                            enabled = selectedCourier != null && selectedTarget?.hasKey == true && message.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.courier_assign_btn), style = CarakaTextStyles.buttonLabel)
+                        }
                     }
                 }
             }
+        }
+    }
+}
 
-            // 3. Pesan untuk penerima Z (terenkripsi)
-            OutlinedTextField(
-                value = message,
-                onValueChange = { if (it.length <= 512) message = it },
-                modifier = Modifier.fillMaxWidth().height(96.dp),
-                label = { Text(stringResource(R.string.caraka_msg_for_target)) },
-                placeholder = { Text(stringResource(R.string.caraka_msg_for_target_ph)) },
-                leadingIcon = { Icon(Icons.Default.Message, contentDescription = null) },
-                shape = MaterialTheme.shapes.medium,
-                maxLines = 4
-            )
-
-            // 4. Catatan untuk kurir B (plaintext)
-            OutlinedTextField(
-                value = note,
-                onValueChange = { if (it.length <= 200) note = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.caraka_note_for_carrier)) },
-                placeholder = { Text(stringResource(R.string.caraka_note_for_carrier_ph)) },
-                leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-                shape = MaterialTheme.shapes.medium,
-                maxLines = 2,
-                supportingText = { Text(stringResource(R.string.caraka_note_hint), style = MaterialTheme.typography.labelSmall) }
-            )
-
-            val canSend = courierId.isNotBlank() && targetId.isNotBlank() && message.isNotBlank()
-            Button(
-                onClick = {
-                    viewModel.sendCourierRequest(
-                        courierId = courierId,
-                        recipientId = targetId,
-                        message = message,
-                        mode = "DIRECTED",
-                        epkPrivB64 = null,
-                        note = note
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = canSend,
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+@Composable
+private fun CarakaFlowProgress(currentStep: Int) {
+    val labels = listOf(
+        stringResource(R.string.caraka_step_target),
+        stringResource(R.string.caraka_step_carrier),
+        stringResource(R.string.caraka_step_message)
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        labels.forEachIndexed { index, label ->
+            val active = index == currentStep
+            val completed = index < currentStep
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
+                color = when {
+                    active -> MaterialTheme.colorScheme.primaryContainer
+                    completed -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
             ) {
-                Icon(Icons.Default.Send, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.courier_assign_btn), style = CarakaTextStyles.buttonLabel)
+                Text(
+                    text = "${index + 1}. $label",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 9.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

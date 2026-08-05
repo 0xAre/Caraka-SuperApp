@@ -557,6 +557,20 @@
     <string name="caraka_peerid_ph">Paste the contact Peer ID…</string>
     <string name="caraka_contact_name_label">Name</string>
     <string name="caraka_add">Add</string>
+    <string name="caraka_step_target">Recipient</string>
+    <string name="caraka_step_carrier">Courier</string>
+    <string name="caraka_step_message">Message</string>
+    <string name="caraka_step_target_hint">Choose the person who will open the encrypted message.</string>
+    <string name="caraka_step_carrier_hint">Choose a connected device to carry the message. The courier cannot also be the recipient.</string>
+    <string name="caraka_continue">Continue</string>
+    <string name="caraka_back">Back</string>
+    <string name="caraka_carrier_must_differ">Connect another device as courier; the recipient and courier must be different.</string>
+    <string name="caraka_route_summary">Delivery route</string>
+    <string name="caraka_route_format">You → %1$s (courier) → %2$s (recipient)</string>
+    <string name="caraka_same_carrier_recipient">The courier and recipient must be different devices.</string>
+    <string name="connection_notification_channel">Mesh connections</string>
+    <string name="connection_notification_title">Device connected</string>
+    <string name="connection_notification_body">%1$s is now connected to CARAKA.</string>
 
     <!-- ───── Help Screen (additional) ───── -->
     <string name="help_tour_title">Interactive Tour</string>

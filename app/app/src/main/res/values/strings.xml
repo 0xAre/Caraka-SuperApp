@@ -557,6 +557,20 @@
     <string name="caraka_peerid_ph">Tempel Peer ID kontak…</string>
     <string name="caraka_contact_name_label">Nama</string>
     <string name="caraka_add">Tambah</string>
+    <string name="caraka_step_target">Penerima</string>
+    <string name="caraka_step_carrier">Pembawa</string>
+    <string name="caraka_step_message">Pesan</string>
+    <string name="caraka_step_target_hint">Pilih orang yang akan membuka pesan terenkripsi.</string>
+    <string name="caraka_step_carrier_hint">Pilih perangkat terhubung yang akan membawa pesan. Pembawa tidak bisa menjadi penerima.</string>
+    <string name="caraka_continue">Lanjut</string>
+    <string name="caraka_back">Kembali</string>
+    <string name="caraka_carrier_must_differ">Hubungkan perangkat lain sebagai pembawa; penerima dan pembawa harus berbeda.</string>
+    <string name="caraka_route_summary">Rute pengiriman</string>
+    <string name="caraka_route_format">Kamu → %1$s (pembawa) → %2$s (penerima)</string>
+    <string name="caraka_same_carrier_recipient">Pembawa pesan dan penerima harus perangkat yang berbeda.</string>
+    <string name="connection_notification_channel">Koneksi mesh</string>
+    <string name="connection_notification_title">Perangkat terhubung</string>
+    <string name="connection_notification_body">%1$s sekarang terhubung ke CARAKA.</string>
 
     <!-- ───── Help Screen (additional) ───── -->
     <string name="help_tour_title">Tur Interaktif</string>

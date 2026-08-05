@@ -21,6 +21,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
 import com.example.caraka.MainActivity
+import com.example.caraka.R
 import com.example.caraka.crypto.CryptoManager
 import com.example.caraka.crypto.IdentityManager
 import com.example.caraka.data.local.entity.MessageEntity
@@ -823,7 +824,9 @@ class WifiDirectManager(
                 recipientId = peerId,
                 content = "Request to connect",
                 timestamp = System.currentTimeMillis(),
-                autoAccept = autoAccept
+                autoAccept = autoAccept,
+                publicKey = identityManager.getEncryptionPublicKeyBase64(),
+                signingKey = identityManager.getSigningPublicKeyBase64()
             )
 
             if (knownIp != null) {
@@ -1204,9 +1207,14 @@ class WifiDirectManager(
     }
 
     private suspend fun sendLanHandshake() {
+        val handshake = buildLanHandshake() ?: return
+        sendLanPayloadInternal(handshake.toJson())
+    }
+
+    private suspend fun buildLanHandshake(): MeshProtocol? {
         val myId = identityManager.getPeerId()
-        if (myId.isBlank()) return
-        val handshake = MeshProtocol(
+        if (myId.isBlank()) return null
+        return MeshProtocol(
             type = "HANDSHAKE",
             id = UUID.randomUUID().toString(),
             senderId = myId,
@@ -1218,7 +1226,6 @@ class WifiDirectManager(
             publicKey = identityManager.getEncryptionPublicKeyBase64(),
             signingKey = identityManager.getSigningPublicKeyBase64()
         )
-        sendLanPayloadInternal(handshake.toJson())
     }
 
     private fun sendLanPayload(json: String) {
@@ -1297,8 +1304,12 @@ class WifiDirectManager(
         // "CONNECTED" here previously put us into busyStates and silently killed discovery.
         if (_connectionState.value !in busyStates) _connectionState.value = "MESH_ACTIVE"
         Log.d(TAG, "LAN peer ACTIVE_MESH: ${peer.displayName} at $hostAddress (verified=${peer.isVerified})")
-        // A new LAN contact = a fresh chance to spread anything we are carrying (Phase 2).
-        maybeFlushCarry()
+        onPeerReachable(protocol.senderId)
+        if (hotspotStateProvider?.invoke()?.role == "HOST") {
+            // Ensure the newly joined station also learns the host even when AP downlink broadcast
+            // is filtered by the OEM. This makes awareness explicitly bidirectional.
+            buildLanHandshake()?.let { sendLanUnicast(hostAddress, it.toJson()) }
+        }
     }
 
     /**
@@ -1551,6 +1562,14 @@ class WifiDirectManager(
             )))
         }
 
+        // Some LocalOnlyHotspot implementations isolate client broadcast. An additional unicast
+        // copy to the gateway lets the host learn this station and fan traffic out to its peers.
+        HotspotRelayPolicy.clientBroadcastGateway(hotspotStateProvider?.invoke())?.let { gateway ->
+            runCatching { InetAddress.getByName(gateway) }
+                .onSuccess { addresses.add(it) }
+                .onFailure { Log.d(TAG, "Invalid hotspot gateway $gateway (${it.message})") }
+        }
+
         // Per-interface broadcast addresses — this picks up the WiFi-Direct group interface
         // (p2p-...) so the LAN mesh works inside a WiFi Direct group with no router present.
         try {
@@ -1716,6 +1735,18 @@ class WifiDirectManager(
         }
     }
 
+    /** Run all peer-arrival hooks for LAN beacons and Wi-Fi Direct handshakes alike. */
+    private suspend fun onPeerReachable(peerId: String) {
+        val now = System.currentTimeMillis()
+        val lastFlush = lastPeerFlushAt[peerId] ?: 0L
+        if (now - lastFlush > MeshPolicy.PEER_FLUSH_DEBOUNCE_MS) {
+            lastPeerFlushAt[peerId] = now
+            repository.flushForPeer(peerId)
+            courierManager?.onPeerHandshake(peerId, peerId)
+        }
+        maybeFlushCarry()
+    }
+
     private suspend fun handleHandshake(protocol: MeshProtocol, fromAddress: String) {
         if (protocol.content != "HANDSHAKE") return
         Log.d(TAG, "HANDSHAKE from ${protocol.senderName} (${protocol.senderId})")
@@ -1794,16 +1825,7 @@ class WifiDirectManager(
         // EU-2.2 / D10: a directly-connected peer just appeared → opportunistically flush any
         // carried/queued messages for it now, instead of waiting for the next timer tick.
         // Debounced to absorb discovery flapping (PEER_FLUSH_DEBOUNCE_MS).
-        val nowFlush = System.currentTimeMillis()
-        val lastFlush = lastPeerFlushAt[protocol.senderId] ?: 0L
-        if (nowFlush - lastFlush > MeshPolicy.PEER_FLUSH_DEBOUNCE_MS) {
-            lastPeerFlushAt[protocol.senderId] = nowFlush
-            repository.flushForPeer(protocol.senderId)
-        }
-        // Also re-offer carried bundles (broadcast/SOS/transit) to this freshly-arrived contact.
-        maybeFlushCarry()
-        // Courier Mode (Directed): cek apakah ada bundle kurir untuk peer ini, kirim langsung.
-        courierManager?.onPeerHandshake(protocol.senderId, protocol.senderId)
+        onPeerReachable(protocol.senderId)
     }
 
     private suspend fun handleTextMessage(protocol: MeshProtocol) {
@@ -2048,6 +2070,61 @@ class WifiDirectManager(
     // ========== NEW: CONNECTION REQUEST HANDLERS ==========
 
     /**
+     * Connection control can arrive before a LAN beacon, especially when hotspot clients are
+     * isolated. Updating a missing Room row is a no-op, so always upsert the sender first. Identity
+     * keys are carried by new builds; older peers remain compatible and are stored unverified.
+     */
+    private suspend fun upsertPeerFromConnectionControl(
+        protocol: MeshProtocol,
+        fromAddress: String
+    ) {
+        val existing = repository.getPeerById(protocol.senderId)
+        val lanHost = fromAddress
+            .takeIf { it.startsWith("lan:") }
+            ?.removePrefix("lan:")
+            ?.takeIf { it.isNotBlank() }
+        val safePublicKey = existing?.publicKey?.takeIf { it.isNotBlank() }
+            ?: protocol.publicKey.orEmpty()
+        val safeSigningKey = existing?.signingKey?.takeIf { it.isNotBlank() }
+            ?: protocol.signingKey.orEmpty()
+        val displayName = protocol.senderName.ifBlank {
+            existing?.displayName ?: protocol.senderId.take(8)
+        }
+
+        val peer = (existing ?: PeerEntity(
+            id = protocol.senderId,
+            deviceName = displayName,
+            displayName = displayName,
+            role = protocol.senderRole,
+            publicKey = safePublicKey,
+            signingKey = safeSigningKey,
+            isVerified = false,
+            isAuthority = protocol.senderRole in listOf("BPBD", "POLRI", "PMI"),
+            macAddress = lanHost?.let { "lan:$it" },
+            lastSeen = System.currentTimeMillis(),
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
+            hopCount = 0
+        )).copy(
+            displayName = displayName,
+            role = protocol.senderRole,
+            publicKey = safePublicKey,
+            signingKey = safeSigningKey,
+            macAddress = existing?.macAddress ?: lanHost?.let { "lan:$it" },
+            lastSeen = System.currentTimeMillis(),
+            status = com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH,
+            hopCount = 0
+        )
+        repository.savePeer(peer)
+        lanHost?.let {
+            peerIpRegistry[protocol.senderId] = it
+            peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
+        }
+        if (_connectionState.value !in busyStates) _connectionState.value = "MESH_ACTIVE"
+        onPeerReachable(protocol.senderId)
+        Log.d(TAG, "Connection control upserted ${peer.displayName} via $fromAddress")
+    }
+
+    /**
      * Handle incoming CONNECTION_REQUEST from peer.
      * Design decision: direct connect, no accept/reject dialog. We always accept and mark
      * the peer ACTIVE_MESH. WiFi Direct P2P is only used as an offline fallback when the
@@ -2057,7 +2134,8 @@ class WifiDirectManager(
         val peerId = protocol.senderId
         Log.d(TAG, "CONNECTION_REQUEST from ${protocol.senderName} ($peerId)")
 
-        repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
+        upsertPeerFromConnectionControl(protocol, fromAddress)
+        showConnectionNotification(peerId, protocol.senderName)
         sendConnectionAccept(peerId, protocol.senderName, protocol.senderRole)
         connectToPeerAfterAccept(peerId)
     }
@@ -2068,7 +2146,7 @@ class WifiDirectManager(
     private suspend fun handleConnectionAccept(protocol: MeshProtocol, fromAddress: String) {
         val peerId = protocol.senderId
         Log.d(TAG, "CONNECTION_ACCEPT from $peerId")
-        repository.updatePeerConnectionState(peerId, com.example.caraka.data.local.entity.ConnectionStatus.ACTIVE_MESH)
+        upsertPeerFromConnectionControl(protocol, fromAddress)
         connectToPeerAfterAccept(peerId)
     }
 
@@ -2101,7 +2179,9 @@ class WifiDirectManager(
             senderRole = identityManager.getRole(),
             recipientId = peerId,
             content = "Accept connection",
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            publicKey = identityManager.getEncryptionPublicKeyBase64(),
+            signingKey = identityManager.getSigningPublicKeyBase64()
         )
         Log.d(TAG, "Sending CONNECTION_ACCEPT to $peerId")
         sendToPeer(peerId, accept.toJson())
@@ -2113,6 +2193,48 @@ class WifiDirectManager(
     override fun sendConnectionAcceptMessage(peerId: String, peerName: String, peerRole: String) {
         scope.launch {
             sendConnectionAccept(peerId, peerName, peerRole)
+        }
+    }
+
+    /** Make QR/manual connections visible on the device that was scanned as well. */
+    private fun showConnectionNotification(peerId: String, peerName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "mesh_connections"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.createNotificationChannel(
+                NotificationChannel(
+                    channelId,
+                    context.getString(R.string.connection_notification_channel),
+                    NotificationManager.IMPORTANCE_DEFAULT
+                )
+            )
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            peerId.hashCode(),
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        try {
+            notificationManager.notify(
+                peerId.hashCode(),
+                NotificationCompat.Builder(context, channelId)
+                    .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+                    .setContentTitle(context.getString(R.string.connection_notification_title))
+                    .setContentText(context.getString(R.string.connection_notification_body, peerName.ifBlank { peerId.take(8) }))
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .build()
+            )
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Connection notification failed", e)
         }
     }
 

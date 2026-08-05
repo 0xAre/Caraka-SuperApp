@@ -222,6 +222,13 @@ class CourierManager(
         courierRepository.acceptBundle(bundleId)
         _courierEvents.emit(CourierEvent.BundleReceived(bundleId, bundle.mode, bundle.expiry))
         Log.d(TAG, "Bundle CARRYING: $bundleId mode=${bundle.mode}")
+
+        // The recipient may already be connected (common in a three-device hotspot demo), so there
+        // may be no future socket HANDSHAKE to trigger delivery. Try immediately; the persisted
+        // CARRYING bundle remains available for a later retry when the recipient is currently away.
+        if (bundle.mode == "DIRECTED") {
+            onPeerHandshake(bundle.claimToken, bundle.claimToken)
+        }
     }
 
     // ── Directed Delivery via HANDSHAKE ──────────────────────────────────────────────────────
@@ -277,7 +284,7 @@ class CourierManager(
                 recipientId = targetPeerId,
                 content = "",
                 timestamp = System.currentTimeMillis(),
-                ttl = 1,
+                ttl = MeshPolicy.COURIER_DIRECT_TTL,
                 priority = "NORMAL",
                 courierClaimToken = claimToken
             )
@@ -346,7 +353,7 @@ class CourierManager(
                     recipientId = targetPeerId,
                     content = "",
                     timestamp = System.currentTimeMillis(),
-                    ttl = 1,
+                    ttl = MeshPolicy.COURIER_DIRECT_TTL,
                     priority = "NORMAL",
                     courierBundleId = bundleId,
                     courierProofSignature = proofSig
@@ -443,7 +450,7 @@ class CourierManager(
             recipientId = protocol.senderId,
             content = "",
             timestamp = System.currentTimeMillis(),
-            ttl = 1,
+            ttl = MeshPolicy.COURIER_DIRECT_TTL,
             priority = "NORMAL",
             courierBundleId = bundleId
         )
@@ -476,7 +483,7 @@ class CourierManager(
                 recipientId = senderId,
                 content = "",
                 timestamp = System.currentTimeMillis(),
-                ttl = MeshPolicy.COURIER_BROADCAST_TTL,
+                ttl = MeshPolicy.COURIER_DIRECT_TTL,
                 priority = "NORMAL",
                 courierBundleId = bundleId
             )

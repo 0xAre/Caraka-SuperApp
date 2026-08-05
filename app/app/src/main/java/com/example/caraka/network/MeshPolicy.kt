@@ -170,6 +170,13 @@ object MeshPolicy {
     const val COURIER_BROADCAST_TTL = 1
 
     /**
+     * Directed courier control packets may need one application-level hop through a LocalOnlyHotspot
+     * host when the OEM isolates client stations. Two keeps the exchange local while allowing that
+     * single gateway relay (client -> host -> client).
+     */
+    const val COURIER_DIRECT_TTL = 2
+
+    /**
      * Batas maksimum karakter konten dalam bundle kurir (guidance UX).
      * Lebih besar dari CARRY_BODY_MAX_CHARS (280) karena kurir adalah pengiriman disengaja.
      */

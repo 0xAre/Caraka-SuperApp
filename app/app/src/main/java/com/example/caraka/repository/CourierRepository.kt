@@ -293,7 +293,7 @@ class CourierRepository(
         recipientId = targetBId,
         content = "",
         timestamp = System.currentTimeMillis(),
-        ttl = 1, // local only — langsung ke B yang ada di sekitar
+        ttl = MeshPolicy.COURIER_DIRECT_TTL,
         priority = bundle.priority,
         courierBundleId = bundle.bundleId,
         courierMode = bundle.mode,
@@ -319,7 +319,7 @@ class CourierRepository(
         recipientId = targetBId,
         content = "",
         timestamp = System.currentTimeMillis(),
-        ttl = 1,
+        ttl = MeshPolicy.COURIER_DIRECT_TTL,
         priority = bundle.priority,
         courierBundleId = bundle.bundleId,
         courierMode = bundle.mode,
@@ -366,7 +366,7 @@ class CourierRepository(
         recipientId = targetId,
         content = "",
         timestamp = System.currentTimeMillis(),
-        ttl = 1,
+        ttl = MeshPolicy.COURIER_DIRECT_TTL,
         priority = "NORMAL",
         courierBundleId = bundleId,
         courierChallengeNonce = challengeNonce
@@ -385,7 +385,7 @@ class CourierRepository(
         recipientId = targetId,
         content = "",
         timestamp = System.currentTimeMillis(),
-        ttl = 1,
+        ttl = MeshPolicy.COURIER_DIRECT_TTL,
         priority = bundle.priority,
         courierBundleId = bundle.bundleId,
         courierMode = bundle.mode,
@@ -407,7 +407,7 @@ class CourierRepository(
             recipientId = fromPeerId,
             content = "",
             timestamp = System.currentTimeMillis(),
-            ttl = 1,
+            ttl = MeshPolicy.COURIER_DIRECT_TTL,
             priority = "NORMAL",
             courierBundleId = bundleId
         )
@@ -427,7 +427,7 @@ class CourierRepository(
             recipientId = fromPeerId,
             content = "",
             timestamp = System.currentTimeMillis(),
-            ttl = 1,
+            ttl = MeshPolicy.COURIER_DIRECT_TTL,
             priority = "NORMAL",
             courierBundleId = bundleId
         )

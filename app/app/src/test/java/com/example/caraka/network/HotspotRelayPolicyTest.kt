@@ -9,6 +9,21 @@ import org.junit.Test
 class HotspotRelayPolicyTest {
 
     @Test
+    fun clientSendsBroadcastCopyToGateway() {
+        val state = HotspotUiState(role = "CLIENT", gatewayIp = "192.168.43.1")
+
+        assertEquals("192.168.43.1", HotspotRelayPolicy.clientBroadcastGateway(state))
+        assertNull(HotspotRelayPolicy.clientBroadcastGateway(HotspotUiState(role = "HOST")))
+        assertNull(HotspotRelayPolicy.clientBroadcastGateway(HotspotUiState(role = "CLIENT")))
+    }
+
+    @Test
+    fun directedCourierTrafficCanCrossOneHotspotGateway() {
+        assertEquals(2, MeshPolicy.COURIER_DIRECT_TTL)
+        assertEquals(1, MeshPolicy.COURIER_BROADCAST_TTL)
+    }
+
+    @Test
     fun clientUsesGatewayWhenDestinationIsAnotherStation() {
         val state = HotspotUiState(role = "CLIENT", gatewayIp = "192.168.43.1")
 

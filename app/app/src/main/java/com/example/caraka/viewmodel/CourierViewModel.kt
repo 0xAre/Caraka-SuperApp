@@ -333,6 +333,12 @@ class CourierViewModel(
         locationHintLon: Double? = null,
         note: String? = null   // catatan plaintext untuk kurir B (Directed)
     ) {
+        if (mode != "STEALTH" && courierId == recipientId) {
+            viewModelScope.launch {
+                _snackbar.emit(context.getString(R.string.caraka_same_carrier_recipient))
+            }
+            return
+        }
         viewModelScope.launch {
             try {
                 if (mode == "STEALTH") {
