@@ -97,6 +97,7 @@ class MeshManager(
         wifiDirectManager.setHotspotOfferSink { ssid, pass, fromId ->
             localHotspotManager.onOfferReceived(ssid, pass, fromId)
         }
+        wifiDirectManager.setHotspotStateProvider { localHotspotManager.state.value }
         Log.d(TAG, "Transports — aware=$awareSupported nearby=$nearbySupported (WiFiDirect/LAN always on)")
     }
 

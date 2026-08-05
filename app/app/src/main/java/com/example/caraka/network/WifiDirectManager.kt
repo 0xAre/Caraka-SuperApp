@@ -173,6 +173,10 @@ class WifiDirectManager(
     @Volatile private var hotspotOfferSink: ((ssid: String, pass: String, fromPeerId: String) -> Unit)? = null
     fun setHotspotOfferSink(sink: (String, String, String) -> Unit) { hotspotOfferSink = sink }
 
+    /** Facade-owned hotspot state; injected without reversing the LocalHotspotManager dependency. */
+    @Volatile private var hotspotStateProvider: (() -> HotspotUiState)? = null
+    fun setHotspotStateProvider(provider: () -> HotspotUiState) { hotspotStateProvider = provider }
+
     /**
      * Courier manager — menangani semua COURIER_* messages dan state machine Caraka Kurir.
      * Di-set oleh MeshManager setelah CourierManager diinisialisasi (dependency injection manual).
@@ -873,6 +877,13 @@ class WifiDirectManager(
      * WiFi-Direct socket when the IP isn't known.
      */
     override fun sendToPeer(peerId: String, json: String) {
+        // Directed sends can return through the hotspot host or another overlay. Pre-register the
+        // ID exactly like broadcast sends so the origin never processes its own relayed copy.
+        MeshProtocol.fromJson(json)?.let { protocol ->
+            if (protocol.type !in listOf("HANDSHAKE", "CONNECTION_REQUEST", "CONNECTION_ACCEPT", "CONNECTION_REJECT")) {
+                socketManager.markSent(protocol.id)
+            }
+        }
         sendDirectedMessage(peerId, json)
         overlayUnicastSinks.forEach { it(peerId, json) } // route via Aware next-hop / Nearby when active
     }
@@ -1125,6 +1136,12 @@ class WifiDirectManager(
                     val protocol = MeshProtocol.fromJson(json) ?: continue
                     val myId = identityManager.getPeerId()
                     val hostAddress = packet.address.hostAddress ?: "unknown"
+                    Log.d(
+                        TAG,
+                        "LAN_RX src=$hostAddress bytes=${packet.length} type=${protocol.type} " +
+                            "id=${protocol.id.take(12)} sender=${protocol.senderId.take(12)} " +
+                            "recipient=${protocol.recipientId.take(12)} ttl=${protocol.ttl}"
+                    )
                     if (protocol.senderId.isBlank() || protocol.senderId == myId) continue
 
                     // Update the LAN registry on EVERY packet — this is what makes
@@ -1133,8 +1150,10 @@ class WifiDirectManager(
                     peerLastLanSeen[protocol.senderId] = System.currentTimeMillis()
 
                     when {
-                        protocol.type == "HANDSHAKE" && protocol.content == "LAN_DISCOVERY" ->
+                        protocol.type == "HANDSHAKE" && protocol.content == "LAN_DISCOVERY" -> {
                             saveLanPeer(protocol, hostAddress)
+                            relayHotspotLanDiscovery(protocol)
+                        }
                         protocol.type == "PEER_LIST" ->
                             handlePeerList(protocol)
                         else ->
@@ -1185,12 +1204,20 @@ class WifiDirectManager(
         val addresses = localBroadcastAddresses()
         if (addresses.isEmpty()) return
         val bytes = json.toByteArray(Charsets.UTF_8)
+        val protocol = MeshProtocol.fromJson(json)
         try {
             DatagramSocket().use { socket ->
                 socket.broadcast = true
                 addresses.forEach { address ->
                     val packet = DatagramPacket(bytes, bytes.size, address, LAN_DISCOVERY_PORT)
                     socket.send(packet)
+                    Log.d(
+                        TAG,
+                        "LAN_TX mode=broadcast dst=${address.hostAddress}:$LAN_DISCOVERY_PORT " +
+                            "bytes=${bytes.size} type=${protocol?.type} id=${protocol?.id?.take(12)} " +
+                            "sender=${protocol?.senderId?.take(12)} recipient=${protocol?.recipientId?.take(12)} " +
+                            "ttl=${protocol?.ttl}"
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -1237,6 +1264,30 @@ class WifiDirectManager(
         maybeFlushCarry()
     }
 
+    /**
+     * LocalOnlyHotspot clients may not hear each other's UDP beacons. The host re-advertises each
+     * client's LAN_DISCOVERY directly to every other known station. Receivers intentionally learn
+     * the host/gateway as that peer's next-hop IP, so later directed traffic follows B -> A -> C.
+     */
+    private fun relayHotspotLanDiscovery(protocol: MeshProtocol) {
+        if (hotspotStateProvider?.invoke()?.role != "HOST" || protocol.ttl <= 1) return
+
+        val relayedJson = protocol.copy(ttl = protocol.ttl - 1).toJson()
+        peerIpRegistry.entries
+            .asSequence()
+            .filter { (peerId, _) -> peerId != protocol.senderId }
+            .map { (_, ip) -> ip }
+            .distinct()
+            .forEach { targetIp ->
+                Log.d(
+                    TAG,
+                    "HOTSPOT_DISCOVERY_RELAY peer=${protocol.senderId.take(12)} " +
+                        "targetIp=$targetIp ttl=${protocol.ttl}->${protocol.ttl - 1}"
+                )
+                sendLanUnicast(targetIp, relayedJson)
+            }
+    }
+
     // ========== PEER_LIST GOSSIP (full-mesh awareness) ==========
 
     /**
@@ -1251,7 +1302,12 @@ class WifiDirectManager(
             if (share.peerId.isBlank() || share.peerId == myId) return@forEach
             share.ip?.takeIf { it.isNotBlank() }?.let { ip ->
                 // Only learn an IP if we don't already have a fresher one of our own.
-                peerIpRegistry.putIfAbsent(share.peerId, ip)
+                val previous = peerIpRegistry.putIfAbsent(share.peerId, ip)
+                Log.d(
+                    TAG,
+                    "LAN_REGISTRY source=peer_list peer=${share.peerId.take(12)} " +
+                        "advertisedIp=$ip effectiveIp=${previous ?: ip}"
+                )
             }
             val existing = repository.getPeerById(share.peerId)
             // Don't downgrade a peer we can already hear directly on the LAN.
@@ -1393,9 +1449,26 @@ class WifiDirectManager(
     private fun sendDirectedMessage(peerId: String, json: String) {
         val ip = peerIpRegistry[peerId]
         if (ip != null) {
+            Log.d(TAG, "LAN_ROUTE peer=${peerId.take(12)} mode=unicast knownIp=$ip")
             sendLanUnicast(ip, json)
         } else {
+            Log.d(TAG, "LAN_ROUTE peer=${peerId.take(12)} mode=broadcast_fallback knownIp=null")
             sendLanPayload(json)            // fall back to LAN broadcast
+        }
+
+        // Some LocalOnlyHotspot implementations isolate client stations. Send a second copy to the
+        // AP/host so it can relay at application level. The copy is skipped when the destination is
+        // already the host itself.
+        val hotspotState = hotspotStateProvider?.invoke()
+        val knownHostIp = hotspotState?.hostPeerId?.let { peerIpRegistry[it] }
+        val relayGateway = HotspotRelayPolicy.clientRelayGateway(hotspotState, ip, knownHostIp)
+        if (relayGateway != null) {
+            Log.d(
+                TAG,
+                "HOTSPOT_RELAY_UPLINK peer=${peerId.take(12)} gateway=$relayGateway " +
+                    "directIp=${ip ?: "unknown"}"
+            )
+            sendLanUnicast(relayGateway, json)
         }
         socketManager.sendPayload(json)     // and the WiFi-Direct relay for offline reach
     }
@@ -1404,9 +1477,17 @@ class WifiDirectManager(
         scope.launch {
             try {
                 val bytes = json.toByteArray(Charsets.UTF_8)
+                val protocol = MeshProtocol.fromJson(json)
                 DatagramSocket().use { socket ->
                     val packet = DatagramPacket(bytes, bytes.size, InetAddress.getByName(ip), LAN_DISCOVERY_PORT)
                     socket.send(packet)
+                    Log.d(
+                        TAG,
+                        "LAN_TX mode=unicast dst=$ip:$LAN_DISCOVERY_PORT bytes=${bytes.size} " +
+                            "type=${protocol?.type} id=${protocol?.id?.take(12)} " +
+                            "sender=${protocol?.senderId?.take(12)} recipient=${protocol?.recipientId?.take(12)} " +
+                            "ttl=${protocol?.ttl}"
+                    )
                 }
             } catch (e: Exception) {
                 Log.d(TAG, "LAN unicast to $ip failed (${e.message}) — falling back to broadcast")
@@ -1451,13 +1532,69 @@ class WifiDirectManager(
 
     // ========== MESH MESSAGE LISTENER ==========
 
+    /**
+     * Relay directed traffic received by the emergency-hotspot host to the target client. Clients
+     * deliberately send an uplink copy to the gateway, so this path still works when the Soft AP
+     * blocks station-to-station frames. Returns true when the packet was transit traffic and must
+     * not be processed locally by the host.
+     */
+    private fun relayHotspotTransitIfNeeded(protocol: MeshProtocol, localPeerId: String): Boolean {
+        val state = hotspotStateProvider?.invoke()
+        if (!HotspotRelayPolicy.shouldRelayAtHost(
+                state = state,
+                localPeerId = localPeerId,
+                senderId = protocol.senderId,
+                recipientId = protocol.recipientId
+            )) return false
+
+        if (protocol.ttl <= 1) {
+            Log.d(
+                TAG,
+                "HOTSPOT_RELAY_DROP id=${protocol.id.take(12)} recipient=${protocol.recipientId.take(12)} ttl=0"
+            )
+            return true
+        }
+
+        val relayed = protocol.copy(ttl = protocol.ttl - 1)
+        Log.d(
+            TAG,
+            "HOTSPOT_RELAY_DOWNLINK type=${protocol.type} id=${protocol.id.take(12)} " +
+                "recipient=${protocol.recipientId.take(12)} ttl=${protocol.ttl}->${relayed.ttl}"
+        )
+        sendToPeer(protocol.recipientId, relayed.toJson())
+        _relayedMessageCount.value++
+        return true
+    }
+
     override fun onMessageReceived(protocol: MeshProtocol, fromAddress: String, connId: String) {
+        Log.d(
+            TAG,
+            "MESH_RX via=$fromAddress conn=${connId.ifBlank { "-" }} type=${protocol.type} " +
+                "id=${protocol.id.take(12)} sender=${protocol.senderId.take(12)} " +
+                "recipient=${protocol.recipientId.take(12)} ttl=${protocol.ttl}"
+        )
         if (protocol.type !in listOf("HANDSHAKE", "CONNECTION_REQUEST", "CONNECTION_ACCEPT", "CONNECTION_REJECT") &&
             socketManager.isDuplicate(protocol.id, protocol.timestamp)) {
             Log.d(TAG, "Anti-replay: dropped ${protocol.type} id=${protocol.id}")
             return
         }
         scope.launch {
+            val localPeerId = identityManager.getPeerId()
+            if (relayHotspotTransitIfNeeded(protocol, localPeerId)) return@launch
+
+            // Directed control/courier packets heard through a broadcast fallback belong to another
+            // node. Only the hotspot host may forward them; every other node must ignore them rather
+            // than accidentally accepting a connection or courier bundle on the recipient's behalf.
+            if (HotspotRelayPolicy.isDirectedToOther(protocol.recipientId, localPeerId) &&
+                (protocol.type.startsWith("CONNECTION_") || protocol.type.startsWith("COURIER_"))) {
+                Log.d(
+                    TAG,
+                    "DIRECTED_TRANSIT_IGNORED type=${protocol.type} id=${protocol.id.take(12)} " +
+                        "recipient=${protocol.recipientId.take(12)}"
+                )
+                return@launch
+            }
+
             // Persistent dedup (D3 / EU-0.2): the in-memory LRU above is empty after a process
             // restart, so a TEXT/SOS we already stored in a previous session would otherwise be
             // re-processed (re-notify/re-relay). messageExists() survives restart and stops that.
@@ -1642,6 +1779,11 @@ class WifiDirectManager(
         if (!isForMe && protocol.ttl > 1) {
             val relayed = protocol.copy(ttl = protocol.ttl - 1)
             if (shouldForwardGossip(protocol.priority)) {
+                Log.d(
+                    TAG,
+                    "MESH_RELAY type=TEXT id=${protocol.id.take(12)} " +
+                        "recipient=${protocol.recipientId.take(12)} ttl=${protocol.ttl}->${relayed.ttl}"
+                )
                 sendMessage(relayed.toJson())
                 _relayedMessageCount.value++
             }

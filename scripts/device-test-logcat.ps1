@@ -11,7 +11,7 @@ if (-not (Test-Path $adb)) {
     $adb = "$env:USERPROFILE\AppData\Local\Android\Sdk\platform-tools\adb.exe"
 }
 
-$tags = "WifiDirect:*", "MeshRouter:*", "MeshFGS:*", "MeshSocket:*", "CarakaDB:*", "DBPassphrase:*", "MeshManager:*", "Room:*"
+$tags = "WifiDirect:*", "LocalHotspot:*", "MeshRouter:*", "MeshFGS:*", "MeshSocket:*", "CarakaDB:*", "DBPassphrase:*", "MeshManager:*", "Room:*"
 $filter = ($tags -join " ") + " *:S"
 
 $args = @("logcat", "-v", "threadtime", $filter)

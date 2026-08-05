@@ -24,6 +24,8 @@ data class HotspotUiState(
     val role: String = "NONE",          // NONE | HOST | CLIENT
     val ssid: String? = null,
     val passphrase: String? = null,     // shown to the HOST only (so it can relay creds / show a QR)
+    val gatewayIp: String? = null,       // AP/host address used by CLIENT for application-level relay
+    val hostPeerId: String? = null,      // identity from HOTSPOT_OFFER; fallback lookup when no route gateway
     val status: String = ""
 )
 
@@ -68,6 +70,7 @@ class LocalHotspotManager(
     @Volatile private var joinCallback: ConnectivityManager.NetworkCallback? = null
     @Volatile private var joinedSsid: String? = null
     @Volatile private var requestedSsid: String? = null // ssid of an in-flight join (avoid churn)
+    @Volatile private var requestedHostPeerId: String? = null
 
     // ─────────────────────────────── HOST ───────────────────────────────
 
@@ -163,7 +166,7 @@ class LocalHotspotManager(
     // ─────────────────────────────── CLIENT ───────────────────────────────
 
     /** Handle a HOTSPOT_OFFER heard from a neighbour; auto-join when appropriate. */
-    fun onOfferReceived(ssid: String, passphrase: String, @Suppress("UNUSED_PARAMETER") fromPeerId: String) {
+    fun onOfferReceived(ssid: String, passphrase: String, fromPeerId: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             _state.value = _state.value.copy(
                 status = "Hotspot terdeteksi (butuh Android 10+ untuk gabung otomatis)"
@@ -173,15 +176,16 @@ class LocalHotspotManager(
         if (reservation != null) return       // we host our own AP
         if (joinedSsid != null) return         // already on a hotspot — stay put, don't hop
         if (requestedSsid != null) return      // a join is already in flight — avoid cancel/retry churn
-        joinHotspot(ssid, passphrase)
+        joinHotspot(ssid, passphrase, fromPeerId)
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
-    fun joinHotspot(ssid: String, passphrase: String) {
+    fun joinHotspot(ssid: String, passphrase: String, hostPeerId: String? = null) {
         if (reservation != null) return
         leave() // drop any previous join before requesting a new one
         requestedSsid = ssid
+        requestedHostPeerId = hostPeerId
         _state.value = _state.value.copy(status = "Bergabung ke hotspot $ssid…")
 
         val specifier = WifiNetworkSpecifier.Builder()
@@ -199,13 +203,32 @@ class LocalHotspotManager(
                 // Route this app's sockets (incl. the LAN backbone) over the hotspot subnet so the
                 // existing mesh backbone meshes everyone M-to-N. The hotspot has no internet — fine
                 // for an offline app.
-                connectivityManager.bindProcessToNetwork(network)
+                val bound = connectivityManager.bindProcessToNetwork(network)
+                val linkProperties = connectivityManager.getLinkProperties(network)
+                val routes = linkProperties?.routes.orEmpty()
+                val gatewayRoute = routes.firstOrNull {
+                    it.isDefaultRoute && it.hasGateway() && it.gateway?.address?.size == 4
+                }
+                    ?: routes.firstOrNull { it.hasGateway() && it.gateway?.address?.size == 4 }
+                    ?: routes.firstOrNull { it.isDefaultRoute && it.hasGateway() }
+                    ?: routes.firstOrNull { it.hasGateway() }
+                val gatewayIp = gatewayRoute?.gateway?.hostAddress
+                    ?.takeIf { it != "0.0.0.0" && it != "::" }
                 joinedSsid = ssid
                 _state.value = HotspotUiState(
-                    role = "CLIENT", ssid = ssid,
+                    role = "CLIENT",
+                    ssid = ssid,
+                    gatewayIp = gatewayIp,
+                    hostPeerId = requestedHostPeerId,
                     status = "Terhubung ke hotspot — mesh via LAN"
                 )
-                Log.d(TAG, "Joined hotspot $ssid; bound process to network")
+                Log.d(
+                    TAG,
+                    "HOTSPOT_NETWORK_AVAILABLE ssid=$ssid network=$network bindOk=$bound " +
+                        "iface=${linkProperties?.interfaceName} gateway=$gatewayIp " +
+                        "addresses=${linkProperties?.linkAddresses?.joinToString()} " +
+                        "routes=${linkProperties?.routes?.joinToString()}"
+                )
             }
 
             override fun onUnavailable() {
@@ -213,13 +236,15 @@ class LocalHotspotManager(
                 _state.value = HotspotUiState(status = "Gagal bergabung ke hotspot $ssid")
                 joinCallback = null
                 requestedSsid = null
+                requestedHostPeerId = null
             }
 
             override fun onLost(network: Network) {
-                Log.d(TAG, "Hotspot network lost")
+                Log.d(TAG, "HOTSPOT_NETWORK_LOST ssid=$ssid network=$network")
                 try { connectivityManager.bindProcessToNetwork(null) } catch (_: Exception) {}
                 joinedSsid = null
                 requestedSsid = null
+                requestedHostPeerId = null
                 if (_state.value.role == "CLIENT") _state.value = HotspotUiState(status = "Koneksi hotspot terputus")
             }
         }
@@ -231,6 +256,7 @@ class LocalHotspotManager(
             _state.value = HotspotUiState(status = "Gagal meminta jaringan hotspot")
             joinCallback = null
             requestedSsid = null
+            requestedHostPeerId = null
         }
     }
 
@@ -241,6 +267,7 @@ class LocalHotspotManager(
         }
         joinCallback = null
         requestedSsid = null
+        requestedHostPeerId = null
         if (joinedSsid != null) {
             try { connectivityManager.bindProcessToNetwork(null) } catch (_: Exception) {}
             joinedSsid = null
